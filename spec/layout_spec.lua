@@ -131,6 +131,92 @@ describe("layout", function()
     assert.are.equal(47, tree.layout.height)
   end)
 
+  it("lays out stack children at the same origin", function()
+    local tree = ui.stack({ width = 100, height = 80, padding = 5 }, {
+      ui.box({ width = 30, height = 20 }),
+      ui.box({ width = 40, height = 25 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(100, tree.layout.width)
+    assert.are.equal(80, tree.layout.height)
+    assert.are.equal(5, tree.children[1].layout.x)
+    assert.are.equal(5, tree.children[1].layout.y)
+    assert.are.equal(5, tree.children[2].layout.x)
+    assert.are.equal(5, tree.children[2].layout.y)
+  end)
+
+  it("supports absolute inset positioning", function()
+    local tree = ui.stack({ width = 100, height = 80, padding = 5 }, {
+      ui.box({ position = "absolute", inset = 10 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(15, tree.children[1].layout.x)
+    assert.are.equal(15, tree.children[1].layout.y)
+    assert.are.equal(70, tree.children[1].layout.width)
+    assert.are.equal(50, tree.children[1].layout.height)
+  end)
+
+  it("supports absolute right and bottom positioning", function()
+    local tree = ui.stack({ width = 120, height = 90 }, {
+      ui.box({ position = "absolute", width = 30, height = 20, right = 8, bottom = 6 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(82, tree.children[1].layout.x)
+    assert.are.equal(64, tree.children[1].layout.y)
+  end)
+
+  it("supports absolute x and y positioning", function()
+    local tree = ui.stack({ width = 120, height = 90 }, {
+      ui.box({ position = "absolute", width = 30, height = 20, x = 14, y = 18 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(14, tree.children[1].layout.x)
+    assert.are.equal(18, tree.children[1].layout.y)
+  end)
+
+  it("derives absolute size from opposing edges", function()
+    local tree = ui.stack({ width = 140, height = 100 }, {
+      ui.box({ position = "absolute", left = 10, right = 20, top = 5, bottom = 15 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(110, tree.children[1].layout.width)
+    assert.are.equal(80, tree.children[1].layout.height)
+  end)
+
+  it("resolves absolute percent sizes against parent content bounds", function()
+    local tree = ui.stack({ width = 200, height = 100, padding = 10 }, {
+      ui.box({ position = "absolute", width = "50%", height = "25%" }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(90, tree.children[1].layout.width)
+    assert.are.equal(20, tree.children[1].layout.height)
+  end)
+
+  it("keeps absolute children out of row flow", function()
+    local tree = ui.row({ gap = 10 }, {
+      ui.box({ width = 30, height = 10 }),
+      ui.box({ position = "absolute", width = 200, height = 200 }),
+      ui.box({ width = 40, height = 10 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(80, tree.layout.width)
+    assert.are.equal(40, tree.children[3].layout.x)
+  end)
+
   it("wraps text to a fixed width", function()
     local tree = ui.text("alpha beta gamma", {
       width = 100,

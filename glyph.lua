@@ -1,8 +1,10 @@
 local Components = require("glyph.components")
 local CallbackBus = require("glyph.callback_bus")
+local Modal = require("glyph.modal")
 local Responsive = require("glyph.responsive")
 local Runtime = require("glyph.runtime")
 local Style = require("glyph.style")
+local Transitions = require("glyph.transitions")
 local theme = require("glyph.theme")
 
 local runtime = Runtime.new()
@@ -11,6 +13,7 @@ local ui = {
   CallbackBus = CallbackBus,
   Responsive = Responsive,
   Style = Style,
+  transitions = Transitions,
   runtime = runtime,
   theme = theme,
 }
@@ -352,6 +355,49 @@ function ui.install(loveModule, opts)
 end
 
 ui.attachLove = ui.install
+
+ui.scene = {
+  set = function(id, component, opts)
+    return runtime.scene:set(id, component, opts)
+  end,
+  push = function(id, component, opts)
+    return runtime.scene:push(id, component, opts)
+  end,
+  pop = function(id)
+    return runtime.scene:pop(id)
+  end,
+  close = function(id)
+    return runtime.scene:close(id)
+  end,
+  clear = function(predicate)
+    return runtime.scene:clear(predicate)
+  end,
+  current = function()
+    return runtime.scene:current()
+  end,
+  isOpen = function(id)
+    return runtime.scene:isOpen(id)
+  end,
+  layers = function()
+    return runtime.scene.layers
+  end,
+}
+
+ui.modal = {
+  open = function(id, component, opts)
+    return Modal.open(runtime.scene, id, component, opts)
+  end,
+  close = function(id)
+    return Modal.close(runtime.scene, id)
+  end,
+  closeAll = function()
+    return Modal.closeAll(runtime.scene)
+  end,
+  isOpen = function(id)
+    return Modal.isOpen(runtime.scene, id)
+  end,
+  transitions = Transitions,
+}
 
 function ui.load(opts)
   opts = opts or {}

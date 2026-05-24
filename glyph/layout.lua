@@ -60,6 +60,18 @@ local function numericSize(value)
   return nil
 end
 
+local function isAbsolute(node)
+  return node and node.props and node.props.position == "absolute"
+end
+
+local function resolveOffset(value, available)
+  if type(value) == "number" then
+    return value
+  end
+
+  return percentValue(value, available)
+end
+
 local function intrinsic(node, axis)
   if axis == "row" then
     return node.layout.width
@@ -339,7 +351,118 @@ end
 function Layout.compute(root, context)
   context = context or {}
 
-  local function visit(node, availableWidth, availableHeight)
+  local visit
+
+  local function absoluteEdges(props, contentWidth, contentHeight)
+    local inset = props.inset ~= nil and spacing(props.inset) or {}
+    return {
+      left = resolveOffset(props.left ~= nil and props.left or inset.left, contentWidth),
+      right = resolveOffset(props.right ~= nil and props.right or inset.right, contentWidth),
+      top = resolveOffset(props.top ~= nil and props.top or inset.top, contentHeight),
+      bottom = resolveOffset(props.bottom ~= nil and props.bottom or inset.bottom, contentHeight),
+    }
+  end
+
+  local function placeAbsoluteChild(child, parent, pad, context)
+    local props = child.props or {}
+    local contentWidth = (parent.layout and parent.layout.contentWidth) or 0
+    local contentHeight = (parent.layout and parent.layout.contentHeight) or 0
+    local edges = absoluteEdges(props, contentWidth, contentHeight)
+    local resolvedWidth = resolveSize(props.width, contentWidth)
+    local resolvedHeight = resolveSize(props.height, contentHeight)
+
+    if resolvedWidth == nil and edges.left ~= nil and edges.right ~= nil then
+      resolvedWidth = math.max(0, contentWidth - edges.left - edges.right)
+    end
+    if resolvedHeight == nil and edges.top ~= nil and edges.bottom ~= nil then
+      resolvedHeight = math.max(0, contentHeight - edges.top - edges.bottom)
+    end
+
+    child.layout = child.layout or {}
+    child.layout.assignedWidth = resolvedWidth
+    child.layout.assignedHeight = resolvedHeight
+    child.dirty = child.dirty or {}
+    child.dirty.layout = true
+    visit(child, resolvedWidth or contentWidth, resolvedHeight or contentHeight)
+
+    local x = resolveOffset(props.x, contentWidth)
+    local y = resolveOffset(props.y, contentHeight)
+
+    if edges.left ~= nil then
+      x = edges.left
+    elseif x == nil and edges.right ~= nil then
+      x = contentWidth - edges.right - (child.layout.width or 0)
+    end
+
+    if edges.top ~= nil then
+      y = edges.top
+    elseif y == nil and edges.bottom ~= nil then
+      y = contentHeight - edges.bottom - (child.layout.height or 0)
+    end
+
+    child.layout.x = pad.left + (x or 0)
+    child.layout.y = pad.top + (y or 0)
+  end
+
+  local function placeAbsoluteChildren(node, pad)
+    for _, child in ipairs(node.children or {}) do
+      if isAbsolute(child) then
+        placeAbsoluteChild(child, node, pad, context)
+      end
+    end
+  end
+
+  local function visitStack(node, availableWidth, availableHeight, props, children, pad)
+    local resolvedWidth = resolveSize(props.width, availableWidth)
+    local resolvedHeight = resolveSize(props.height, availableHeight)
+    local width = node.layout.assignedWidth or resolvedWidth or numericSize(props.width)
+    local height = node.layout.assignedHeight or resolvedHeight or numericSize(props.height)
+    local innerWidth = width and math.max(0, width - pad.left - pad.right) or availableWidth
+    local innerHeight = height and math.max(0, height - pad.top - pad.bottom) or availableHeight
+    local maxWidth = 0
+    local maxHeight = 0
+
+    for _, child in ipairs(children) do
+      child.layout = child.layout or {}
+      child.layout.assignedWidth = nil
+      child.layout.assignedHeight = nil
+
+      if not isAbsolute(child) then
+        if flexGrow(child.props) > 0 then
+          child.layout.assignedWidth = innerWidth
+          child.layout.assignedHeight = innerHeight
+        end
+
+        visit(child, innerWidth, innerHeight)
+        child.layout.x = pad.left
+        child.layout.y = pad.top
+        maxWidth = math.max(maxWidth, child.layout.width or 0)
+        maxHeight = math.max(maxHeight, child.layout.height or 0)
+      end
+    end
+
+    node.layout.width = clamp(width or (maxWidth + pad.left + pad.right), props.minWidth, props.maxWidth)
+    node.layout.height = clamp(height or (maxHeight + pad.top + pad.bottom), props.minHeight, props.maxHeight)
+    node.layout.contentWidth = math.max(0, node.layout.width - pad.left - pad.right)
+    node.layout.contentHeight = math.max(0, node.layout.height - pad.top - pad.bottom)
+
+    for _, child in ipairs(children) do
+      if not isAbsolute(child) and flexGrow(child.props) > 0 then
+        child.layout.assignedWidth = node.layout.contentWidth
+        child.layout.assignedHeight = node.layout.contentHeight
+        child.dirty.layout = true
+        visit(child, node.layout.contentWidth, node.layout.contentHeight)
+        child.layout.x = pad.left
+        child.layout.y = pad.top
+      end
+    end
+
+    placeAbsoluteChildren(node, pad)
+    node.dirty.layout = false
+    return node.layout.width, node.layout.height
+  end
+
+  visit = function(node, availableWidth, availableHeight)
     node.layout = node.layout or {}
     node.dirty = node.dirty or {}
     node.layout.availableWidth = availableWidth
@@ -355,6 +478,10 @@ function Layout.compute(root, context)
     local gap = props.gap or 0
     local direction = props.display or node.display
 
+    if direction == "stack" then
+      return visitStack(node, availableWidth, availableHeight, props, children, pad)
+    end
+
     if direction ~= "row" and direction ~= "column" then
       local measuredWidth, measuredHeight = Layout.measureNode(node, context)
       local resolvedWidth = resolveSize(props.width, availableWidth)
@@ -363,6 +490,7 @@ function Layout.compute(root, context)
       node.layout.height = clamp(node.layout.assignedHeight or resolvedHeight or numericSize(props.height) or measuredHeight, props.minHeight, props.maxHeight)
       node.layout.contentWidth = math.max(0, node.layout.width - pad.left - pad.right)
       node.layout.contentHeight = math.max(0, node.layout.height - pad.top - pad.bottom)
+      placeAbsoluteChildren(node, pad)
       node.dirty.layout = false
       return node.layout.width, node.layout.height
     end
@@ -387,27 +515,31 @@ function Layout.compute(root, context)
     local growTotal = 0
     local shrinkTotal = 0
 
-    for index, child in ipairs(children) do
+    local flowIndex = 0
+    for _, child in ipairs(children) do
       child.layout = child.layout or {}
       child.layout.assignedWidth = nil
       child.layout.assignedHeight = nil
 
-      local childAvailableWidth = innerCrossLimit
-      local childAvailableHeight = innerMainLimit
-      if direction == "row" then
-        childAvailableWidth = innerMainLimit
-        childAvailableHeight = innerCrossLimit
-      end
+      if not isAbsolute(child) then
+        local childAvailableWidth = innerCrossLimit
+        local childAvailableHeight = innerMainLimit
+        if direction == "row" then
+          childAvailableWidth = innerMainLimit
+          childAvailableHeight = innerCrossLimit
+        end
 
-      visit(child, childAvailableWidth, childAvailableHeight)
-      local basis = flexBasis(child, direction)
-      totalMain = totalMain + basis
-      maxCross = math.max(maxCross, cross(child, direction))
-      growTotal = growTotal + flexGrow(child.props)
-      shrinkTotal = shrinkTotal + flexShrink(child.props) * basis
+        visit(child, childAvailableWidth, childAvailableHeight)
+        local basis = flexBasis(child, direction)
+        totalMain = totalMain + basis
+        maxCross = math.max(maxCross, cross(child, direction))
+        growTotal = growTotal + flexGrow(child.props)
+        shrinkTotal = shrinkTotal + flexShrink(child.props) * basis
 
-      if index > 1 then
-        totalMain = totalMain + gap
+        flowIndex = flowIndex + 1
+        if flowIndex > 1 then
+          totalMain = totalMain + gap
+        end
       end
     end
 
@@ -415,37 +547,45 @@ function Layout.compute(root, context)
     local extra = math.max(0, innerMain - totalMain)
     if extra > 0 and growTotal > 0 then
       for _, child in ipairs(children) do
-        local grow = flexGrow(child.props)
-        if grow > 0 then
-          local assigned = flexBasis(child, direction) + extra * (grow / growTotal)
-          setMain(child, direction, assigned)
-          assignMainConstraint(child, direction, assigned)
-          child.dirty.layout = true
-          visit(child, assignedWidthFor(child, direction, assigned, innerCrossLimit), assignedHeightFor(child, direction, assigned, innerCrossLimit))
+        if not isAbsolute(child) then
+          local grow = flexGrow(child.props)
+          if grow > 0 then
+            local assigned = flexBasis(child, direction) + extra * (grow / growTotal)
+            setMain(child, direction, assigned)
+            assignMainConstraint(child, direction, assigned)
+            child.dirty.layout = true
+            visit(child, assignedWidthFor(child, direction, assigned, innerCrossLimit), assignedHeightFor(child, direction, assigned, innerCrossLimit))
+          end
         end
       end
     elseif node.type ~= "scrollView" and innerMainLimit and totalMain > innerMainLimit and shrinkTotal > 0 then
       local overflow = totalMain - innerMainLimit
       for _, child in ipairs(children) do
-        local shrink = flexShrink(child.props)
-        local basis = flexBasis(child, direction)
-        if shrink > 0 and basis > 0 then
-          local assigned = math.max(0, basis - overflow * ((shrink * basis) / shrinkTotal))
-          setMain(child, direction, assigned)
-          assignMainConstraint(child, direction, assigned)
-          child.dirty.layout = true
-          visit(child, assignedWidthFor(child, direction, assigned, innerCrossLimit), assignedHeightFor(child, direction, assigned, innerCrossLimit))
+        if not isAbsolute(child) then
+          local shrink = flexShrink(child.props)
+          local basis = flexBasis(child, direction)
+          if shrink > 0 and basis > 0 then
+            local assigned = math.max(0, basis - overflow * ((shrink * basis) / shrinkTotal))
+            setMain(child, direction, assigned)
+            assignMainConstraint(child, direction, assigned)
+            child.dirty.layout = true
+            visit(child, assignedWidthFor(child, direction, assigned, innerCrossLimit), assignedHeightFor(child, direction, assigned, innerCrossLimit))
+          end
         end
       end
     end
 
     totalMain = 0
     maxCross = 0
-    for index, child in ipairs(children) do
-      totalMain = totalMain + intrinsic(child, direction)
-      maxCross = math.max(maxCross, cross(child, direction))
-      if index > 1 then
-        totalMain = totalMain + gap
+    flowIndex = 0
+    for _, child in ipairs(children) do
+      if not isAbsolute(child) then
+        totalMain = totalMain + intrinsic(child, direction)
+        maxCross = math.max(maxCross, cross(child, direction))
+        flowIndex = flowIndex + 1
+        if flowIndex > 1 then
+          totalMain = totalMain + gap
+        end
       end
     end
 
@@ -459,27 +599,29 @@ function Layout.compute(root, context)
     local cursor = direction == "row" and pad.left or pad.top
 
     for _, child in ipairs(children) do
-      local childCross = cross(child, direction)
-      local offsetCross = 0
+      if not isAbsolute(child) then
+        local childCross = cross(child, direction)
+        local offsetCross = 0
 
-      if align == "center" then
-        offsetCross = (innerCross - childCross) / 2
-      elseif align == "end" then
-        offsetCross = innerCross - childCross
-      elseif align == "stretch" then
-        childCross = innerCross
-        setCross(child, direction, innerCross)
+        if align == "center" then
+          offsetCross = (innerCross - childCross) / 2
+        elseif align == "end" then
+          offsetCross = innerCross - childCross
+        elseif align == "stretch" then
+          childCross = innerCross
+          setCross(child, direction, innerCross)
+        end
+
+        if direction == "row" then
+          child.layout.x = cursor
+          child.layout.y = pad.top + offsetCross
+        else
+          child.layout.x = pad.left + offsetCross
+          child.layout.y = cursor
+        end
+
+        cursor = cursor + intrinsic(child, direction) + gap
       end
-
-      if direction == "row" then
-        child.layout.x = cursor
-        child.layout.y = pad.top + offsetCross
-      else
-        child.layout.x = pad.left + offsetCross
-        child.layout.y = cursor
-      end
-
-      cursor = cursor + intrinsic(child, direction) + gap
     end
 
     if direction == "row" then
@@ -492,11 +634,12 @@ function Layout.compute(root, context)
 
     node.layout.contentWidth = math.max(0, node.layout.width - pad.left - pad.right)
     node.layout.contentHeight = math.max(0, node.layout.height - pad.top - pad.bottom)
+    placeAbsoluteChildren(node, pad)
     node.dirty.layout = false
     return node.layout.width, node.layout.height
   end
 
-  visit(root)
+  visit(root, context.availableWidth, context.availableHeight)
   root.layout.x = root.layout.x or 0
   root.layout.y = root.layout.y or 0
   return root

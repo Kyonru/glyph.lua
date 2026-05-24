@@ -237,4 +237,61 @@ describe("runtime", function()
     assert.are.equal(8, rects[2].width)
     assert.is_true(rects[2].height < 56)
   end)
+
+  it("routes overlapping stack clicks to the topmost child", function()
+    local runtime = Runtime.new()
+    local clicked = nil
+
+    local function App()
+      return Components.stack({ width = 100, height = 100 }, {
+        Components.button({ label = "Bottom", width = 100, height = 100, onClick = function() clicked = "bottom" end }),
+        Components.button({ label = "Top", width = 100, height = 100, onClick = function() clicked = "top" end }),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(10, 10, 1)
+    runtime:mousereleased(10, 10, 1)
+
+    assert.are.equal("top", clicked)
+  end)
+
+  it("uses zIndex for stack hit testing", function()
+    local runtime = Runtime.new()
+    local clicked = nil
+
+    local function App()
+      return Components.stack({ width = 100, height = 100 }, {
+        Components.button({ label = "Top", width = 100, height = 100, zIndex = 10, onClick = function() clicked = "z" end }),
+        Components.button({ label = "Later", width = 100, height = 100, onClick = function() clicked = "later" end }),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(10, 10, 1)
+    runtime:mousereleased(10, 10, 1)
+
+    assert.are.equal("z", clicked)
+  end)
+
+  it("lets non-interactive absolute decoration pass clicks through", function()
+    local runtime = Runtime.new()
+    local clicked = false
+
+    local function App()
+      return Components.stack({ width = 100, height = 100 }, {
+        Components.button({ label = "Button", width = 100, height = 100, onClick = function() clicked = true end }),
+        Components.box({ position = "absolute", inset = 0, zIndex = 10, interactive = false }),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(10, 10, 1)
+    runtime:mousereleased(10, 10, 1)
+
+    assert.is_true(clicked)
+  end)
 end)

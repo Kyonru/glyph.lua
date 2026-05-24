@@ -1,6 +1,7 @@
 local CallbackBus = require("glyph.callback_bus")
 local Layout = require("glyph.layout")
 local Responsive = require("glyph.responsive")
+local Scene = require("glyph.scene")
 local Style = require("glyph.style")
 local theme = require("glyph.theme")
 
@@ -17,6 +18,41 @@ local runtimeCallbacks = {
 
 local Runtime = {}
 Runtime.__index = Runtime
+
+local function orderedChildren(node, reverse)
+  local source = node.children or {}
+  if #source <= 1 then
+    return source
+  end
+
+  local ordered = {}
+  for index, child in ipairs(source) do
+    ordered[index] = {
+      index = index,
+      node = child,
+      zIndex = (child.props and child.props.zIndex) or 0,
+    }
+  end
+
+  table.sort(ordered, function(a, b)
+    if a.zIndex == b.zIndex then
+      if reverse then
+        return a.index > b.index
+      end
+      return a.index < b.index
+    end
+    if reverse then
+      return a.zIndex > b.zIndex
+    end
+    return a.zIndex < b.zIndex
+  end)
+
+  local result = {}
+  for index, entry in ipairs(ordered) do
+    result[index] = entry.node
+  end
+  return result
+end
 
 local function sameDeps(a, b)
   if a == b then
@@ -43,7 +79,7 @@ local function absoluteWalk(node, parentX, parentY, fn)
 
   fn(node, x, y)
 
-  for _, child in ipairs(node.children or {}) do
+  for _, child in ipairs(orderedChildren(node)) do
     absoluteWalk(child, x, y, fn)
   end
 end
@@ -82,7 +118,7 @@ local function contains(node, x, y, absX, absY)
 end
 
 function Runtime.new()
-  return setmetatable({
+  local self = setmetatable({
     root = nil,
     rootComponent = nil,
     hooks = {},
@@ -108,7 +144,11 @@ function Runtime.new()
     lastDt = 0,
     responsive = Responsive.new(),
     love = nil,
+    scene = nil,
+    currentScope = nil,
   }, Runtime)
+  self.scene = Scene.new(self)
+  return self
 end
 
 function Runtime:setLove(loveModule)
@@ -130,26 +170,34 @@ end
 function Runtime:useState(initial)
   self.hookCursor = self.hookCursor + 1
   local index = self.hookCursor
+  local hooks = self.hooks
+  local scope = self.currentScope
 
-  if self.hooks[index] == nil then
+  if hooks[index] == nil then
     if type(initial) == "function" then
-      self.hooks[index] = initial()
+      hooks[index] = initial()
     else
-      self.hooks[index] = initial
+      hooks[index] = initial
     end
   end
 
   local function setState(nextValue)
     if type(nextValue) == "function" then
-      self.hooks[index] = nextValue(self.hooks[index])
+      hooks[index] = nextValue(hooks[index])
     else
-      self.hooks[index] = nextValue
+      hooks[index] = nextValue
     end
 
+    if scope then
+      scope.needsRender = true
+      if scope.layer then
+        scope.layer.needsRender = true
+      end
+    end
     self:markDirty()
   end
 
-  return self.hooks[index], setState
+  return hooks[index], setState
 end
 
 function Runtime:useEffect(fn, deps)
@@ -183,6 +231,42 @@ function Runtime:runEffects()
   self.pendingEffects = {}
 end
 
+function Runtime:withHookScope(scope, fn)
+  scope = scope or {}
+  local saved = {
+    hooks = self.hooks,
+    hookCursor = self.hookCursor,
+    effects = self.effects,
+    pendingEffects = self.pendingEffects,
+    currentScope = self.currentScope,
+  }
+
+  self.hooks = scope.hooks or {}
+  self.effects = scope.effects or {}
+  self.pendingEffects = scope.pendingEffects or {}
+  self.hookCursor = 0
+  self.currentScope = scope
+
+  local ok, result = pcall(fn)
+
+  scope.hooks = self.hooks
+  scope.effects = self.effects
+  scope.pendingEffects = self.pendingEffects
+  scope.needsRender = false
+
+  self.hooks = saved.hooks
+  self.hookCursor = saved.hookCursor
+  self.effects = saved.effects
+  self.pendingEffects = saved.pendingEffects
+  self.currentScope = saved.currentScope
+
+  if not ok then
+    error(result, 0)
+  end
+
+  return result
+end
+
 function Runtime:build(component)
   self.rootComponent = component or self.rootComponent
   if not self.rootComponent then
@@ -201,9 +285,24 @@ function Runtime:build(component)
   return root
 end
 
-function Runtime:layoutRoot(root)
+function Runtime:buildLayer(layer)
+  local root = self:withHookScope(layer.scope, function()
+    local nextRoot = layer.component(layer.props)
+    assignPaths(nextRoot, "layer:" .. tostring(layer.id), nil)
+    self:runEffects()
+    return nextRoot
+  end)
+
+  layer.root = root
+  layer.needsRender = false
+  return root
+end
+
+function Runtime:layoutRoot(root, availableWidth, availableHeight)
   local context = {
     theme = self.theme,
+    availableWidth = availableWidth,
+    availableHeight = availableHeight,
     measureText = function(text, props)
       local love = self.love or _G.love
       local font = props.font or self.theme.font or (love and love.graphics and love.graphics.getFont and love.graphics.getFont())
@@ -223,41 +322,216 @@ function Runtime:update(dt)
   self.lastDt = dt or 0
   self.styleClock = self.styleClock + (dt or 0)
   self.bus:dispatch("beforeUpdate", dt)
+  if self.scene then
+    self.scene:update(dt or 0)
+  end
   self.bus:dispatch("afterUpdate", dt)
 end
+
+local viewportSize
 
 function Runtime:render(component)
   self.bus:dispatch("beforeRender")
   local root = self.root
 
-  if self.needsRender or component ~= self.rootComponent or self.root == nil then
+  local hasSceneRoot = self.scene and #self.scene.layers > 0 and component == nil
+
+  if not hasSceneRoot and (self.needsRender or component ~= self.rootComponent or self.root == nil) then
     root = self:build(component)
   end
 
-  if root then
-    self:layoutRoot(root)
+  if not hasSceneRoot and root then
+    local loveModule = self.love or _G.love
+    local viewportWidth, viewportHeight = viewportSize(loveModule)
+    self:layoutRoot(root, viewportWidth, viewportHeight)
     self:draw(root)
+  end
+
+  if self.scene then
+    self:renderLayers()
   end
 
   self.bus:dispatch("afterRender", root)
 end
 
+local function graphicsPushAll(graphics)
+  if not graphics or not graphics.push then
+    return function() end
+  end
+
+  local ok = pcall(function()
+    graphics.push("all")
+  end)
+  if not ok then
+    graphics.push()
+  end
+
+  return function()
+    if graphics.pop then
+      graphics.pop()
+    end
+    if graphics.setStencilTest then
+      graphics.setStencilTest()
+    end
+    if graphics.setScissor then
+      graphics.setScissor()
+    end
+  end
+end
+
+function viewportSize(loveModule)
+  if loveModule and loveModule.graphics and loveModule.graphics.getDimensions then
+    return loveModule.graphics.getDimensions()
+  end
+  return 800, 600
+end
+
+local function resolveLayerBounds(layer, viewportWidth, viewportHeight)
+  local root = layer.root
+  local layout = root and root.layout or {}
+  local width = layer.width or layout.width or viewportWidth
+  local height = layer.height or layout.height or viewportHeight
+  local align = layer.align or "stretch"
+  local x, y = 0, 0
+
+  if align == "center" then
+    x = (viewportWidth - width) / 2
+    y = (viewportHeight - height) / 2
+  elseif align == "top" then
+    x = (viewportWidth - width) / 2
+  elseif align == "bottom" then
+    x = (viewportWidth - width) / 2
+    y = viewportHeight - height
+  elseif align == "right" then
+    x = viewportWidth - width
+  elseif align == "stretch" then
+    width = layer.width or viewportWidth
+    height = layer.height or viewportHeight
+  end
+
+  layer.offsetX = x
+  layer.offsetY = y
+  layer.bounds = {
+    x = x,
+    y = y,
+    width = width,
+    height = height,
+  }
+  return layer.bounds
+end
+
+function Runtime:drawLayerBackdrop(layer, graphics, viewportWidth, viewportHeight)
+  if not layer.backdrop or not graphics then
+    return
+  end
+
+  local colorValue = layer.backdropColor or { 0, 0, 0, 0.5 }
+  local progress = layer.state == "exiting" and (1 - layer.progress) or layer.progress
+  local alpha = (colorValue[4] or 0.5) * progress
+  graphics.setColor(colorValue[1] or 0, colorValue[2] or 0, colorValue[3] or 0, alpha)
+  graphics.rectangle("fill", 0, 0, viewportWidth, viewportHeight)
+end
+
+function Runtime:renderLayer(layer, viewportWidth, viewportHeight)
+  local loveModule = self.love or _G.love
+  local graphics = loveModule and loveModule.graphics
+  if not graphics then
+    return
+  end
+
+  if layer.needsRender or not layer.root or layer.scope.needsRender then
+    self:buildLayer(layer)
+  end
+
+  if not layer.root then
+    return
+  end
+
+  self:layoutRoot(layer.root, layer.width or viewportWidth, layer.height or viewportHeight)
+  local bounds = resolveLayerBounds(layer, viewportWidth, viewportHeight)
+
+  local progress = layer.state == "open" and 1 or layer.progress
+  local phase = layer.state == "exiting" and "exit" or "enter"
+  local transition = layer.transition or {}
+
+  local function drawLayer()
+    graphics.push()
+    graphics.translate(bounds.x, bounds.y)
+    self:draw(layer.root)
+    graphics.pop()
+  end
+
+  local restore = graphicsPushAll(graphics)
+  self:drawLayerBackdrop(layer, graphics, viewportWidth, viewportHeight)
+  local ctx = {
+    progress = progress,
+    phase = phase,
+    layer = layer,
+    bounds = bounds,
+    love = loveModule,
+    runtime = self,
+    transition = transition,
+    drawLayer = drawLayer,
+  }
+
+  if transition.draw then
+    transition.draw(ctx)
+  else
+    drawLayer()
+  end
+  restore()
+end
+
+function Runtime:renderLayers()
+  if not self.scene or #self.scene.layers == 0 then
+    return
+  end
+
+  local loveModule = self.love or _G.love
+  local viewportWidth, viewportHeight = viewportSize(loveModule)
+  for _, layer in ipairs(self.scene.layers) do
+    self:renderLayer(layer, viewportWidth, viewportHeight)
+  end
+end
+
+local function hitTestNode(node, parentX, parentY, x, y)
+  local layout = node.layout or {}
+  local absX = parentX + (layout.x or 0)
+  local absY = parentY + (layout.y or 0)
+
+  for _, child in ipairs(orderedChildren(node, true)) do
+    local hit = hitTestNode(child, absX, absY, x, y)
+    if hit then
+      return hit
+    end
+  end
+
+  if node.props and node.props.interactive ~= false and contains(node, x, y, absX, absY) then
+    node.absoluteX = absX
+    node.absoluteY = absY
+    return node
+  end
+
+  return nil
+end
+
+local function walkHitTest(root, ox, oy, x, y)
+  return hitTestNode(root, ox, oy, x, y)
+end
+
 function Runtime:hitTest(x, y)
-  local hit = nil
+  if self.scene then
+    local node, layer = self.scene:topInteractiveHit(x, y, walkHitTest)
+    if node or layer then
+      return node
+    end
+  end
 
   if not self.root then
     return nil
   end
 
-  absoluteWalk(self.root, 0, 0, function(node, absX, absY)
-    if node.props and node.props.interactive ~= false and contains(node, x, y, absX, absY) then
-      hit = node
-      node.absoluteX = absX
-      node.absoluteY = absY
-    end
-  end)
-
-  return hit
+  return walkHitTest(self.root, 0, 0, x, y)
 end
 
 function Runtime:setHover(node)
@@ -290,7 +564,23 @@ function Runtime:mousemoved(x, y)
 end
 
 function Runtime:mousepressed(x, y, button)
-  local node = self:hitTest(x, y)
+  local node, activeLayer = nil, nil
+
+  if self.scene then
+    node, activeLayer = self.scene:topInteractiveHit(x, y, walkHitTest)
+  end
+
+  if activeLayer then
+    if not node then
+      if activeLayer.dismissOnBackdrop then
+        self.scene:close(activeLayer.id)
+      end
+      self:markDirty()
+      return
+    end
+  else
+    node = self:hitTest(x, y)
+  end
   self.mouseDownNode = node
   self.mouseDownPath = node and node.path or nil
   self:setHover(node)
@@ -364,6 +654,12 @@ end
 
 function Runtime:keypressed(key)
   local node = self.focusNode
+
+  if key == "escape" and self.scene and self.scene:closeTopEscapable() then
+    self.bus:dispatch("event", "keypressed", key, node)
+    self:markDirty()
+    return
+  end
 
   if node and node.type == "input" and node.props and type(node.props.onChange) == "function" then
     local value = tostring(node.props.value or "")
@@ -714,7 +1010,7 @@ function Runtime:drawNode(node, x, y)
     local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - height))
     local offset = math.min(maxScroll, math.max(0, self.scrollOffsets[node.path] or 0))
     self.scrollOffsets[node.path] = offset
-    for _, child in ipairs(node.children or {}) do
+    for _, child in ipairs(orderedChildren(node)) do
       self:drawNode(child, absX, absY - offset)
     end
     love.graphics.setScissor()
@@ -744,7 +1040,7 @@ function Runtime:drawNode(node, x, y)
       drawRect(love, "fill", trackX, thumbY, barWidth, thumbHeight, barRadius)
     end
   else
-    for _, child in ipairs(node.children or {}) do
+    for _, child in ipairs(orderedChildren(node)) do
       self:drawNode(child, absX, absY)
     end
   end

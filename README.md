@@ -31,7 +31,7 @@ end
 
 ## v0.1
 
-- Components: `text`, `box`, `row`, `column`, `button`, `input`, `scrollView`, `tabs`, `panel`.
+- Components: `text`, `box`, `stack`, `row`, `column`, `button`, `input`, `scrollView`, `tabs`, `panel`.
 - Hooks: `useState`, `useEffect`.
 - Runtime callbacks via `ui.on(name, fn, opts)`.
 - Performance helpers: `ui.memo(component, deps)` and `ui.static(node)`.
@@ -170,6 +170,58 @@ ui.column({ width = 600, padding = 12 }, {
 })
 ```
 
+For layered game UI, use `ui.stack` and absolute children. Absolute children do
+not affect parent size or row/column flow, so the parent still needs explicit
+size, flex, or normal content:
+
+```lua
+ui.stack({ width = "100%", height = "100%" }, {
+  ui.box({
+    position = "absolute",
+    inset = 0,
+    interactive = false,
+    draw = drawAnimatedBackground,
+  }),
+
+  ui.column({
+    position = "absolute",
+    top = 126,
+    left = 0,
+    right = 0,
+    align = "center",
+    gap = 10,
+  }, {
+    ui.text("Scene-backed Modals"),
+    ui.button({ label = "Open" }),
+  }),
+})
+```
+
+Supported absolute props include `x`, `y`, `top`, `right`, `bottom`, `left`,
+`inset`, `zIndex`, percent sizes, and min/max sizes. Later stack children draw
+above earlier children unless `zIndex` changes the order.
+
+## Scenes And Modals
+
+Glyph includes a native scene/layer stack. Scenes, overlays, and modals share
+the same transition pipeline and input routing:
+
+```lua
+ui.scene.set("main", MainScene, { transition = "none" })
+ui.scene.push("pause", PauseMenu, {
+  kind = "modal",
+  width = 420,
+  height = 260,
+  dismissOnBackdrop = true,
+  transition = ui.transitions.scale({ duration = 0.18 }),
+})
+```
+
+`ui.modal.open(id, component, opts)` is a convenience wrapper over
+`ui.scene.push` with `kind = "modal"`. Built-in transitions include `none`,
+`fade`, `slide`, and `scale`; custom transitions receive a context with
+`progress`, `phase`, `layer`, `bounds`, `love`, `runtime`, and `drawLayer`.
+
 Run tests with Busted:
 
 ```sh
@@ -182,6 +234,8 @@ busted
 love examples/basic
 love examples/dashboard
 love examples/hud-menu
+love examples/modal
+love examples/scene
 love examples/styles
 love examples/performance
 ```
@@ -195,3 +249,5 @@ Glyph panels, metric cards, chart drawing, filters, tabs-style buttons, and a
 documents table.
 The HUD menu example shows animated custom-drawn game buttons, hover/press
 transitions, and colorful command-panel styling.
+The modal and scene examples show the native scene/layer stack, modal wrappers,
+blocking and non-blocking overlays, and custom shader/stencil transitions.

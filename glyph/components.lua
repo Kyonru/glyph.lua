@@ -58,6 +58,12 @@ function Components.box(props, children)
   return createNode("box", props, children)
 end
 
+function Components.stack(props, children)
+  props = normalizeProps(props)
+  props.display = "stack"
+  return createNode("stack", props, children)
+end
+
 function Components.row(props, children)
   props = normalizeProps(props)
   props.display = "row"
