@@ -2,3 +2,5 @@
 lua_modules/
 *.love
 .DS_Store
+.venv/
+site/

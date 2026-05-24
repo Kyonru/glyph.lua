@@ -37,6 +37,8 @@ end
 - Performance helpers: `ui.memo(component, deps)` and `ui.static(node)`.
 - Pure-Lua layout backend with Yoga-compatible concepts and an adapter boundary for future Yoga integration.
 
+Full subsystem documentation lives in [docs/](docs/README.md).
+
 ## Styling
 
 Use Lua tables for styles. Existing visual props such as `backgroundColor`,

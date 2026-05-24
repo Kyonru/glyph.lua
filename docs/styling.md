@@ -1,0 +1,121 @@
+---
+icon: lucide/palette
+---
+
+# Styling And Themes
+
+Glyph uses Lua tables for styling, not CSS syntax.
+
+## Inline Style
+
+```lua
+ui.button({
+  label = "Run",
+  style = {
+    background = { 0.1, 0.5, 0.9, 1 },
+    color = { 1, 1, 1, 1 },
+    borderColor = { 1, 1, 1, 0.2 },
+    borderWidth = 1,
+    radius = 4,
+  },
+})
+```
+
+Supported visual fields include:
+
+- `background`
+- `color`
+- `borderColor`
+- `borderWidth`
+- `radius`
+- `lineWidth`
+- `font`
+- `fontSize`
+- `opacity`
+- `padding`
+- `shader`
+- `blendMode`
+
+Existing compatibility props such as `backgroundColor`, `borderColor`, `color`, and `radius` still work, but `style` is preferred.
+
+## State Styles
+
+State styles are nested tables:
+
+```lua
+style = {
+  background = { 0.1, 0.1, 0.12, 1 },
+  hover = { background = { 0.16, 0.16, 0.2, 1 } },
+  pressed = { background = { 0.08, 0.08, 0.1, 1 } },
+  focused = { borderColor = { 0.4, 0.7, 1, 1 } },
+  disabled = { opacity = 0.5 },
+}
+```
+
+Supported states:
+
+- `hover`
+- `pressed`
+- `focused`
+- `active`
+- `disabled`
+
+Tabs should use `active` state styling rather than ad hoc active colors.
+
+## Themes
+
+Set a theme globally:
+
+```lua
+ui.setTheme({
+  textColor = { 0.92, 0.92, 0.96, 1 },
+  components = {
+    button = {
+      background = { 0.12, 0.12, 0.16, 1 },
+      variants = {
+        primary = {
+          background = { 0.1, 0.5, 0.9, 1 },
+          color = { 1, 1, 1, 1 },
+        },
+      },
+    },
+  },
+})
+```
+
+Read the current theme:
+
+```lua
+local theme = ui.getTheme()
+```
+
+## Variants
+
+Use `variant` to select component theme variants:
+
+```lua
+ui.button({
+  label = "Save",
+  variant = "primary",
+})
+```
+
+## Style Helpers
+
+- `ui.style(table)`
+- `ui.variant(name, table)`
+- `ui.composeStyles(...)`
+
+## Transitions
+
+Style transitions are lightweight interpolation tables:
+
+```lua
+style = {
+  background = { 0.1, 0.1, 0.12, 1 },
+  hover = { background = { 0.2, 0.2, 0.26, 1 } },
+  transition = { background = 0.12, opacity = 0.08 },
+}
+```
+
+Style transitions should only mark style dirty unless animating layout fields.
