@@ -1,0 +1,4 @@
+.luarocks/
+lua_modules/
+*.love
+.DS_Store
