@@ -1,4 +1,5 @@
-local Transitions = require("glyph.transitions")
+local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local Transitions = require(prefix .. ".transitions")
 
 local Scene = {}
 Scene.__index = Scene

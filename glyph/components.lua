@@ -1,4 +1,5 @@
-local CallbackBus = require("glyph.callback_bus")
+local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local CallbackBus = require(prefix .. ".callback_bus")
 
 local Components = {}
 

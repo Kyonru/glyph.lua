@@ -19,6 +19,7 @@ build = {
   type = "builtin",
   modules = {
     glyph = "glyph.lua",
+    ["glyph.init"] = "glyph/init.lua",
     ["glyph.callback_bus"] = "glyph/callback_bus.lua",
     ["glyph.components"] = "glyph/components.lua",
     ["glyph.layout"] = "glyph/layout.lua",

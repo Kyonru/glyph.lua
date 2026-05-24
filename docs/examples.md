@@ -12,6 +12,7 @@ love examples/dashboard
 love examples/hud-menu
 love examples/modal
 love examples/scene
+love examples/showcase
 love examples/styles
 love examples/performance
 ```
@@ -35,6 +36,12 @@ Scene-backed modals, moving background, shader transitions, stencil/blob transit
 ## Scene
 
 Scene replacement, non-blocking debug overlays, blocking pause modal, modal-driven pause behavior, and scene-local motion.
+
+## Showcase
+
+A combined runnable app that keeps the standalone examples unchanged while
+mounting their shared example modules into one scene-driven app. Use it to resize
+one window and compare how the real demos adapt.
 
 ## Styles
 

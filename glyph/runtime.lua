@@ -1,9 +1,10 @@
-local CallbackBus = require("glyph.callback_bus")
-local Layout = require("glyph.layout")
-local Responsive = require("glyph.responsive")
-local Scene = require("glyph.scene")
-local Style = require("glyph.style")
-local theme = require("glyph.theme")
+local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local CallbackBus = require(prefix .. ".callback_bus")
+local Layout = require(prefix .. ".layout")
+local Responsive = require(prefix .. ".responsive")
+local Scene = require(prefix .. ".scene")
+local Style = require(prefix .. ".style")
+local theme = require(prefix .. ".theme")
 
 local runtimeCallbacks = {
   "beforeUpdate",
