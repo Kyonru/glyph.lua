@@ -106,10 +106,14 @@ local function normalize(spec)
   return normalized
 end
 
+---@param spec? string|GlyphTransition|fun(ctx: GlyphTransitionCtx)
+---@return GlyphTransition
 function Transitions.resolve(spec)
   return normalize(spec)
 end
 
+---@param spec? GlyphTransition|fun(ctx: GlyphTransitionCtx)
+---@return GlyphTransition
 function Transitions.custom(spec)
   if type(spec) == "function" then
     return {

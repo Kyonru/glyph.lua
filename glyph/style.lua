@@ -163,6 +163,8 @@ function Style.resolve(node, runtime, state)
   return resolved
 end
 
+---@param ... GlyphStyle
+---@return GlyphStyle
 function Style.compose(...)
   local result = {}
   for index = 1, select("#", ...) do
@@ -171,10 +173,15 @@ function Style.compose(...)
   return result
 end
 
+---@param style? GlyphStyle
+---@return GlyphStyle
 function Style.create(style)
   return copyValue(style or {})
 end
 
+---@param name string
+---@param style? GlyphStyle
+---@return GlyphVariant
 function Style.variant(name, style)
   return {
     name = name,

@@ -132,6 +132,10 @@ function Scene:findIndex(id)
   return nil, nil
 end
 
+---@param id string|number
+---@param component fun(): GlyphNode
+---@param opts? GlyphLayerOpts
+---@return GlyphLayer
 function Scene:set(id, component, opts)
   opts = copyOptions(opts)
   opts.kind = opts.kind or "scene"
@@ -143,6 +147,10 @@ function Scene:set(id, component, opts)
   return layer
 end
 
+---@param id string|number
+---@param component fun(): GlyphNode
+---@param opts? GlyphLayerOpts
+---@return GlyphLayer
 function Scene:push(id, component, opts)
   local existingIndex = self:findIndex(id)
   if existingIndex then
@@ -156,6 +164,8 @@ function Scene:push(id, component, opts)
   return layer
 end
 
+---@param id string|number
+---@return GlyphLayer|nil
 function Scene:close(id)
   local _, layer = self:findIndex(id)
   if layer and layer.state ~= "exiting" then
@@ -169,6 +179,8 @@ function Scene:close(id)
   return layer
 end
 
+---@param id? string|number
+---@return GlyphLayer|nil
 function Scene:pop(id)
   if id ~= nil then
     return self:close(id)
@@ -183,6 +195,7 @@ function Scene:pop(id)
   return nil
 end
 
+---@param predicate? fun(layer: GlyphLayer): boolean
 function Scene:clear(predicate)
   for _, layer in ipairs(self.layers) do
     if layer.state ~= "exiting" and (predicate == nil or predicate(layer)) then
@@ -196,6 +209,7 @@ function Scene:clear(predicate)
   self.runtime:markDirty()
 end
 
+---@return GlyphLayer|nil
 function Scene:current()
   for index = #self.layers, 1, -1 do
     if self.layers[index].state ~= "exiting" then
@@ -205,6 +219,8 @@ function Scene:current()
   return nil
 end
 
+---@param id string|number
+---@return boolean
 function Scene:isOpen(id)
   local _, layer = self:findIndex(id)
   return layer ~= nil and layer.state ~= "exiting"

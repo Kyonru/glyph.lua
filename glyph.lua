@@ -9,6 +9,19 @@ local theme = require("glyph.theme")
 
 local runtime = Runtime.new()
 
+---@class glyph
+---@field text fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field box fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field row fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field column fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field stack fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field button fun(props?: GlyphButtonProps): GlyphNode
+---@field input fun(props?: GlyphInputProps): GlyphNode
+---@field scrollView fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field panel fun(props?: GlyphPanelProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field static fun(node: GlyphNode): GlyphNode
+---@field scene GlyphSceneApi
+---@field modal GlyphModalApi
 local ui = {
   CallbackBus = CallbackBus,
   Responsive = Responsive,
@@ -22,6 +35,9 @@ for name, fn in pairs(Components) do
   ui[name] = fn
 end
 
+---@param props? GlyphTabsProps
+---@param tabs? GlyphTab[]
+---@return GlyphNode
 function ui.tabs(props, tabs)
   props = props or {}
 
@@ -47,105 +63,159 @@ function ui.tabs(props, tabs)
   return Components.tabs(nextProps, tabs)
 end
 
+---@generic T
+---@param initial T|fun(): T
+---@return T, fun(value: T|fun(prev: T): T)
 function ui.useState(initial)
   return runtime:useState(initial)
 end
 
+---@param fn fun(): (fun()|nil)
+---@param deps? any[]
 function ui.useEffect(fn, deps)
   return runtime:useEffect(fn, deps)
 end
 
+---@param component fun(): GlyphNode
+---@param deps? any[]
+---@return GlyphNode
 function ui.memo(component, deps)
   return runtime:memo(component, deps)
 end
 
+---@param nextTheme GlyphTheme
 function ui.setTheme(nextTheme)
   theme.merge(nextTheme)
   runtime.styleCache = {}
   runtime:markDirty()
 end
 
+---@return GlyphTheme
 function ui.getTheme()
   return theme
 end
 
+---@param style GlyphStyle
+---@return GlyphStyle
 function ui.style(style)
   return Style.create(style)
 end
 
+---@param name string
+---@param style? GlyphStyle
+---@return GlyphVariant
 function ui.variant(name, style)
   return Style.variant(name, style)
 end
 
+---@param ... GlyphStyle
+---@return GlyphStyle
 function ui.composeStyles(...)
   return Style.compose(...)
 end
 
+---@param loveModule table
 function ui.setLove(loveModule)
   runtime:setLove(loveModule)
 end
 
+---@param opts GlyphWindowOpts
 function ui.configureWindow(opts)
   return Responsive.configureWindow(runtime, opts)
 end
 
+---@param width number
+---@param height number
 function ui.resize(width, height)
   Responsive.resize(runtime.responsive, width, height)
   runtime:markDirty()
 end
 
+---@return GlyphViewport
 function ui.viewport()
   return Responsive.viewport(runtime.responsive)
 end
 
+---@return string
 function ui.breakpoint()
   return Responsive.breakpoint(runtime.responsive)
 end
 
+---@param name string
+---@return boolean
 function ui.atLeast(name)
   return Responsive.atLeast(runtime.responsive, name)
 end
 
+---@param name string
+---@return boolean
 function ui.below(name)
   return Responsive.below(runtime.responsive, name)
 end
 
+---@param values table
+---@return any
 function ui.responsive(values)
   return Responsive.pick(runtime.responsive, values)
 end
 
+---@param containerWidth number
+---@param opts? table
+---@return any
 function ui.columns(containerWidth, opts)
   return Responsive.columns(containerWidth, opts)
 end
 
+---@param value number
+---@param minValue number
+---@param maxValue number
+---@return number
 function ui.clamp(value, minValue, maxValue)
   return Responsive.clamp(value, minValue, maxValue)
 end
 
+---@param node? GlyphNode
+---@return boolean
 function ui.isHovered(node)
   return node ~= nil and (runtime.hoverNode == node or runtime.hoverPath == node.path)
 end
 
+---@param node? GlyphNode
+---@return boolean
 function ui.isPressed(node)
   return node ~= nil and (runtime.mouseDownNode == node or runtime.mouseDownPath == node.path)
 end
 
+---@param node? GlyphNode
+---@return boolean
 function ui.isFocused(node)
   return node ~= nil and (runtime.focusNode == node or runtime.focusPath == node.path)
 end
 
+---@param node? GlyphNode
+---@return boolean
 function ui.isActive(node)
   return node ~= nil and node.props and node.props.active == true
 end
 
+---@param node? GlyphNode
+---@return boolean
 function ui.isHot(node)
   return ui.isHovered(node) or ui.isPressed(node) or ui.isFocused(node) or ui.isActive(node)
 end
 
+---@param a number
+---@param b number
+---@param t number
+---@return number
 function ui.mix(a, b, t)
   return a + (b - a) * t
 end
 
+---@param a GlyphColor
+---@param b GlyphColor
+---@param t number
+---@return GlyphColor
 function ui.mixColor(a, b, t)
   return {
     ui.mix(a[1] or 0, b[1] or 0, t),
@@ -155,12 +225,16 @@ function ui.mixColor(a, b, t)
   }
 end
 
+---@param loveModule table
+---@param color GlyphColor
+---@param alpha? number
 function ui.setColor(loveModule, color, alpha)
   if loveModule and loveModule.graphics and color then
     loveModule.graphics.setColor(color[1] or 1, color[2] or 1, color[3] or 1, (color[4] or 1) * (alpha or 1))
   end
 end
 
+---@return number
 function ui.time()
   local loveModule = runtime.love or _G.love
   if loveModule and loveModule.timer and loveModule.timer.getTime then
@@ -170,10 +244,19 @@ function ui.time()
   return runtime.styleClock
 end
 
+---@param speed? number
+---@param phase? number
+---@return number
 function ui.pulse(speed, phase)
   return (math.sin(ui.time() * (speed or 1) + (phase or 0)) + 1) / 2
 end
 
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@param opts? table skew and inset numbers
+---@return number[]
 function ui.polygonBox(x, y, width, height, opts)
   opts = opts or {}
   local skew = opts.skew or 0
@@ -191,46 +274,70 @@ function ui.polygonBox(x, y, width, height, opts)
   }
 end
 
+---@param props? GlyphButtonProps
+---@return GlyphNode
 function ui.customButton(props)
   return Components.button(props)
 end
 
+---@param name string
+---@param fn fun(...): any
+---@param opts? table
+---@return fun() unregister
 function ui.on(name, fn, opts)
   return runtime:register(name, fn, opts)
 end
 
+---@param name string
+---@param ... any
 function ui.dispatch(name, ...)
   return runtime:dispatch(name, ...)
 end
 
+---@param dt number
 function ui.update(dt)
   return runtime:update(dt)
 end
 
+---@param component fun(): GlyphNode
 function ui.render(component)
   return runtime:render(component)
 end
 
+---@param x number
+---@param y number
+---@param dx number
+---@param dy number
 function ui.mousemoved(x, y, dx, dy)
   return runtime:mousemoved(x, y, dx, dy)
 end
 
+---@param x number
+---@param y number
+---@param button number
 function ui.mousepressed(x, y, button)
   return runtime:mousepressed(x, y, button)
 end
 
+---@param x number
+---@param y number
+---@param button number
 function ui.mousereleased(x, y, button)
   return runtime:mousereleased(x, y, button)
 end
 
+---@param dx number
+---@param dy number
 function ui.wheelmoved(dx, dy)
   return runtime:wheelmoved(dx, dy)
 end
 
+---@param text string
 function ui.textinput(text)
   return runtime:textinput(text)
 end
 
+---@param key string
 function ui.keypressed(key)
   return runtime:keypressed(key)
 end
@@ -308,6 +415,9 @@ local function chainCallback(previous, nextCallback, order)
   end
 end
 
+---@param loveModule? table
+---@param opts? GlyphLoadOpts
+---@return fun() uninstall
 function ui.install(loveModule, opts)
   opts = opts or {}
   loveModule = loveModule or _G.love
@@ -399,6 +509,8 @@ ui.modal = {
   transitions = Transitions,
 }
 
+---@param opts? GlyphLoadOpts
+---@return fun() uninstall
 function ui.load(opts)
   opts = opts or {}
   local loveModule = opts.love or _G.love

@@ -10,6 +10,8 @@ This repository is `glyph.lua`: a declarative UI runtime for Love2D 11.x, shaped
 - Layout engine: `glyph/layout.lua`
 - Styling: `glyph/style.lua`, `glyph/theme.lua`
 - Scene/modal layers: `glyph/scene.lua`, `glyph/modal.lua`, `glyph/transitions.lua`
+- Type definitions: `glyph/types.lua` (LuaLS annotations, no runtime effect)
+- LuaLS config: `.luarc.json`
 - Examples: `examples/*/main.lua`
 - Tests: `spec/*_spec.lua`
 - Public docs: `docs/*.md`
@@ -26,6 +28,8 @@ Syntax-check Lua files with:
 ```sh
 luac -p glyph.lua glyph/*.lua examples/*/main.lua spec/*_spec.lua
 ```
+
+This project uses [LuaLS annotations](https://luals.github.io/wiki/annotations/) for IDE type support. When adding or changing public API, annotate with `---@param`, `---@return`, `---@class`, etc. Shared types live in `glyph/types.lua`.
 
 Run an example:
 

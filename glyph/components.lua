@@ -48,52 +48,77 @@ local function createNode(kind, props, children)
   return node
 end
 
+---@param value string
+---@param props? GlyphTextProps
+---@return GlyphNode
 function Components.text(value, props)
   local node = createNode("text", props, nil)
   node.value = value
   return node
 end
 
+---@param props? GlyphProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
 function Components.box(props, children)
   return createNode("box", props, children)
 end
 
+---@param props? GlyphProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
 function Components.stack(props, children)
   props = normalizeProps(props)
   props.display = "stack"
   return createNode("stack", props, children)
 end
 
+---@param props? GlyphProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
 function Components.row(props, children)
   props = normalizeProps(props)
   props.display = "row"
   return createNode("row", props, children)
 end
 
+---@param props? GlyphProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
 function Components.column(props, children)
   props = normalizeProps(props)
   props.display = "column"
   return createNode("column", props, children)
 end
 
+---@param props? GlyphButtonProps
+---@return GlyphNode
 function Components.button(props)
   props = normalizeProps(props)
   props.focusable = props.focusable ~= false
   return createNode("button", props, nil)
 end
 
+---@param props? GlyphInputProps
+---@return GlyphNode
 function Components.input(props)
   props = normalizeProps(props)
   props.focusable = props.focusable ~= false
   return createNode("input", props, nil)
 end
 
+---@param props? GlyphProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
 function Components.scrollView(props, children)
   props = normalizeProps(props)
   props.display = props.display or "column"
   return createNode("scrollView", props, children)
 end
 
+---@param props? GlyphTabsProps
+---@param tabs? GlyphTab[]
+---@return GlyphNode
 function Components.tabs(props, tabs)
   props = normalizeProps(props)
   local active = props.active or 1
@@ -124,6 +149,9 @@ function Components.tabs(props, tabs)
   })
 end
 
+---@param props? GlyphPanelProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
 function Components.panel(props, children)
   props = normalizeProps(props)
   local panelChildren = {}
@@ -150,6 +178,8 @@ function Components.panel(props, children)
   }, panelChildren)
 end
 
+---@param node GlyphNode
+---@return GlyphNode
 function Components.static(node)
   node.static = true
   node.dirty = node.dirty or {}
