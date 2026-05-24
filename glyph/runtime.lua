@@ -456,6 +456,91 @@ local function mergeScrollbarStyle(theme, style, props)
   return result
 end
 
+local function polygonBox(x, y, width, height, opts)
+  opts = opts or {}
+  local skew = opts.skew or 0
+  local inset = opts.inset or 0
+
+  return {
+    x + inset,
+    y + inset,
+    x + width - skew - inset,
+    y + inset,
+    x + width - inset,
+    y + height - inset,
+    x + skew + inset,
+    y + height - inset,
+  }
+end
+
+local function createDrawContext(runtime, node, x, y, width, height, love, style)
+  local props = node.props or {}
+  local graphics = love and love.graphics
+  local ctx = {
+    node = node,
+    props = props,
+    x = x,
+    y = y,
+    width = width,
+    height = height,
+    love = love,
+    graphics = graphics,
+    style = style,
+    runtime = runtime,
+    hovered = runtime.hoverNode == node or runtime.hoverPath == node.path,
+    pressed = runtime.mouseDownNode == node or runtime.mouseDownPath == node.path,
+    focused = runtime.focusNode == node or runtime.focusPath == node.path,
+    active = props.active == true,
+    time = love and love.timer and love.timer.getTime and love.timer.getTime() or runtime.styleClock,
+  }
+
+  ctx.hot = ctx.hovered or ctx.pressed or ctx.focused or ctx.active
+
+  function ctx:pulse(speed, phase)
+    return (math.sin(self.time * (speed or 1) + (phase or 0)) + 1) / 2
+  end
+
+  function ctx:color(value, alpha)
+    color(love, withOpacity(value, alpha))
+  end
+
+  function ctx:rect(mode, rx, ry, rw, rh, radius)
+    drawRect(love, mode, rx, ry, rw, rh, radius)
+  end
+
+  function ctx:line(...)
+    if graphics and graphics.line then
+      graphics.line(...)
+    end
+  end
+
+  function ctx:polygon(mode, points)
+    if graphics and graphics.polygon then
+      graphics.polygon(mode, (table.unpack or unpack)(points))
+    end
+  end
+
+  function ctx:text(value, tx, ty)
+    if graphics and graphics.print then
+      graphics.print(tostring(value), tx, ty)
+    end
+  end
+
+  function ctx:printf(value, tx, ty, limit, align)
+    if graphics and graphics.printf then
+      graphics.printf(tostring(value), tx, ty, limit, align or "left")
+    elseif graphics and graphics.print then
+      graphics.print(tostring(value), tx, ty)
+    end
+  end
+
+  function ctx:skewBox(opts)
+    return polygonBox(self.x, self.y, self.width, self.height, opts)
+  end
+
+  return ctx
+end
+
 function Runtime:animatedStyle(node, resolved)
   local transition = resolved.transition
   if type(transition) ~= "table" or not node.path then
@@ -556,8 +641,11 @@ function Runtime:drawNode(node, x, y)
   local radius = style.radius or self.theme.radius
   local opacity = style.opacity or 1
 
+  local ctx = nil
+
   if type(props.draw) == "function" then
-    props.draw(node, absX, absY, width, height, love, style)
+    ctx = createDrawContext(self, node, absX, absY, width, height, love, style)
+    props.draw(node, absX, absY, width, height, love, style, ctx)
   elseif node.type == "text" then
     color(love, withOpacity(style.color or self.theme.textColor, opacity))
     local text = tostring(node.value or "")

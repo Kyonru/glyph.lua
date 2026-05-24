@@ -119,6 +119,79 @@ function ui.clamp(value, minValue, maxValue)
   return Responsive.clamp(value, minValue, maxValue)
 end
 
+function ui.isHovered(node)
+  return node ~= nil and (runtime.hoverNode == node or runtime.hoverPath == node.path)
+end
+
+function ui.isPressed(node)
+  return node ~= nil and (runtime.mouseDownNode == node or runtime.mouseDownPath == node.path)
+end
+
+function ui.isFocused(node)
+  return node ~= nil and (runtime.focusNode == node or runtime.focusPath == node.path)
+end
+
+function ui.isActive(node)
+  return node ~= nil and node.props and node.props.active == true
+end
+
+function ui.isHot(node)
+  return ui.isHovered(node) or ui.isPressed(node) or ui.isFocused(node) or ui.isActive(node)
+end
+
+function ui.mix(a, b, t)
+  return a + (b - a) * t
+end
+
+function ui.mixColor(a, b, t)
+  return {
+    ui.mix(a[1] or 0, b[1] or 0, t),
+    ui.mix(a[2] or 0, b[2] or 0, t),
+    ui.mix(a[3] or 0, b[3] or 0, t),
+    ui.mix(a[4] or 1, b[4] or 1, t),
+  }
+end
+
+function ui.setColor(loveModule, color, alpha)
+  if loveModule and loveModule.graphics and color then
+    loveModule.graphics.setColor(color[1] or 1, color[2] or 1, color[3] or 1, (color[4] or 1) * (alpha or 1))
+  end
+end
+
+function ui.time()
+  local loveModule = runtime.love or _G.love
+  if loveModule and loveModule.timer and loveModule.timer.getTime then
+    return loveModule.timer.getTime()
+  end
+
+  return runtime.styleClock
+end
+
+function ui.pulse(speed, phase)
+  return (math.sin(ui.time() * (speed or 1) + (phase or 0)) + 1) / 2
+end
+
+function ui.polygonBox(x, y, width, height, opts)
+  opts = opts or {}
+  local skew = opts.skew or 0
+  local inset = opts.inset or 0
+
+  return {
+    x + inset,
+    y + inset,
+    x + width - skew - inset,
+    y + inset,
+    x + width - inset,
+    y + height - inset,
+    x + skew + inset,
+    y + height - inset,
+  }
+end
+
+function ui.customButton(props)
+  return Components.button(props)
+end
+
 function ui.on(name, fn, opts)
   return runtime:register(name, fn, opts)
 end
@@ -157,6 +230,152 @@ end
 
 function ui.keypressed(key)
   return runtime:keypressed(key)
+end
+
+local autoCallbacks = {
+  resize = function(width, height)
+    ui.resize(width, height)
+  end,
+  mousemoved = function(x, y, dx, dy, istouch)
+    ui.mousemoved(x, y, dx, dy, istouch)
+  end,
+  mousepressed = function(x, y, button, istouch, presses)
+    ui.mousepressed(x, y, button, istouch, presses)
+  end,
+  mousereleased = function(x, y, button, istouch, presses)
+    ui.mousereleased(x, y, button, istouch, presses)
+  end,
+  wheelmoved = function(dx, dy)
+    ui.wheelmoved(dx, dy)
+  end,
+  textinput = function(text)
+    ui.textinput(text)
+  end,
+  keypressed = function(key, scancode, isrepeat)
+    ui.keypressed(key, scancode, isrepeat)
+  end,
+  keyreleased = function(key, scancode)
+    ui.dispatch("event", "keyreleased", key, scancode)
+  end,
+  mousefocus = function(focused)
+    ui.dispatch("event", "mousefocus", focused)
+  end,
+  focus = function(focused)
+    ui.dispatch("event", "focus", focused)
+  end,
+  visible = function(visible)
+    ui.dispatch("event", "visible", visible)
+  end,
+  quit = function()
+    ui.dispatch("event", "quit")
+  end,
+  touchpressed = function(id, x, y, dx, dy, pressure)
+    ui.dispatch("event", "touchpressed", id, x, y, dx, dy, pressure)
+    ui.mousepressed(x, y, 1)
+  end,
+  touchmoved = function(id, x, y, dx, dy, pressure)
+    ui.dispatch("event", "touchmoved", id, x, y, dx, dy, pressure)
+    ui.mousemoved(x, y, dx, dy)
+  end,
+  touchreleased = function(id, x, y, dx, dy, pressure)
+    ui.dispatch("event", "touchreleased", id, x, y, dx, dy, pressure)
+    ui.mousereleased(x, y, 1)
+  end,
+}
+
+local function chainCallback(previous, nextCallback, order)
+  if order == "before" then
+    return function(...)
+      nextCallback(...)
+      if previous then
+        return previous(...)
+      end
+    end
+  end
+
+  return function(...)
+    local results
+    if previous then
+      results = { previous(...) }
+    end
+    nextCallback(...)
+    if results then
+      return (table.unpack or unpack)(results)
+    end
+  end
+end
+
+function ui.install(loveModule, opts)
+  opts = opts or {}
+  loveModule = loveModule or _G.love
+
+  if not loveModule then
+    error("[glyph] love module is required to install callbacks", 2)
+  end
+
+  ui.setLove(loveModule)
+
+  local order = opts.order or "after"
+  local callbacks = opts.callbacks or autoCallbacks
+  local previousCallbacks = {}
+  local installedNames = {}
+
+  for name, callback in pairs(callbacks) do
+    local enabled = opts[name]
+    if enabled ~= false then
+      previousCallbacks[name] = loveModule[name]
+      installedNames[#installedNames + 1] = name
+      loveModule[name] = chainCallback(loveModule[name], callback, order)
+    end
+  end
+
+  if opts.app then
+    previousCallbacks.update = loveModule.update
+    previousCallbacks.draw = loveModule.draw
+    installedNames[#installedNames + 1] = "update"
+    installedNames[#installedNames + 1] = "draw"
+    loveModule.update = chainCallback(loveModule.update, function(dt)
+      ui.update(dt)
+    end, order)
+
+    loveModule.draw = chainCallback(loveModule.draw, function()
+      ui.render(opts.app)
+    end, order)
+  end
+
+  runtime.installedLove = loveModule
+  return function()
+    for _, name in ipairs(installedNames) do
+      loveModule[name] = previousCallbacks[name]
+    end
+  end
+end
+
+ui.attachLove = ui.install
+
+function ui.load(opts)
+  opts = opts or {}
+  local loveModule = opts.love or _G.love
+
+  if opts.theme then
+    ui.setTheme(opts.theme)
+  end
+
+  if opts.window then
+    ui.setLove(loveModule)
+    ui.configureWindow(opts.window)
+  elseif loveModule then
+    ui.setLove(loveModule)
+  end
+
+  local installOptions = opts.install or {}
+  for key, value in pairs(opts) do
+    if key ~= "window" and key ~= "theme" and key ~= "love" and key ~= "install" then
+      installOptions[key] = value
+    end
+  end
+
+  return ui.install(loveModule, installOptions)
 end
 
 return ui

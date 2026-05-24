@@ -118,6 +118,42 @@ function App()
 end
 ```
 
+Glyph can also install common Love2D callbacks for you:
+
+```lua
+function love.load()
+  ui.load({
+    window = { width = 928, height = 720, resizable = true },
+    app = App,
+  })
+end
+```
+
+`ui.load` configures the window and installs common Love2D callbacks using the
+global `love` module by default. The lower-level `ui.install` API is still
+available when you only want callback wiring.
+
+## Game UI Helpers
+
+Custom draw callbacks receive a draw context as the final argument:
+
+```lua
+ui.customButton({
+  width = 240,
+  height = 64,
+  draw = function(node, x, y, width, height, love, style, ctx)
+    ctx:color(style.background)
+    ctx:polygon("fill", ctx:skewBox({ skew = 16 }))
+    ctx:color(ctx.hot and ui.theme.accentColor or style.color)
+    ctx:text("COMMAND", x + 18, y + 22)
+  end,
+})
+```
+
+Useful helpers include `ui.isHovered`, `ui.isPressed`, `ui.isFocused`,
+`ui.isActive`, `ui.isHot`, `ui.mix`, `ui.mixColor`, `ui.setColor`,
+`ui.time`, `ui.pulse`, `ui.polygonBox`, and `ui.customButton`.
+
 Children can take remaining space with `flex = 1`, similar to Tailwind's
 `flex-1`. `grow` still expands from the measured or explicit size, while
 `flex = 1` uses a zero basis unless a width or height is provided. Containers
@@ -145,6 +181,7 @@ busted
 ```sh
 love examples/basic
 love examples/dashboard
+love examples/hud-menu
 love examples/styles
 love examples/performance
 ```
@@ -156,3 +193,5 @@ transitions, custom draw, and shader-backed styling.
 The dashboard example is inspired by shadcn/ui `dashboard-01`, translated into
 Glyph panels, metric cards, chart drawing, filters, tabs-style buttons, and a
 documents table.
+The HUD menu example shows animated custom-drawn game buttons, hover/press
+transitions, and colorful command-panel styling.
