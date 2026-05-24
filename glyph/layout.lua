@@ -79,6 +79,106 @@ local function crossProp(axis)
   return "width"
 end
 
+local function charWidth(context, props, theme)
+  if context.measureText then
+    local width = context.measureText("M", props, theme)
+    return width > 0 and width or 7
+  end
+
+  return 7
+end
+
+local function wrapText(text, maxWidth, context, props, theme)
+  local measuredLineHeight = nil
+  if context.measureText then
+    local _, height = context.measureText("M", props, theme)
+    measuredLineHeight = height
+  end
+  local lineHeight = props.lineHeight or measuredLineHeight or theme.lineHeight
+  local widthLimit = math.max(1, maxWidth or 1)
+  local lines = {}
+
+  local function textWidth(value)
+    if context.measureText then
+      local width = context.measureText(value, props, theme)
+      return width
+    end
+
+    return #value * charWidth(context, props, theme)
+  end
+
+  local function pushHardWrapped(value)
+    if value == "" then
+      lines[#lines + 1] = ""
+      return
+    end
+
+    local current = ""
+    for index = 1, #value do
+      local nextValue = current .. value:sub(index, index)
+      if current ~= "" and textWidth(nextValue) > widthLimit then
+        lines[#lines + 1] = current
+        current = value:sub(index, index)
+      else
+        current = nextValue
+      end
+    end
+
+    if current ~= "" then
+      lines[#lines + 1] = current
+    end
+  end
+
+  local paragraphs = {}
+  local source = tostring(text)
+  local startIndex = 1
+  while true do
+    local newline = source:find("\n", startIndex, true)
+    if not newline then
+      paragraphs[#paragraphs + 1] = source:sub(startIndex)
+      break
+    end
+
+    paragraphs[#paragraphs + 1] = source:sub(startIndex, newline - 1)
+    startIndex = newline + 1
+  end
+
+  for _, paragraph in ipairs(paragraphs) do
+    if paragraph == "" then
+      lines[#lines + 1] = ""
+    else
+      local current = ""
+      for word in paragraph:gmatch("%S+") do
+        local candidate = current == "" and word or current .. " " .. word
+        if textWidth(candidate) <= widthLimit then
+          current = candidate
+        else
+          if current ~= "" then
+            lines[#lines + 1] = current
+          end
+
+          if textWidth(word) > widthLimit then
+            pushHardWrapped(word)
+            current = ""
+          else
+            current = word
+          end
+        end
+      end
+
+      if current ~= "" then
+        lines[#lines + 1] = current
+      end
+    end
+  end
+
+  if #lines == 0 then
+    lines[1] = ""
+  end
+
+  return lines, widthLimit, #lines * lineHeight
+end
+
 function Layout.measureNode(node, context)
   local props = node.props or {}
   local theme = context.theme
@@ -91,6 +191,19 @@ function Layout.measureNode(node, context)
 
   if node.type == "text" then
     local text = tostring(node.value or "")
+    if props.wrap or props.width then
+      local widthLimit = props.wrapWidth or props.width or props.maxWidth
+      if widthLimit then
+        local lines, wrappedWidth, wrappedHeight = wrapText(text, widthLimit, context, props, theme)
+        node.wrappedText = {
+          lines = lines,
+          width = wrappedWidth,
+          height = wrappedHeight,
+        }
+        return wrappedWidth, wrappedHeight
+      end
+    end
+
     if context.measureText then
       return context.measureText(text, props, theme)
     end
@@ -154,7 +267,14 @@ function Layout.compute(root, context)
     local growTotal = 0
 
     for index, child in ipairs(children) do
-      visit(child, availableWidth, availableHeight)
+      local childAvailableWidth = innerCrossLimit
+      local childAvailableHeight = innerMainLimit
+      if direction == "row" then
+        childAvailableWidth = innerMainLimit
+        childAvailableHeight = innerCrossLimit
+      end
+
+      visit(child, childAvailableWidth, childAvailableHeight)
       totalMain = totalMain + intrinsic(child, direction)
       maxCross = math.max(maxCross, cross(child, direction))
       growTotal = growTotal + (child.props and child.props.grow or 0)

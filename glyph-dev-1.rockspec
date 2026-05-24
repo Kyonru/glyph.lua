@@ -22,7 +22,9 @@ build = {
     ["glyph.callback_bus"] = "glyph/callback_bus.lua",
     ["glyph.components"] = "glyph/components.lua",
     ["glyph.layout"] = "glyph/layout.lua",
+    ["glyph.responsive"] = "glyph/responsive.lua",
     ["glyph.runtime"] = "glyph/runtime.lua",
+    ["glyph.style"] = "glyph/style.lua",
     ["glyph.theme"] = "glyph/theme.lua",
   },
 }

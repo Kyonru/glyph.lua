@@ -102,6 +102,10 @@ function Components.tabs(props, tabs)
         end
       end,
       backgroundColor = index == active and props.activeColor or nil,
+      active = index == active,
+      variant = props.tabVariant,
+      style = props.tabStyle,
+      styleType = "tab",
     })
   end
 

@@ -1,5 +1,7 @@
 local CallbackBus = require("glyph.callback_bus")
 local Layout = require("glyph.layout")
+local Responsive = require("glyph.responsive")
+local Style = require("glyph.style")
 local theme = require("glyph.theme")
 
 local runtimeCallbacks = {
@@ -99,6 +101,12 @@ function Runtime.new()
     inputCursors = {},
     focusPath = nil,
     memoCache = setmetatable({}, { __mode = "k" }),
+    styleCache = {},
+    previousStyles = {},
+    animatedStyles = {},
+    styleClock = 0,
+    lastDt = 0,
+    responsive = Responsive.new(),
     love = nil,
   }, Runtime)
 end
@@ -212,6 +220,8 @@ function Runtime:layoutRoot(root)
 end
 
 function Runtime:update(dt)
+  self.lastDt = dt or 0
+  self.styleClock = self.styleClock + (dt or 0)
   self.bus:dispatch("beforeUpdate", dt)
   self.bus:dispatch("afterUpdate", dt)
 end
@@ -396,6 +406,115 @@ local function drawRect(love, mode, x, y, width, height, radius)
   end
 end
 
+local function withOpacity(value, opacity)
+  if not Style.isColor(value) then
+    return value
+  end
+
+  return {
+    value[1],
+    value[2],
+    value[3],
+    (value[4] or 1) * (opacity or 1),
+  }
+end
+
+local function lerp(a, b, t)
+  return a + (b - a) * t
+end
+
+local function lerpColor(a, b, t)
+  return {
+    lerp(a[1] or 1, b[1] or 1, t),
+    lerp(a[2] or 1, b[2] or 1, t),
+    lerp(a[3] or 1, b[3] or 1, t),
+    lerp(a[4] or 1, b[4] or 1, t),
+  }
+end
+
+function Runtime:animatedStyle(node, resolved)
+  local transition = resolved.transition
+  if type(transition) ~= "table" or not node.path then
+    self.previousStyles[node.path] = Style.copyValue(resolved)
+    return resolved
+  end
+
+  local previous = self.previousStyles[node.path]
+  local animated = Style.copyValue(resolved)
+
+  if previous then
+    for field, duration in pairs(transition) do
+      if type(duration) == "number" and duration > 0 then
+        local from = previous[field]
+        local to = resolved[field]
+
+        if type(from) == "number" and type(to) == "number" then
+          local t = math.min(1, (self.lastDt > 0 and self.lastDt or 1 / 60) / duration)
+          animated[field] = lerp(from, to, t)
+        elseif Style.isColor(from) and Style.isColor(to) then
+          local t = math.min(1, (self.lastDt > 0 and self.lastDt or 1 / 60) / duration)
+          animated[field] = lerpColor(from, to, t)
+        end
+      end
+    end
+  end
+
+  self.previousStyles[node.path] = Style.copyValue(animated)
+  return animated
+end
+
+local function applyDrawState(love, style, node, runtime)
+  local graphics = love and love.graphics
+  if not graphics then
+    return function() end
+  end
+
+  local previous = {}
+
+  if graphics.getLineWidth and graphics.setLineWidth then
+    previous.lineWidth = graphics.getLineWidth()
+    local lineWidth = style.lineWidth or (style.borderWidth and style.borderWidth > 0 and style.borderWidth) or previous.lineWidth
+    graphics.setLineWidth(lineWidth)
+  end
+
+  if graphics.getShader and graphics.setShader then
+    previous.hasShader = true
+    previous.shader = graphics.getShader()
+    local shader = style.shader
+    if type(shader) == "function" then
+      shader = shader(node, runtime)
+    end
+    if shader ~= nil then
+      graphics.setShader(shader)
+    end
+  end
+
+  if graphics.getBlendMode and graphics.setBlendMode and style.blendMode then
+    previous.blendMode, previous.alphaMode = graphics.getBlendMode()
+    graphics.setBlendMode(style.blendMode)
+  end
+
+  if graphics.getFont and graphics.setFont and style.font then
+    previous.font = graphics.getFont()
+    graphics.setFont(style.font)
+  end
+
+  return function()
+    if previous.font then
+      graphics.setFont(previous.font)
+    end
+    if previous.blendMode then
+      graphics.setBlendMode(previous.blendMode, previous.alphaMode)
+    end
+    if previous.hasShader then
+      graphics.setShader(previous.shader)
+    end
+    if previous.lineWidth then
+      graphics.setLineWidth(previous.lineWidth)
+    end
+  end
+end
+
 function Runtime:drawNode(node, x, y)
   local love = self.love or _G.love
   if not love or not love.graphics then
@@ -408,54 +527,74 @@ function Runtime:drawNode(node, x, y)
   local absY = y + (layout.y or 0)
   local width = layout.width or 0
   local height = layout.height or 0
-  local radius = props.radius or self.theme.radius
+  local style = self:animatedStyle(node, Style.resolve(node, self))
+  local restore = applyDrawState(love, style, node, self)
+  local radius = style.radius or self.theme.radius
+  local opacity = style.opacity or 1
 
   if type(props.draw) == "function" then
-    props.draw(node, absX, absY, width, height, love)
+    props.draw(node, absX, absY, width, height, love, style)
   elseif node.type == "text" then
-    color(love, props.color or self.theme.textColor)
-    love.graphics.print(tostring(node.value or ""), absX, absY)
-  elseif node.type == "button" then
-    local background = props.backgroundColor or self.theme.surfaceColor
-    if props.disabled then
-      background = self.theme.disabledColor
-    elseif self.mouseDownNode == node or self.mouseDownPath == node.path then
-      background = self.theme.surfacePressedColor
-    elseif self.hoverNode == node or self.hoverPath == node.path then
-      background = self.theme.surfaceHoverColor
+    color(love, withOpacity(style.color or self.theme.textColor, opacity))
+    local text = tostring(node.value or "")
+    if props.wrap or node.wrappedText then
+      local limit = (node.wrappedText and node.wrappedText.width) or props.wrapWidth or props.width or width
+      local align = props.textAlign or "left"
+      if love.graphics.printf then
+        love.graphics.printf(text, absX, absY, limit, align)
+      else
+        local lineHeight = props.lineHeight or self.theme.lineHeight
+        local lines = node.wrappedText and node.wrappedText.lines or { text }
+        for index, line in ipairs(lines) do
+          love.graphics.print(line, absX, absY + (index - 1) * lineHeight)
+        end
+      end
+    else
+      love.graphics.print(text, absX, absY)
     end
-    color(love, background)
-    drawRect(love, "fill", absX, absY, width, height, radius)
-    color(love, props.borderColor or self.theme.borderColor)
-    drawRect(love, "line", absX, absY, width, height, radius)
-    color(love, props.color or self.theme.textColor)
+  elseif node.type == "button" then
+    if style.background then
+      color(love, withOpacity(style.background, opacity))
+      drawRect(love, "fill", absX, absY, width, height, radius)
+    end
+    if style.borderColor and (style.borderWidth or 0) > 0 then
+      color(love, withOpacity(style.borderColor, opacity))
+      drawRect(love, "line", absX, absY, width, height, radius)
+    end
+    color(love, withOpacity(style.color or self.theme.textColor, opacity))
     love.graphics.print(tostring(props.label or ""), absX + 10, absY + 5)
   elseif node.type == "input" then
-    color(love, props.backgroundColor or self.theme.inputColor)
-    drawRect(love, "fill", absX, absY, width, height, radius)
-    color(love, self.focusNode == node and self.theme.accentColor or self.theme.borderColor)
-    drawRect(love, "line", absX, absY, width, height, radius)
+    if style.background then
+      color(love, withOpacity(style.background, opacity))
+      drawRect(love, "fill", absX, absY, width, height, radius)
+    end
+    if style.borderColor and (style.borderWidth or 0) > 0 then
+      color(love, withOpacity(style.borderColor, opacity))
+      drawRect(love, "line", absX, absY, width, height, radius)
+    end
     local value = tostring(props.value or "")
-    color(love, value == "" and self.theme.mutedTextColor or self.theme.textColor)
+    color(love, withOpacity(value == "" and (style.placeholderColor or self.theme.mutedTextColor) or (style.color or self.theme.textColor), opacity))
     love.graphics.print(value ~= "" and value or tostring(props.placeholder or ""), absX + 8, absY + 6)
     if self.focusNode == node then
       local cursor = self.inputCursors[self:cursorKey(node)] or #value
       local prefix = value:sub(1, cursor)
       local font = love.graphics.getFont and love.graphics.getFont()
       local cursorX = absX + 8 + (font and font:getWidth(prefix) or #prefix * 7)
-      color(love, self.theme.accentColor)
+      color(love, withOpacity(style.cursorColor or self.theme.accentColor, opacity))
       love.graphics.rectangle("fill", cursorX, absY + 6, self.theme.inputCursorWidth, math.max(12, height - 12))
     end
   else
-    if props.backgroundColor then
-      color(love, props.backgroundColor)
+    if style.background then
+      color(love, withOpacity(style.background, opacity))
       drawRect(love, "fill", absX, absY, width, height, radius)
     end
-    if props.borderColor then
-      color(love, props.borderColor)
+    if style.borderColor and (style.borderWidth or 0) > 0 then
+      color(love, withOpacity(style.borderColor, opacity))
       drawRect(love, "line", absX, absY, width, height, radius)
     end
   end
+
+  restore()
 
   if node.type == "scrollView" and love.graphics.push then
     love.graphics.push()

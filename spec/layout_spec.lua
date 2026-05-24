@@ -67,4 +67,30 @@ describe("layout", function()
     assert.are.equal(34, tree.layout.width)
     assert.are.equal(47, tree.layout.height)
   end)
+
+  it("wraps text to a fixed width", function()
+    local tree = ui.text("alpha beta gamma", {
+      width = 100,
+      wrap = true,
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(100, tree.layout.width)
+    assert.are.equal(40, tree.layout.height)
+    assert.are.same({ "alpha beta", "gamma" }, tree.wrappedText.lines)
+  end)
+
+  it("hard-wraps words that are wider than the fixed width", function()
+    local tree = ui.text("abcdefghij", {
+      width = 30,
+      wrap = true,
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(30, tree.layout.width)
+    assert.are.equal(80, tree.layout.height)
+    assert.are.same({ "abc", "def", "ghi", "j" }, tree.wrappedText.lines)
+  end)
 end)

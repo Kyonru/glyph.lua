@@ -1,12 +1,16 @@
 local Components = require("glyph.components")
 local CallbackBus = require("glyph.callback_bus")
+local Responsive = require("glyph.responsive")
 local Runtime = require("glyph.runtime")
+local Style = require("glyph.style")
 local theme = require("glyph.theme")
 
 local runtime = Runtime.new()
 
 local ui = {
   CallbackBus = CallbackBus,
+  Responsive = Responsive,
+  Style = Style,
   runtime = runtime,
   theme = theme,
 }
@@ -54,10 +58,65 @@ end
 
 function ui.setTheme(nextTheme)
   theme.merge(nextTheme)
+  runtime.styleCache = {}
+  runtime:markDirty()
+end
+
+function ui.getTheme()
+  return theme
+end
+
+function ui.style(style)
+  return Style.create(style)
+end
+
+function ui.variant(name, style)
+  return Style.variant(name, style)
+end
+
+function ui.composeStyles(...)
+  return Style.compose(...)
 end
 
 function ui.setLove(loveModule)
   runtime:setLove(loveModule)
+end
+
+function ui.configureWindow(opts)
+  return Responsive.configureWindow(runtime, opts)
+end
+
+function ui.resize(width, height)
+  Responsive.resize(runtime.responsive, width, height)
+  runtime:markDirty()
+end
+
+function ui.viewport()
+  return Responsive.viewport(runtime.responsive)
+end
+
+function ui.breakpoint()
+  return Responsive.breakpoint(runtime.responsive)
+end
+
+function ui.atLeast(name)
+  return Responsive.atLeast(runtime.responsive, name)
+end
+
+function ui.below(name)
+  return Responsive.below(runtime.responsive, name)
+end
+
+function ui.responsive(values)
+  return Responsive.pick(runtime.responsive, values)
+end
+
+function ui.columns(containerWidth, opts)
+  return Responsive.columns(containerWidth, opts)
+end
+
+function ui.clamp(value, minValue, maxValue)
+  return Responsive.clamp(value, minValue, maxValue)
 end
 
 function ui.on(name, fn, opts)

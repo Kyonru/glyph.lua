@@ -37,6 +37,87 @@ end
 - Performance helpers: `ui.memo(component, deps)` and `ui.static(node)`.
 - Pure-Lua layout backend with Yoga-compatible concepts and an adapter boundary for future Yoga integration.
 
+## Styling
+
+Use Lua tables for styles. Existing visual props such as `backgroundColor`,
+`borderColor`, `color`, and `radius` still work, but `style` is the preferred
+API.
+
+```lua
+ui.button({
+  label = "Run",
+  variant = "primary",
+  style = {
+    background = { 0.1, 0.5, 0.9, 1 },
+    color = { 1, 1, 1, 1 },
+    borderWidth = 2,
+    radius = 4,
+    hover = { background = { 0.15, 0.6, 1, 1 } },
+    pressed = { background = { 0.05, 0.35, 0.7, 1 } },
+    transition = { background = 0.12 },
+  },
+})
+```
+
+Theme component defaults and variants live under `theme.components`:
+
+```lua
+ui.setTheme({
+  components = {
+    button = {
+      variants = {
+        danger = {
+          background = { 0.72, 0.12, 0.16, 1 },
+          color = { 1, 1, 1, 1 },
+          hover = { background = { 0.86, 0.18, 0.22, 1 } },
+        },
+      },
+    },
+  },
+})
+```
+
+Supported visual fields include `background`, `color`, `borderColor`,
+`borderWidth`, `radius`, `lineWidth`, `font`, `opacity`, `shader`, and
+`blendMode`. Custom draw callbacks receive the resolved style as the last
+argument.
+
+## Responsive Layout
+
+Glyph tracks a viewport for resizable Love2D windows and exposes small helpers
+for breakpoint-based UI:
+
+```lua
+function love.load()
+  ui.configureWindow({
+    width = 928,
+    height = 720,
+    resizable = true,
+    minWidth = 420,
+    minHeight = 520,
+    breakpoints = { md = 760 },
+  })
+end
+
+function love.resize(width, height)
+  ui.resize(width, height)
+end
+
+function App()
+  local viewport = ui.viewport()
+  local compact = ui.below("md")
+  local cards = ui.columns(viewport.width - 28, {
+    min = compact and 150 or 160,
+    maxCount = compact and 2 or 4,
+    gap = 10,
+  })
+
+  return ui.row({ width = viewport.width, height = viewport.height }, {
+    -- use `cards.count`, `cards.width`, `ui.clamp`, and `ui.responsive`
+  })
+end
+```
+
 Run tests with Busted:
 
 ```sh
@@ -47,8 +128,15 @@ busted
 
 ```sh
 love examples/basic
+love examples/dashboard
+love examples/styles
 love examples/performance
 ```
 
 The performance example keeps a 10,000-event dataset but mounts only a small
 visible window, reuses static row nodes, and shows render/layout timing in the UI.
+The styles example demonstrates theme switching, variants, state styles,
+transitions, custom draw, and shader-backed styling.
+The dashboard example is inspired by shadcn/ui `dashboard-01`, translated into
+Glyph panels, metric cards, chart drawing, filters, tabs-style buttons, and a
+documents table.
