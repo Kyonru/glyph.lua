@@ -31,6 +31,35 @@ local function clamp(value, minValue, maxValue)
   return value
 end
 
+local function percentValue(value, available)
+  if type(value) ~= "string" then
+    return nil
+  end
+
+  local number = value:match("^(%-?%d+%.?%d*)%%$")
+  if not number or available == nil then
+    return nil
+  end
+
+  return available * (tonumber(number) / 100)
+end
+
+local function resolveSize(value, available)
+  if type(value) == "number" then
+    return value
+  end
+
+  return percentValue(value, available)
+end
+
+local function numericSize(value)
+  if type(value) == "number" then
+    return value
+  end
+
+  return nil
+end
+
 local function intrinsic(node, axis)
   if axis == "row" then
     return node.layout.width
@@ -77,6 +106,82 @@ local function crossProp(axis)
   end
 
   return "width"
+end
+
+local function flexGrow(props)
+  if not props then
+    return 0
+  end
+
+  if type(props.flex) == "number" then
+    return props.flex
+  end
+
+  if props.flex == true then
+    return 1
+  end
+
+  return props.grow or 0
+end
+
+local function flexShrink(props)
+  if not props then
+    return 1
+  end
+
+  if type(props.shrink) == "number" then
+    return props.shrink
+  end
+
+  if props.flex ~= nil then
+    return 1
+  end
+
+  return 1
+end
+
+local function flexBasis(node, direction)
+  local props = node.props or {}
+  if props.basis ~= nil then
+    return props.basis
+  end
+
+  if props.flexBasis ~= nil then
+    return props.flexBasis
+  end
+
+  local main = mainProp(direction)
+  if props.flex ~= nil and props[main] == nil then
+    return 0
+  end
+
+  return intrinsic(node, direction)
+end
+
+local function assignMainConstraint(child, direction, value)
+  child.layout = child.layout or {}
+
+  if direction == "row" then
+    child.layout.assignedWidth = value
+  else
+    child.layout.assignedHeight = value
+  end
+end
+
+local function assignedWidthFor(node, direction, mainValue, crossValue)
+  if direction == "row" then
+    return mainValue
+  end
+
+  return crossValue
+end
+
+local function assignedHeightFor(node, direction, mainValue, crossValue)
+  if direction == "row" then
+    return crossValue
+  end
+
+  return mainValue
 end
 
 local function charWidth(context, props, theme)
@@ -191,8 +296,8 @@ function Layout.measureNode(node, context)
 
   if node.type == "text" then
     local text = tostring(node.value or "")
-    if props.wrap or props.width then
-      local widthLimit = props.wrapWidth or props.width or props.maxWidth
+    if props.wrap or props.width or node.layout.assignedWidth then
+      local widthLimit = props.wrapWidth or resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or node.layout.assignedWidth or (props.wrap and node.layout.availableWidth) or props.maxWidth
       if widthLimit then
         local lines, wrappedWidth, wrappedHeight = wrapText(text, widthLimit, context, props, theme)
         node.wrappedText = {
@@ -212,7 +317,7 @@ function Layout.measureNode(node, context)
   end
 
   if node.type == "input" then
-    return props.width or 160, props.height or 28
+    return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or 160, resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or 28
   end
 
   if node.type == "button" then
@@ -228,7 +333,7 @@ function Layout.measureNode(node, context)
     return textWidth + pad.left + pad.right, textHeight + pad.top + pad.bottom
   end
 
-  return props.width or 0, props.height or 0
+  return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or 0, resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or 0
 end
 
 function Layout.compute(root, context)
@@ -237,6 +342,8 @@ function Layout.compute(root, context)
   local function visit(node, availableWidth, availableHeight)
     node.layout = node.layout or {}
     node.dirty = node.dirty or {}
+    node.layout.availableWidth = availableWidth
+    node.layout.availableHeight = availableHeight
 
     if (node.static or node.memoized) and node.dirty.layout == false and (node.layout.width or 0) > 0 and (node.layout.height or 0) > 0 then
       return node.layout.width, node.layout.height
@@ -250,8 +357,10 @@ function Layout.compute(root, context)
 
     if direction ~= "row" and direction ~= "column" then
       local measuredWidth, measuredHeight = Layout.measureNode(node, context)
-      node.layout.width = clamp(props.width or measuredWidth, props.minWidth, props.maxWidth)
-      node.layout.height = clamp(props.height or measuredHeight, props.minHeight, props.maxHeight)
+      local resolvedWidth = resolveSize(props.width, availableWidth)
+      local resolvedHeight = resolveSize(props.height, availableHeight)
+      node.layout.width = clamp(node.layout.assignedWidth or resolvedWidth or numericSize(props.width) or measuredWidth, props.minWidth, props.maxWidth)
+      node.layout.height = clamp(node.layout.assignedHeight or resolvedHeight or numericSize(props.height) or measuredHeight, props.minHeight, props.maxHeight)
       node.layout.contentWidth = math.max(0, node.layout.width - pad.left - pad.right)
       node.layout.contentHeight = math.max(0, node.layout.height - pad.top - pad.bottom)
       node.dirty.layout = false
@@ -260,13 +369,29 @@ function Layout.compute(root, context)
 
     local main = mainProp(direction)
     local crossAxis = crossProp(direction)
-    local innerMainLimit = props[main] and math.max(0, props[main] - (direction == "row" and pad.left + pad.right or pad.top + pad.bottom)) or nil
-    local innerCrossLimit = props[crossAxis] and math.max(0, props[crossAxis] - (direction == "row" and pad.top + pad.bottom or pad.left + pad.right)) or nil
+    local resolvedWidth = resolveSize(props.width, availableWidth)
+    local resolvedHeight = resolveSize(props.height, availableHeight)
+    local mainSize
+    local crossSize
+    if direction == "row" then
+      mainSize = resolvedWidth or node.layout.assignedWidth
+      crossSize = resolvedHeight or node.layout.assignedHeight
+    else
+      mainSize = resolvedHeight or node.layout.assignedHeight
+      crossSize = resolvedWidth or node.layout.assignedWidth
+    end
+    local innerMainLimit = mainSize and math.max(0, mainSize - (direction == "row" and pad.left + pad.right or pad.top + pad.bottom)) or nil
+    local innerCrossLimit = crossSize and math.max(0, crossSize - (direction == "row" and pad.top + pad.bottom or pad.left + pad.right)) or nil
     local totalMain = 0
     local maxCross = 0
     local growTotal = 0
+    local shrinkTotal = 0
 
     for index, child in ipairs(children) do
+      child.layout = child.layout or {}
+      child.layout.assignedWidth = nil
+      child.layout.assignedHeight = nil
+
       local childAvailableWidth = innerCrossLimit
       local childAvailableHeight = innerMainLimit
       if direction == "row" then
@@ -275,9 +400,11 @@ function Layout.compute(root, context)
       end
 
       visit(child, childAvailableWidth, childAvailableHeight)
-      totalMain = totalMain + intrinsic(child, direction)
+      local basis = flexBasis(child, direction)
+      totalMain = totalMain + basis
       maxCross = math.max(maxCross, cross(child, direction))
-      growTotal = growTotal + (child.props and child.props.grow or 0)
+      growTotal = growTotal + flexGrow(child.props)
+      shrinkTotal = shrinkTotal + flexShrink(child.props) * basis
 
       if index > 1 then
         totalMain = totalMain + gap
@@ -288,14 +415,46 @@ function Layout.compute(root, context)
     local extra = math.max(0, innerMain - totalMain)
     if extra > 0 and growTotal > 0 then
       for _, child in ipairs(children) do
-        local grow = child.props and child.props.grow or 0
+        local grow = flexGrow(child.props)
         if grow > 0 then
-          setMain(child, direction, intrinsic(child, direction) + extra * (grow / growTotal))
+          local assigned = flexBasis(child, direction) + extra * (grow / growTotal)
+          setMain(child, direction, assigned)
+          assignMainConstraint(child, direction, assigned)
+          child.dirty.layout = true
+          visit(child, assignedWidthFor(child, direction, assigned, innerCrossLimit), assignedHeightFor(child, direction, assigned, innerCrossLimit))
+        end
+      end
+    elseif node.type ~= "scrollView" and innerMainLimit and totalMain > innerMainLimit and shrinkTotal > 0 then
+      local overflow = totalMain - innerMainLimit
+      for _, child in ipairs(children) do
+        local shrink = flexShrink(child.props)
+        local basis = flexBasis(child, direction)
+        if shrink > 0 and basis > 0 then
+          local assigned = math.max(0, basis - overflow * ((shrink * basis) / shrinkTotal))
+          setMain(child, direction, assigned)
+          assignMainConstraint(child, direction, assigned)
+          child.dirty.layout = true
+          visit(child, assignedWidthFor(child, direction, assigned, innerCrossLimit), assignedHeightFor(child, direction, assigned, innerCrossLimit))
         end
       end
     end
 
+    totalMain = 0
+    maxCross = 0
+    for index, child in ipairs(children) do
+      totalMain = totalMain + intrinsic(child, direction)
+      maxCross = math.max(maxCross, cross(child, direction))
+      if index > 1 then
+        totalMain = totalMain + gap
+      end
+    end
+
     local innerCross = innerCrossLimit or maxCross
+    if node.type == "scrollView" then
+      node.layout.scrollContentWidth = direction == "row" and totalMain or maxCross
+      node.layout.scrollContentHeight = direction == "row" and maxCross or totalMain
+    end
+
     local align = props.align or "start"
     local cursor = direction == "row" and pad.left or pad.top
 
@@ -324,11 +483,11 @@ function Layout.compute(root, context)
     end
 
     if direction == "row" then
-      node.layout.width = clamp(props.width or (totalMain + pad.left + pad.right), props.minWidth, props.maxWidth)
-      node.layout.height = clamp(props.height or (innerCross + pad.top + pad.bottom), props.minHeight, props.maxHeight)
+      node.layout.width = clamp(node.layout.assignedWidth or resolvedWidth or (totalMain + pad.left + pad.right), props.minWidth, props.maxWidth)
+      node.layout.height = clamp(node.layout.assignedHeight or resolvedHeight or (innerCross + pad.top + pad.bottom), props.minHeight, props.maxHeight)
     else
-      node.layout.width = clamp(props.width or (innerCross + pad.left + pad.right), props.minWidth, props.maxWidth)
-      node.layout.height = clamp(props.height or (totalMain + pad.top + pad.bottom), props.minHeight, props.maxHeight)
+      node.layout.width = clamp(node.layout.assignedWidth or resolvedWidth or (innerCross + pad.left + pad.right), props.minWidth, props.maxWidth)
+      node.layout.height = clamp(node.layout.assignedHeight or resolvedHeight or (totalMain + pad.top + pad.bottom), props.minHeight, props.maxHeight)
     end
 
     node.layout.contentWidth = math.max(0, node.layout.width - pad.left - pad.right)

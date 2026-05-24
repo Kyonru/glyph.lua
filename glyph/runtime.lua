@@ -336,7 +336,8 @@ function Runtime:wheelmoved(dx, dy)
   while node do
     if node.type == "scrollView" then
       local scrollKey = node.path
-      self.scrollOffsets[scrollKey] = math.max(0, (self.scrollOffsets[scrollKey] or 0) - dy * 24)
+      local maxScroll = math.max(0, ((node.layout and node.layout.scrollContentHeight) or 0) - ((node.layout and node.layout.height) or 0))
+      self.scrollOffsets[scrollKey] = math.min(maxScroll, math.max(0, (self.scrollOffsets[scrollKey] or 0) - dy * 24))
       self:markDirty()
       break
     end
@@ -430,6 +431,29 @@ local function lerpColor(a, b, t)
     lerp(a[3] or 1, b[3] or 1, t),
     lerp(a[4] or 1, b[4] or 1, t),
   }
+end
+
+local function mergeScrollbarStyle(theme, style, props)
+  local result = {}
+  local defaults = theme.components and theme.components.scrollBar or {}
+
+  for key, value in pairs(defaults) do
+    result[key] = value
+  end
+
+  if type(style.scrollbar) == "table" then
+    for key, value in pairs(style.scrollbar) do
+      result[key] = value
+    end
+  end
+
+  if type(props.scrollbar) == "table" then
+    for key, value in pairs(props.scrollbar) do
+      result[key] = value
+    end
+  end
+
+  return result
 end
 
 function Runtime:animatedStyle(node, resolved)
@@ -599,12 +623,38 @@ function Runtime:drawNode(node, x, y)
   if node.type == "scrollView" and love.graphics.push then
     love.graphics.push()
     love.graphics.setScissor(absX, absY, width, height)
-    local offset = self.scrollOffsets[node.path] or 0
+    local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - height))
+    local offset = math.min(maxScroll, math.max(0, self.scrollOffsets[node.path] or 0))
+    self.scrollOffsets[node.path] = offset
     for _, child in ipairs(node.children or {}) do
       self:drawNode(child, absX, absY - offset)
     end
     love.graphics.setScissor()
     love.graphics.pop()
+
+    local scrollbar = mergeScrollbarStyle(self.theme, style, props)
+    local showScrollbar = props.showScrollbar ~= false and maxScroll > 0
+    if showScrollbar then
+      local barWidth = scrollbar.width or self.theme.scrollbarWidth
+      local padding = scrollbar.padding or 0
+      local trackX = absX + width - barWidth - padding
+      local trackY = absY + padding
+      local trackHeight = math.max(0, height - padding * 2)
+      local contentHeight = layout.scrollContentHeight or height
+      local thumbHeight = math.max(scrollbar.minThumbSize or 18, trackHeight * (height / contentHeight))
+      thumbHeight = math.min(trackHeight, thumbHeight)
+      local thumbTravel = math.max(0, trackHeight - thumbHeight)
+      local thumbY = trackY + (maxScroll > 0 and (offset / maxScroll) * thumbTravel or 0)
+      local barRadius = scrollbar.radius or barWidth / 2
+
+      if scrollbar.trackColor then
+        color(love, withOpacity(scrollbar.trackColor, opacity))
+        drawRect(love, "fill", trackX, trackY, barWidth, trackHeight, barRadius)
+      end
+
+      color(love, withOpacity(scrollbar.thumbColor or self.theme.scrollbarColor, opacity))
+      drawRect(love, "fill", trackX, thumbY, barWidth, thumbHeight, barRadius)
+    end
   else
     for _, child in ipairs(node.children or {}) do
       self:drawNode(child, absX, absY)

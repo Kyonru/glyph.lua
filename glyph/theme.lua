@@ -37,6 +37,14 @@ theme.components = {
   row = {},
   column = {},
   scrollView = {},
+  scrollBar = {
+    width = theme.scrollbarWidth,
+    padding = 3,
+    minThumbSize = 24,
+    radius = 3,
+    trackColor = { 0, 0, 0, 0 },
+    thumbColor = theme.scrollbarColor,
+  },
   panel = {
     background = theme.surfaceColor,
     borderColor = theme.borderColor,
@@ -161,6 +169,8 @@ local function syncDerivedDefaults()
   theme.components.tab.active.color = theme.accentTextColor
   theme.components.tab.hover.background = theme.surfaceHoverColor
   theme.components.tab.pressed.background = theme.surfacePressedColor
+  theme.components.scrollBar.width = theme.scrollbarWidth
+  theme.components.scrollBar.thumbColor = theme.scrollbarColor
 end
 
 function theme.merge(nextTheme)

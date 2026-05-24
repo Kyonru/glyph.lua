@@ -157,4 +157,84 @@ describe("runtime", function()
 
     assert.are.equal("", value)
   end)
+
+  it("clamps scroll views to their content bounds", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      local rows = {}
+      for index = 1, 10 do
+        rows[index] = Components.box({ width = 100, height = 20 })
+      end
+
+      return Components.scrollView({
+        width = 100,
+        height = 60,
+        gap = 0,
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:setHover(runtime.root)
+    runtime:wheelmoved(0, -100)
+
+    assert.are.equal(140, runtime.scrollOffsets["0"])
+
+    runtime:wheelmoved(0, 100)
+    assert.are.equal(0, runtime.scrollOffsets["0"])
+  end)
+
+  it("draws a customizable scroll indicator when content overflows", function()
+    local runtime = Runtime.new()
+    local rects = {}
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function()
+          return 1
+        end,
+        setLineWidth = function() end,
+        getShader = function()
+          return nil
+        end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function(mode, x, y, width, height)
+          rects[#rects + 1] = { mode = mode, x = x, y = y, width = width, height = height }
+        end,
+        print = function() end,
+        push = function() end,
+        pop = function() end,
+        setScissor = function() end,
+      },
+    })
+
+    local function App()
+      local rows = {}
+      for index = 1, 10 do
+        rows[index] = Components.box({ width = 100, height = 20 })
+      end
+
+      return Components.scrollView({
+        width = 100,
+        height = 60,
+        scrollbar = {
+          width = 8,
+          padding = 2,
+          trackColor = { 0, 0, 0, 1 },
+          thumbColor = { 1, 1, 1, 1 },
+        },
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(2, #rects)
+    assert.are.equal(8, rects[1].width)
+    assert.are.equal(8, rects[2].width)
+    assert.is_true(rects[2].height < 56)
+  end)
 end)

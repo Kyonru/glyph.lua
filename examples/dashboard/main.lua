@@ -90,6 +90,21 @@ local rows = {
 	},
 }
 
+local baseRows = rows
+rows = {}
+for cycle = 1, 8 do
+	for _, row in ipairs(baseRows) do
+		rows[#rows + 1] = {
+			title = row.title .. " " .. cycle,
+			section = row.section,
+			status = (cycle + row.target) % 3 == 0 and "In Process" or row.status,
+			target = row.target + cycle,
+			limit = row.limit + (cycle % 4),
+			reviewer = cycle % 3 == 0 and "Assign reviewer" or row.reviewer,
+		}
+	end
+end
+
 local visitors = { 220, 310, 280, 420, 390, 520, 480, 610, 590, 710, 690, 760 }
 
 ui.setTheme({
@@ -142,8 +157,8 @@ local function metrics()
 	local height = viewport.height
 	local compact = ui.below("md")
 	local sidebarWidth = compact and 0 or ui.clamp(width * 0.22, 172, 210)
-	local contentWidth = math.max(340, width - sidebarWidth)
-	local innerWidth = math.max(312, contentWidth - 28)
+	local availableContentWidth = math.max(340, width - sidebarWidth)
+	local innerWidth = math.max(312, availableContentWidth - 28)
 	local cardGap = 10
 	local cardColumns = ui.columns(innerWidth, {
 		min = compact and 150 or 160,
@@ -152,24 +167,21 @@ local function metrics()
 	})
 	local cardsPerRow = cardColumns.count
 	local cardWidth = cardColumns.width
-	local tableWidth = innerWidth
 	local tableGap = compact and 6 or 10
-	local tableInner = tableWidth - 20 - tableGap * 6
+	local tableInner = innerWidth - 20 - tableGap * 6
+	local tableHeight = math.max(180, height - (compact and 468 or 430))
 
 	return {
 		width = width,
 		height = height,
 		compact = compact,
 		sidebarWidth = sidebarWidth,
-		contentWidth = contentWidth,
 		innerWidth = innerWidth,
 		cardGap = cardGap,
 		cardsPerRow = cardsPerRow,
 		cardWidth = cardWidth,
-		chartWidth = innerWidth,
-		chartBodyWidth = math.max(280, innerWidth - 28),
-		tableWidth = tableWidth,
 		tableGap = tableGap,
+		tableHeight = tableHeight,
 		dragWidth = compact and 0 or 22,
 		titleWidth = math.floor(tableInner * (compact and 0.42 or 0.3)),
 		sectionWidth = compact and 0 or math.floor(tableInner * 0.18),
@@ -240,7 +252,7 @@ end
 
 local function chartPanel(m)
 	return ui.box({
-		width = m.chartWidth,
+		width = "100%",
 		height = 224,
 		padding = 14,
 		display = "column",
@@ -268,7 +280,7 @@ local function chartPanel(m)
 			}),
 		}),
 		ui.box({
-			width = m.chartBodyWidth,
+			width = "100%",
 			height = 154,
 			draw = function(_, x, y, width, height, love, style)
 				love.graphics.setColor(0.965, 0.97, 0.975, 1)
@@ -330,9 +342,10 @@ local function tableRow(row, index, m)
 		children[#children + 1] = ui.text(tostring(row.target), { width = m.targetWidth })
 		children[#children + 1] = ui.text(tostring(row.limit), { width = m.limitWidth })
 	end
-	children[#children + 1] = ui.text(row.reviewer, { width = m.reviewerWidth, wrap = true, style = muted })
+	children[#children + 1] = ui.text(row.reviewer, { flex = 1, wrap = true, style = muted })
 
 	return ui.row({
+		width = "100%",
 		gap = m.tableGap,
 		align = "center",
 		padding = { x = 10, y = 6 },
@@ -358,10 +371,22 @@ local function dataTable(m)
 		header[#header + 1] = ui.text("Target", { width = m.targetWidth, style = muted })
 		header[#header + 1] = ui.text("Limit", { width = m.limitWidth, style = muted })
 	end
-	header[#header + 1] = ui.text("Reviewer", { width = m.reviewerWidth, style = muted })
+	header[#header + 1] = ui.text("Reviewer", { flex = 1, style = muted })
 
-	local children = {
+	local bodyRows = {}
+	for index, row in ipairs(filteredRows()) do
+		bodyRows[#bodyRows + 1] = tableRow(row, index, m)
+	end
+
+	return ui.box({
+		width = "100%",
+		height = m.tableHeight,
+		padding = 0,
+		display = "column",
+		style = cardStyle,
+	}, {
 		ui.row({
+			width = "100%",
 			gap = m.tableGap,
 			padding = { x = 10, y = 8 },
 			style = {
@@ -370,18 +395,22 @@ local function dataTable(m)
 				borderWidth = 1,
 			},
 		}, header),
-	}
 
-	for index, row in ipairs(filteredRows()) do
-		children[#children + 1] = tableRow(row, index, m)
-	end
-
-	return ui.box({
-		width = m.tableWidth,
-		padding = 0,
-		display = "column",
-		style = cardStyle,
-	}, children)
+		ui.scrollView({
+			width = "100%",
+			flex = 1,
+			display = "column",
+			gap = 0,
+			scrollbar = {
+				width = 7,
+				padding = 4,
+				radius = 4,
+				trackColor = { 0.92, 0.93, 0.94, 1 },
+				thumbColor = { 0.42, 0.46, 0.5, 0.9 },
+				minThumbSize = 32,
+			},
+		}, bodyRows),
+	})
 end
 
 function App()
@@ -429,7 +458,7 @@ function App()
 	end
 
 	local headerChildren = {
-		ui.text("Documents", { width = m.compact and math.max(110, m.innerWidth - 190) or math.max(160, m.innerWidth - 326) }),
+		ui.text("Documents", { flex = 1 }),
 		ui.input({
 			width = m.compact and 150 or 184,
 			value = search,
@@ -461,7 +490,8 @@ function App()
 	shellChildren[#shellChildren + 1] = ui.column({
 		gap = 12,
 		padding = 14,
-		width = m.contentWidth,
+		flex = 1,
+		minWidth = 340,
 		style = {
 			background = ui.theme.backgroundColor,
 		},

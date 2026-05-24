@@ -53,6 +53,69 @@ describe("layout", function()
     assert.are.equal(70, tree.children[2].layout.width)
   end)
 
+  it("supports flex as a grow alias", function()
+    local tree = ui.row({ width = 120, gap = 10 }, {
+      ui.box({ width = 20, height = 10 }),
+      ui.box({ height = 10, flex = 1 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(20, tree.children[1].layout.width)
+    assert.are.equal(90, tree.children[2].layout.width)
+  end)
+
+  it("supports percent widths against available parent space", function()
+    local tree = ui.column({ width = 240, padding = 20 }, {
+      ui.box({ width = "100%", height = 10 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(200, tree.children[1].layout.width)
+  end)
+
+  it("does not leak unresolved percent widths into arithmetic", function()
+    local tree = ui.row({ width = 240 }, {
+      ui.box({ width = "100%", height = 10 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(240, tree.children[1].layout.width)
+    assert.are.equal(240, tree.children[1].layout.contentWidth)
+  end)
+
+  it("remeasures nested flex children with assigned width", function()
+    local tree = ui.row({ width = 120, gap = 10 }, {
+      ui.box({ width = 20, height = 10 }),
+      ui.column({ flex = 1 }, {
+        ui.text("alpha beta gamma", { wrap = true }),
+      }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(90, tree.children[2].layout.width)
+    assert.are.equal(60, tree.children[2].layout.height)
+    assert.are.same({ "alpha", "beta", "gamma" }, tree.children[2].children[1].wrappedText.lines)
+  end)
+
+  it("remeasures percent children inside flex containers after assignment", function()
+    local tree = ui.row({ width = 300 }, {
+      ui.box({ width = 80, height = 10 }),
+      ui.column({ flex = 1, padding = 10 }, {
+        ui.box({ width = "100%", height = 10 }),
+      }),
+    })
+
+    Layout.compute(tree, context)
+
+    local flexColumn = tree.children[2]
+    assert.are.equal(220, flexColumn.layout.width)
+    assert.are.equal(200, flexColumn.children[1].layout.width)
+  end)
+
   it("supports nested rows and columns", function()
     local tree = ui.column({ padding = 2, gap = 3 }, {
       ui.row({ gap = 2 }, {

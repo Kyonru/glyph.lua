@@ -118,6 +118,22 @@ function App()
 end
 ```
 
+Children can take remaining space with `flex = 1`, similar to Tailwind's
+`flex-1`. `grow` still expands from the measured or explicit size, while
+`flex = 1` uses a zero basis unless a width or height is provided. Containers
+and leaf nodes can also use percent sizes such as `width = "100%"`:
+
+```lua
+ui.row({ width = 600, gap = 8 }, {
+  ui.button({ label = "Fixed" }),
+  ui.input({ flex = 1, value = query, onChange = setQuery }),
+})
+
+ui.column({ width = 600, padding = 12 }, {
+  ui.box({ width = "100%", height = 180 }),
+})
+```
+
 Run tests with Busted:
 
 ```sh
