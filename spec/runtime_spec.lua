@@ -2,12 +2,14 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local Runtime = require("glyph.runtime")
 local Components = require("glyph.components")
+local Accessibility = require("glyph.accessibility")
 local Animation = require("glyph.animation")
 local Style = require("glyph.style")
 
 describe("runtime", function()
   before_each(function()
     Animation.clear()
+    Accessibility.configure({})
   end)
 
   it("persists useState values across renders", function()
@@ -261,6 +263,115 @@ describe("runtime", function()
     runtime:mousereleased(1, 1, 1)
 
     assert.are.equal(0, count)
+  end)
+
+  it("emits accessibility focus announcements", function()
+    local runtime = Runtime.new()
+    local events = {}
+
+    runtime:register("accessibility", function(event)
+      events[#events + 1] = event.kind .. ":" .. event.message
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Go",
+        accessibilityDescription = "Starts the mission",
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:setFocus(runtime.root)
+
+    assert.are.same({
+      "focus:Go, button, Starts the mission",
+    }, events)
+  end)
+
+  it("emits accessibility activation announcements for mouse and keyboard activation", function()
+    local runtime = Runtime.new()
+    local events = {}
+    local clicks = 0
+
+    runtime:register("accessibility", function(event)
+      if event.kind == "activate" then
+        events[#events + 1] = event.message
+      end
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Confirm",
+        onClick = function()
+          clicks = clicks + 1
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+    runtime:setFocus(runtime.root)
+    runtime:keypressed("return")
+    runtime:keyreleased("return")
+
+    assert.are.equal(2, clicks)
+    assert.are.same({ "Confirm, button", "Confirm, button" }, events)
+  end)
+
+  it("does not emit accessibility activation for disabled buttons", function()
+    local runtime = Runtime.new()
+    local events = {}
+
+    runtime:register("accessibility", function(event)
+      events[#events + 1] = event.kind
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Locked",
+        disabled = true,
+        onClick = function() end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+    runtime:setFocus(runtime.root)
+    runtime:keypressed("return")
+    runtime:keyreleased("return")
+
+    assert.are.same({ "focus" }, events)
+  end)
+
+  it("announces live region changes once after the initial build", function()
+    local runtime = Runtime.new()
+    local events = {}
+    local status = "Ready"
+
+    runtime:register("accessibility", function(event)
+      if event.kind == "live" then
+        events[#events + 1] = event.message
+      end
+    end)
+
+    local function App()
+      return Components.text(status, {
+        accessibilityLive = "polite",
+      })
+    end
+
+    runtime:build(App)
+    assert.are.same({}, events)
+    status = "Enemy sighted"
+    runtime:build(App)
+    runtime:build(App)
+
+    assert.are.same({ "Enemy sighted" }, events)
   end)
 
   it("keeps button taps valid across a rerender between press and release", function()

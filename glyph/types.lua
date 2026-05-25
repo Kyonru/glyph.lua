@@ -133,6 +133,25 @@ local GlyphPadding = {}
 ---@field active? boolean
 ---@field disabled? boolean
 ---@field interactive? boolean
+---@field role? "button"|"text"|"input"|"panel"|"tab"|"meter"|"dialog"|"group"|"none"|string
+---@field accessibilityLabel? string
+---@field accessibilityLabelKey? string
+---@field accessibilityLabelParams? table
+---@field accessibilityLabelFallback? string
+---@field accessibilityLabelCacheKey? string|number
+---@field accessibilityDescription? string
+---@field accessibilityDescriptionKey? string
+---@field accessibilityDescriptionParams? table
+---@field accessibilityDescriptionFallback? string
+---@field accessibilityDescriptionCacheKey? string|number
+---@field accessibilityValue? string|number
+---@field accessibilityValueText? string
+---@field accessibilityValueTextKey? string
+---@field accessibilityValueTextParams? table
+---@field accessibilityValueTextFallback? string
+---@field accessibilityValueTextCacheKey? string|number
+---@field accessibilityHidden? boolean
+---@field accessibilityLive? "off"|"polite"|"assertive"
 ---@field variant? string
 ---@field styleType? string
 ---@field audio? GlyphAudioCues|false
@@ -235,12 +254,60 @@ local GlyphPanelProps = {}
 ---@field styleType? string
 ---@field label? string
 
+---@class GlyphAccessibilityDescription
+---@field node GlyphNode
+---@field path? string
+---@field type string
+---@field role? string
+---@field label? string
+---@field description? string
+---@field value? string|number
+---@field valueText? string
+---@field live? "off"|"polite"|"assertive"|string
+---@field disabled? boolean
+---@field focusable? boolean
+
+---@class GlyphAccessibilityEvent
+---@field kind "focus"|"activate"|"live"|"announce"|string
+---@field message? string
+---@field node? GlyphNode
+---@field path? string
+---@field role? string
+---@field label? string
+---@field description? string
+---@field valueText? string
+---@field live? "off"|"polite"|"assertive"|string
+
+---@class GlyphAccessibilityConfig
+---@field enabled? boolean
+---@field announceOnFocus? boolean
+---@field announceOnActivate? boolean
+
+---@class GlyphAccessibilityApi
+---@field configure fun(opts?: GlyphAccessibilityConfig)
+---@field describe fun(node?: GlyphNode): GlyphAccessibilityDescription|nil
+---@field snapshot fun(root?: GlyphNode): GlyphAccessibilityDescription[]
+---@field focused fun(): GlyphAccessibilityDescription|nil
+---@field announce fun(message: string, opts?: table): GlyphAccessibilityEvent|nil
+
 ---@class GlyphTab
 ---@field label? string
 ---@field labelKey? string
 ---@field labelParams? table
 ---@field labelFallback? string
 ---@field labelCacheKey? string|number
+---@field role? "tab"|"button"|"none"|string
+---@field accessibilityLabel? string
+---@field accessibilityLabelKey? string
+---@field accessibilityLabelParams? table
+---@field accessibilityLabelFallback? string
+---@field accessibilityLabelCacheKey? string|number
+---@field accessibilityDescription? string
+---@field accessibilityDescriptionKey? string
+---@field accessibilityDescriptionParams? table
+---@field accessibilityDescriptionFallback? string
+---@field accessibilityDescriptionCacheKey? string|number
+---@field accessibilityHidden? boolean
 ---@field content? GlyphNode
 local GlyphTab = {}
 

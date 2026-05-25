@@ -83,6 +83,10 @@ function love.gamepadreleased(joystick, button)
 end
 ```
 
+Keyboard, pointer, touch, and mapped gamepad activation all share the same
+focus/press/release lifecycle. If accessibility is enabled, d-pad focus changes
+emit `accessibility` focus events and confirm activation emits activate events.
+
 ## Focusable nodes
 
 `button` and `input` nodes are focusable by default. Any other node becomes focusable by

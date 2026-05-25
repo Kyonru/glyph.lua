@@ -5,6 +5,7 @@ elseif prefix:sub(-5) == ".init" then
   prefix = prefix:sub(1, -6)
 end
 
+local Accessibility = require(prefix .. ".accessibility")
 local Animation = require(prefix .. ".animation")
 local Components = require(prefix .. ".components")
 local CallbackBus = require(prefix .. ".callback_bus")
@@ -33,6 +34,7 @@ local runtime = Runtime.new()
 ---@field panel fun(props?: GlyphPanelProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field static fun(node: GlyphNode): GlyphNode
 ---@field animation GlyphAnimationApi
+---@field accessibility GlyphAccessibilityApi
 ---@field i18n GlyphI18nApi
 ---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
 ---@field viewportBackend GlyphViewportBackendApi
@@ -46,6 +48,7 @@ local runtime = Runtime.new()
 ---@field gamepadpressed fun(joystick: any, button: string, opts?: boolean|GlyphGamepadMapperOpts): any
 ---@field gamepadreleased fun(joystick: any, button: string, opts?: boolean|GlyphGamepadMapperOpts): any
 local ui = {
+  accessibility = nil,
   CallbackBus = CallbackBus,
   animation = Animation,
   i18n = I18n,
@@ -60,6 +63,25 @@ local ui = {
 I18n.setInvalidationCallback(function()
   runtime:markDirty()
 end)
+
+ui.accessibility = {
+  configure = function(opts)
+    Accessibility.configure(opts)
+    runtime:markDirty()
+  end,
+  describe = function(node)
+    return Accessibility.describe(node)
+  end,
+  snapshot = function(root)
+    return Accessibility.snapshot(root or runtime)
+  end,
+  focused = function()
+    return Accessibility.focused(runtime)
+  end,
+  announce = function(message, opts)
+    return Accessibility.announce(runtime, message, opts)
+  end,
+}
 
 for name, fn in pairs(Components) do
   ui[name] = fn

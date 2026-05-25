@@ -3,6 +3,7 @@ package.path = "?.lua;?/init.lua;dev/vendor/?.lua;../dev/vendor/?.lua;../../dev/
 local ui = require("glyph")
 
 local examples = {
+	{ id = "accessibility", label = "Accessibility", module = "accessibility" },
 	{ id = "animations", label = "Animations", module = "animations" },
 	{ id = "audio-cues", label = "Audio Cues", module = "audio-cues" },
 	{ id = "basic", label = "Basic", module = "basic" },

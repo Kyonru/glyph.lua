@@ -7,6 +7,7 @@ icon: lucide/play
 Run examples with Love2D:
 
 ```sh
+love examples/accessibility
 love examples/animations
 love examples/audio-cues
 love examples/basic
@@ -23,6 +24,10 @@ love examples/themes
 love examples/viewport
 love examples/performance
 ```
+
+## Accessibility
+
+Love2D-friendly semantics demo with keyboard/gamepad focus traversal, localized labels, live region events, hidden decoration, semantic snapshots, and a fake TTS/log adapter.
 
 ## Animations
 

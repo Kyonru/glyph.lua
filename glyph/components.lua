@@ -163,6 +163,18 @@ function Components.tabs(props, tabs)
       end,
       backgroundColor = index == active and props.activeColor or nil,
       active = index == active,
+      role = tab.role or "tab",
+      accessibilityLabel = tab.accessibilityLabel,
+      accessibilityLabelKey = tab.accessibilityLabelKey,
+      accessibilityLabelParams = tab.accessibilityLabelParams,
+      accessibilityLabelFallback = tab.accessibilityLabelFallback,
+      accessibilityLabelCacheKey = tab.accessibilityLabelCacheKey,
+      accessibilityDescription = tab.accessibilityDescription,
+      accessibilityDescriptionKey = tab.accessibilityDescriptionKey,
+      accessibilityDescriptionParams = tab.accessibilityDescriptionParams,
+      accessibilityDescriptionFallback = tab.accessibilityDescriptionFallback,
+      accessibilityDescriptionCacheKey = tab.accessibilityDescriptionCacheKey,
+      accessibilityHidden = tab.accessibilityHidden,
       variant = props.tabVariant,
       style = props.tabStyle,
       styleType = "tab",
@@ -184,13 +196,11 @@ end
 function Components.panel(props, children)
   props = normalizeProps(props)
   local panelChildren = {}
+  local title = props.title or props.titleKey
+  local resolvedTitle = title and I18n.resolveTitle(props) or nil
 
-  if props.title then
-    panelChildren[#panelChildren + 1] = Components.text(I18n.resolveTitle(props), {
-      color = props.titleColor,
-    })
-  elseif props.titleKey then
-    panelChildren[#panelChildren + 1] = Components.text(I18n.resolveTitle(props), {
+  if title then
+    panelChildren[#panelChildren + 1] = Components.text(resolvedTitle, {
       color = props.titleColor,
     })
   end
@@ -226,6 +236,26 @@ function Components.panel(props, children)
     navScope = props.navScope,
     navTrap = props.navTrap,
     onNavigateExit = props.onNavigateExit,
+    role = props.role,
+    accessibilityLabel = props.accessibilityLabel,
+    accessibilityLabelKey = props.accessibilityLabelKey,
+    accessibilityLabelParams = props.accessibilityLabelParams,
+    accessibilityLabelFallback = props.accessibilityLabelFallback,
+    accessibilityLabelCacheKey = props.accessibilityLabelCacheKey,
+    accessibilityDescription = props.accessibilityDescription,
+    accessibilityDescriptionKey = props.accessibilityDescriptionKey,
+    accessibilityDescriptionParams = props.accessibilityDescriptionParams,
+    accessibilityDescriptionFallback = props.accessibilityDescriptionFallback,
+    accessibilityDescriptionCacheKey = props.accessibilityDescriptionCacheKey,
+    accessibilityValue = props.accessibilityValue,
+    accessibilityValueText = props.accessibilityValueText,
+    accessibilityValueTextKey = props.accessibilityValueTextKey,
+    accessibilityValueTextParams = props.accessibilityValueTextParams,
+    accessibilityValueTextFallback = props.accessibilityValueTextFallback,
+    accessibilityValueTextCacheKey = props.accessibilityValueTextCacheKey,
+    accessibilityHidden = props.accessibilityHidden,
+    accessibilityLive = props.accessibilityLive,
+    title = resolvedTitle,
     clip = props.clip,
     stencil = props.stencil,
     shape = props.shape,

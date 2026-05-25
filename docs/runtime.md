@@ -130,6 +130,7 @@ Supported names:
 - `afterRender`
 - `layout`
 - `audio`
+- `accessibility`
 - `focusChanged`
 - `hoverChanged`
 - `event`
@@ -167,13 +168,22 @@ The event includes `cue`, `kind`, `node`, `type`, `path`, `variant`,
 `styleType`, and a best-effort `label`. Supported cue kinds are `hover`,
 `press`, `activate`, and `focus`.
 
-## Future Accessibility
+## Accessibility Events
 
-Glyph does not implement accessibility behavior yet. The intended shape is
-layout-agnostic metadata and app-provided resolvers rather than fixed widgets:
+Glyph exposes Love2D-friendly accessibility semantics through metadata and
+runtime events. It does not speak text or create native OS controls; apps own
+TTS, platform bridges, logs, or Love.js DOM adapters.
 
-- semantic props such as `role`, `label`, `description`, and `valueText`
-- queryable runtime metadata for tools, overlays, and platform adapters
+```lua
+ui.on("accessibility", function(event)
+  print(event.kind, event.message)
+end)
+```
+
+Focus changes, button activation, manual announcements, and live-region updates
+can emit events with `kind`, `message`, `node`, `path`, `role`, `label`,
+`description`, `valueText`, and `live`. See [Accessibility](accessibility.md)
+for semantic props, snapshots, i18n keys, and adapter patterns.
 
 ## Interaction Helpers
 

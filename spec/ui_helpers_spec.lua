@@ -338,4 +338,64 @@ describe("ui helpers", function()
 
     ui.i18n.configure({})
   end)
+
+  it("describes default accessibility semantics", function()
+    local button = ui.button({ label = "Launch" })
+    local input = ui.input({ value = "Nova", placeholder = "Name" })
+    local meter = ui.meter({ value = 7, max = 10, label = "Power" })
+    local panel = ui.panel({ title = "Status" }, {})
+
+    assert.are.equal("button", ui.accessibility.describe(button).role)
+    assert.are.equal("Launch", ui.accessibility.describe(button).label)
+    assert.are.equal("input", ui.accessibility.describe(input).role)
+    assert.are.equal("Name", ui.accessibility.describe(input).label)
+    assert.are.equal("Nova", ui.accessibility.describe(input).valueText)
+    assert.are.equal("meter", ui.accessibility.describe(meter).role)
+    assert.are.equal("Power", ui.accessibility.describe(meter).label)
+    assert.are.equal("Power", ui.accessibility.describe(meter).valueText)
+    assert.are.equal("panel", ui.accessibility.describe(panel).role)
+    assert.are.equal("Status", ui.accessibility.describe(panel).label)
+  end)
+
+  it("uses explicit accessibility props and i18n semantic keys", function()
+    ui.i18n.configure({
+      translate = function(key)
+        local values = {
+          label = "Translated Launch",
+          description = "Starts the mission",
+          value = "Armed",
+        }
+        return values[key]
+      end,
+    })
+
+    local node = ui.button({
+      label = "Launch",
+      accessibilityLabelKey = "label",
+      accessibilityDescriptionKey = "description",
+      accessibilityValueTextKey = "value",
+    })
+    local description = ui.accessibility.describe(node)
+
+    assert.are.equal("Translated Launch", description.label)
+    assert.are.equal("Starts the mission", description.description)
+    assert.are.equal("Armed", description.valueText)
+
+    ui.i18n.configure({})
+  end)
+
+  it("omits hidden and none-role nodes from accessibility snapshots", function()
+    local tree = ui.column({}, {
+      ui.text("Visible"),
+      ui.text("Decorative", { accessibilityHidden = true }),
+      ui.button({ label = "Skip", role = "none" }),
+      ui.button({ label = "Go" }),
+    })
+
+    local snapshot = ui.accessibility.snapshot(tree)
+
+    assert.are.equal(2, #snapshot)
+    assert.are.equal("Visible", snapshot[1].label)
+    assert.are.equal("Go", snapshot[2].label)
+  end)
 end)

@@ -4,6 +4,7 @@ local Components = require("glyph.components")
 local Runtime = require("glyph.runtime")
 local Modal = require("glyph.modal")
 local Transitions = require("glyph.transitions")
+local Accessibility = require("glyph.accessibility")
 
 local function textComponent(value)
   return function()
@@ -130,6 +131,10 @@ describe("Scene manager", function()
 end)
 
 describe("Scene runtime integration", function()
+  before_each(function()
+    Accessibility.configure({})
+  end)
+
   it("isolates hook state per layer", function()
     local runtime = Runtime.new()
     local setA
@@ -237,6 +242,40 @@ describe("Scene runtime integration", function()
     runtime:keypressed("escape")
 
     assert.are.equal("exiting", runtime.scene.layers[1].state)
+  end)
+
+  it("includes modal layer semantics in accessibility snapshots", function()
+    local runtime = Runtime.new()
+    runtime:setLove(makeLove())
+
+    local function Main()
+      return Components.button({ label = "Main" })
+    end
+
+    local function Dialog()
+      return Components.panel({
+        title = "Settings",
+        role = "dialog",
+      }, {
+        Components.button({ label = "Close" }),
+      })
+    end
+
+    Modal.open(runtime.scene, "settings", Dialog, {
+      transition = "none",
+      width = 240,
+      height = 120,
+    })
+    runtime:render(Main)
+
+    local snapshot = Accessibility.snapshot(runtime)
+
+    assert.are.equal("button", snapshot[1].role)
+    assert.are.equal("Main", snapshot[1].label)
+    assert.are.equal("dialog", snapshot[2].role)
+    assert.are.equal("Settings", snapshot[2].label)
+    assert.are.equal("button", snapshot[4].role)
+    assert.are.equal("Close", snapshot[4].label)
   end)
 end)
 

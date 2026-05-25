@@ -190,3 +190,11 @@ ui.panel({ title = "Logs", width = "100%", flex = 1 }, {
 ```
 
 Use `titleKey` for localized panel titles.
+
+## Accessibility Props
+
+All nodes accept semantic props such as `role`, `accessibilityLabel`,
+`accessibilityDescription`, `accessibilityValueText`, `accessibilityHidden`, and
+`accessibilityLive`. Buttons, inputs, meters, tabs, text, and panels have
+best-effort defaults, and semantic strings can use i18n key props. See
+[Accessibility](accessibility.md) for adapter events and snapshot APIs.

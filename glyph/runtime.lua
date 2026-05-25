@@ -1,4 +1,5 @@
 local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local Accessibility = require(prefix .. ".accessibility")
 local Animation = require(prefix .. ".animation")
 local CallbackBus = require(prefix .. ".callback_bus")
 local Layout = require(prefix .. ".layout")
@@ -16,6 +17,7 @@ local runtimeCallbacks = {
   "layout",
   "navigate",
   "audio",
+  "accessibility",
   "focusChanged",
   "hoverChanged",
   "event",
@@ -188,6 +190,7 @@ function Runtime.new()
     lastDt = 0,
     responsive = Responsive.new(),
     viewportBackend = ViewportBackend.new(),
+    accessibilityLiveValues = {},
     love = nil,
     scene = nil,
     currentScope = nil,
@@ -526,6 +529,7 @@ function Runtime:build(component)
   self.hoverNode = findByPath(root, self.hoverPath)
   self.mouseDownNode = findByPath(root, self.mouseDownPath)
   self.keyDownNode = findByPath(root, self.keyDownPath)
+  Accessibility.scanLive(self, root)
   self.needsRender = false
   self:runEffects()
   return root
@@ -541,6 +545,7 @@ function Runtime:buildLayer(layer)
   end)
 
   layer.root = root
+  Accessibility.scanLive(self, root)
   layer.needsRender = false
   return root
 end
@@ -852,6 +857,7 @@ function Runtime:setFocus(node)
     self.bus:dispatch("focusChanged", node, previous)
     if node then
       self:emitAudio("focus", node)
+      Accessibility.emit(self, "focus", node)
     end
     self:markDirty()
   end
@@ -918,6 +924,7 @@ function Runtime:mousereleased(x, y, button)
 
   if node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
     self:emitAudio("activate", node)
+    Accessibility.emit(self, "activate", node)
     node.props.onClick(node)
   end
 
@@ -1017,6 +1024,7 @@ function Runtime:keyreleased(key)
 
     if node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
       self:emitAudio("activate", node)
+      Accessibility.emit(self, "activate", node)
       node.props.onClick(node)
     end
 
@@ -1760,6 +1768,9 @@ function Runtime:drawNode(node, x, y)
     local text = tostring(node.value or "")
     if props.wrap or node.wrappedText then
       local limit = (node.wrappedText and node.wrappedText.width) or props.wrapWidth or props.width or width
+      if type(limit) ~= "number" then
+        limit = width
+      end
       local align = props.textAlign or "left"
       if love.graphics.printf then
         love.graphics.printf(text, absX, absY, limit, align)
