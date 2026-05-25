@@ -17,6 +17,7 @@ local VISUAL_ALIASES = {
   lineWidth = "lineWidth",
   font = "font",
   fontSize = "fontSize",
+  lineHeight = "lineHeight",
   opacity = "opacity",
   shader = "shader",
   blendMode = "blendMode",

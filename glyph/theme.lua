@@ -15,11 +15,61 @@ local theme = {
   scrollbarColor = { 0.34, 0.38, 0.45, 0.85 },
   fontSize = 13,
   lineHeight = 18,
+  textScale = 1,
   radius = 4,
   borderWidth = 1,
   inputCursorWidth = 1,
   tabHeight = 28,
   scrollbarWidth = 6,
+}
+
+theme.fonts = {
+  body = nil,
+  heading = nil,
+  mono = nil,
+}
+
+theme.typography = {
+  text = {
+    font = "body",
+    fontSize = theme.fontSize,
+    lineHeight = theme.lineHeight,
+  },
+  h1 = {
+    font = "heading",
+    fontSize = 30,
+    lineHeight = 36,
+  },
+  h2 = {
+    font = "heading",
+    fontSize = 22,
+    lineHeight = 28,
+  },
+  paragraph = {
+    font = "body",
+    fontSize = theme.fontSize,
+    lineHeight = 20,
+  },
+  caption = {
+    font = "body",
+    fontSize = 11,
+    lineHeight = 15,
+  },
+  code = {
+    font = "mono",
+    fontSize = 12,
+    lineHeight = 17,
+  },
+  button = {
+    font = "body",
+    fontSize = theme.fontSize,
+    lineHeight = theme.lineHeight,
+  },
+  input = {
+    font = "body",
+    fontSize = theme.fontSize,
+    lineHeight = theme.lineHeight,
+  },
 }
 
 theme.base = {
@@ -131,7 +181,20 @@ local function mergeInto(target, source)
   end
 end
 
-local function syncDerivedDefaults()
+local function syncDerivedDefaults(nextTheme)
+  local typographyOverrides = nextTheme and nextTheme.typography or nil
+
+  local function syncTypography(name)
+    theme.typography[name] = theme.typography[name] or {}
+    local override = type(typographyOverrides) == "table" and typographyOverrides[name] or nil
+    if not (type(override) == "table" and override.fontSize ~= nil) then
+      theme.typography[name].fontSize = theme.fontSize
+    end
+    if not (type(override) == "table" and override.lineHeight ~= nil) then
+      theme.typography[name].lineHeight = theme.lineHeight
+    end
+  end
+
   theme.base.color = theme.textColor
   theme.base.borderWidth = theme.borderWidth
   theme.base.radius = theme.radius
@@ -171,6 +234,12 @@ local function syncDerivedDefaults()
   theme.components.tab.pressed.background = theme.surfacePressedColor
   theme.components.scrollBar.width = theme.scrollbarWidth
   theme.components.scrollBar.thumbColor = theme.scrollbarColor
+
+  if nextTheme and (nextTheme.fontSize ~= nil or nextTheme.lineHeight ~= nil) then
+    syncTypography("text")
+    syncTypography("button")
+    syncTypography("input")
+  end
 end
 
 function theme.merge(nextTheme)
@@ -190,7 +259,7 @@ function theme.merge(nextTheme)
   end
 
   if hasTopLevelOverrides then
-    syncDerivedDefaults()
+    syncDerivedDefaults(nextTheme)
   end
 
   if componentOverrides then

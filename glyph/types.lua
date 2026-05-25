@@ -9,6 +9,14 @@
 ---@class GlyphColor
 local GlyphColor = {}
 
+---@class GlyphFontSpec
+---@field path? string
+---@field size? number
+---@field hinting? string
+local GlyphFontSpec = {}
+
+---@alias GlyphFontRef any|string|GlyphFontSpec
+
 -- ---------------------------------------------------------------------------
 -- Style
 -- ---------------------------------------------------------------------------
@@ -21,6 +29,8 @@ local GlyphColor = {}
 ---@field radius? number
 ---@field shape? GlyphShape|fun(ctx: table): any
 ---@field fontSize? number
+---@field lineHeight? number
+---@field font? GlyphFontRef
 ---@field opacity? number
 local GlyphStateStyle = {}
 
@@ -38,7 +48,8 @@ local GlyphAudioCues = {}
 ---@field borderWidth? number
 ---@field radius? number
 ---@field fontSize? number
----@field font? any
+---@field lineHeight? number
+---@field font? GlyphFontRef
 ---@field opacity? number
 ---@field lineWidth? number
 ---@field shape? GlyphShape|fun(ctx: table): any
@@ -249,6 +260,13 @@ local GlyphPadding = {}
 ---@field disabled? boolean
 ---@field interactive? boolean
 ---@field feedback? GlyphFeedbackProps|false
+---@field font? GlyphFontRef
+---@field fontSize? number
+---@field lineHeight? number
+---@field textStyle? string
+---@field format? "plain"|"tags"
+---@field rich? boolean
+---@field richVerticalAlign? "baseline"|"top"|"center"|"bottom"
 ---@field role? "button"|"text"|"input"|"panel"|"tab"|"meter"|"dialog"|"group"|"none"|string
 ---@field accessibilityLabel? string
 ---@field accessibilityLabelKey? string
@@ -289,6 +307,10 @@ local GlyphProps = {}
 ---@field textParams? table
 ---@field textFallback? string
 ---@field textCacheKey? string|number
+---@field textStyle? "text"|"h1"|"h2"|"paragraph"|"caption"|"code"|string
+---@field format? "plain"|"tags"
+---@field rich? boolean
+---@field richVerticalAlign? "baseline"|"top"|"center"|"bottom"
 local GlyphTextProps = {}
 
 ---@class GlyphButtonProps : GlyphProps
@@ -353,6 +375,7 @@ local GlyphTabsProps = {}
 ---@field titleFallback? string
 ---@field titleCacheKey? string|number
 ---@field titleColor? GlyphColor
+---@field titleTextStyle? string
 local GlyphPanelProps = {}
 
 ---@class GlyphNavigateEvent
@@ -461,6 +484,33 @@ local GlyphI18nConfig = {}
 ---@field version fun(): number
 local GlyphI18nApi = {}
 
+---@class GlyphTypographyStyle
+---@field font? GlyphFontRef
+---@field fontSize? number
+---@field lineHeight? number
+---@field color? GlyphColor
+local GlyphTypographyStyle = {}
+
+---@class GlyphRichTextSegment
+---@field text? string
+---@field style? GlyphTypographyStyle
+---@field width? number
+---@field height? number
+---@field br? boolean
+local GlyphRichTextSegment = {}
+
+---@class GlyphRichTextLine
+---@field segments GlyphRichTextSegment[]
+---@field width number
+---@field height number
+local GlyphRichTextLine = {}
+
+---@class GlyphRichTextLayout
+---@field lines GlyphRichTextLine[]
+---@field width number
+---@field height number
+local GlyphRichTextLayout = {}
+
 -- ---------------------------------------------------------------------------
 -- Node
 -- ---------------------------------------------------------------------------
@@ -492,6 +542,7 @@ local GlyphDirty = {}
 ---@field path? string
 ---@field _glyphFeedback? GlyphAnimationValues
 ---@field _glyphFeedbackId? string
+---@field richText? GlyphRichTextLayout
 local GlyphNode = {}
 
 -- ---------------------------------------------------------------------------
@@ -624,9 +675,12 @@ local GlyphViewportBackend = {}
 ---@field accentTextColor? GlyphColor
 ---@field fontSize? number
 ---@field lineHeight? number
+---@field textScale? number
 ---@field radius? number
 ---@field borderWidth? number
----@field font? any
+---@field font? GlyphFontRef
+---@field fonts? table<string, GlyphFontRef>
+---@field typography? table<string, GlyphTypographyStyle>
 ---@field base? GlyphStyle
 ---@field components? table
 local GlyphTheme = {}

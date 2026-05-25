@@ -12,11 +12,37 @@ Glyph components return virtual nodes. Components are plain Lua functions; there
 ui.text("Hello", {
   wrap = true,
   width = 240,
+  textStyle = "paragraph",
   style = { color = { 1, 1, 1, 1 } },
 })
 ```
 
 Use `wrap = true` with a known width for text that may overflow.
+Use `textStyle` to select a theme typography preset such as `h1`, `h2`,
+`paragraph`, `caption`, or `code`. Convenience helpers set that prop for you:
+
+```lua
+ui.h1("Mission Briefing")
+ui.h2("Objectives")
+ui.p("Hold the zone until extraction.")
+ui.caption("Autosaved 4 seconds ago")
+```
+
+Formatted inline text is opt-in with `ui.richText` or `format = "tags"`:
+
+```lua
+ui.richText("Status: [color=#7cffae]online[/color] [style=caption]stable[/style]", {
+  wrap = true,
+  width = 320,
+})
+```
+
+Supported tags are `[color=#RRGGBB]`, `[color=r,g,b,a]`, `[font=name]`,
+`[size=18]`, `[style=h2]`, `[br]`, and closing tags such as `[/color]`.
+Unknown tags render literally.
+Mixed-size rich text defaults to baseline alignment. Use
+`richVerticalAlign = "top" | "center" | "bottom" | "baseline"` when a line
+should deliberately show formatted runs at different vertical levels.
 
 For localized text, use `ui.textKey` after configuring `ui.i18n`:
 
@@ -25,6 +51,8 @@ ui.textKey("hud.ready", {
   textFallback = "Ready",
 })
 ```
+
+Rich localized text uses `ui.richTextKey`.
 
 ## Box
 

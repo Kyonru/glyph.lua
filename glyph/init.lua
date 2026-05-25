@@ -24,6 +24,12 @@ local runtime = Runtime.new()
 ---@class glyph
 ---@field text fun(value: string, props?: GlyphTextProps): GlyphNode
 ---@field textKey fun(key: string, props?: GlyphTextProps): GlyphNode
+---@field richText fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field richTextKey fun(key: string, props?: GlyphTextProps): GlyphNode
+---@field h1 fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field h2 fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field p fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field caption fun(value: string, props?: GlyphTextProps): GlyphNode
 ---@field box fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field row fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field column fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode

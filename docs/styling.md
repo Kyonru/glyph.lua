@@ -31,12 +31,46 @@ Supported visual fields include:
 - `lineWidth`
 - `font`
 - `fontSize`
+- `lineHeight`
 - `opacity`
 - `padding`
 - `shader`
 - `blendMode`
 
 Existing compatibility props such as `backgroundColor`, `borderColor`, `color`, and `radius` still work, but `style` is preferred.
+
+## Typography
+
+Themes can define a font registry, typography presets, and a global text scale:
+
+```lua
+ui.setTheme({
+  textScale = 1.15,
+  fonts = {
+    body = love.graphics.newFont(14),
+    heading = love.graphics.newFont(24),
+  },
+  typography = {
+    text = { font = "body", fontSize = 14, lineHeight = 20 },
+    h1 = { font = "heading", fontSize = 30, lineHeight = 36 },
+    caption = { font = "body", fontSize = 11, lineHeight = 15 },
+  },
+})
+```
+
+`font` may be a Love2D font object, a registered font name, or a font spec table
+such as `{ path = "assets/ui.ttf", size = 14 }`. Font specs are loaded lazily and
+cached when Love2D font creation is available.
+
+Text nodes select presets with `textStyle`:
+
+```lua
+ui.text("ALERT", { textStyle = "h1" })
+ui.richText("[style=caption]Optional tag text[/style]", {
+  format = "tags",
+  richVerticalAlign = "top",
+})
+```
 
 ## State Styles
 

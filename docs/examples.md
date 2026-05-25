@@ -22,6 +22,7 @@ love examples/scene
 love examples/showcase
 love examples/styles
 love examples/themes
+love examples/typography
 love examples/viewport
 love examples/performance
 ```
@@ -89,6 +90,10 @@ Theme switching, variants, state styles, transitions, custom draw, and shader-ba
 ## Themes
 
 A full-screen game-tool HUD showing four theme presets, live radius/border/density/accent token controls, component variants, inputs, tabs, meters, and themed scrollbars.
+
+## Typography
+
+Responsive typography lab showing theme font registries, text presets, live text scale, localized rich text tags, wrapped formatted paragraphs, and normal components using typography tokens.
 
 ## Viewport
 

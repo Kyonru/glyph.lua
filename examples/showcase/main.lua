@@ -18,6 +18,7 @@ local examples = {
 	{ id = "settings", label = "Settings", module = "settings" },
 	{ id = "styles", label = "Styles", module = "styles" },
 	{ id = "themes", label = "Themes", module = "themes" },
+	{ id = "typography", label = "Typography", module = "typography" },
 	{ id = "viewport", label = "Viewport", module = "viewport" },
 }
 

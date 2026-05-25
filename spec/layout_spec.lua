@@ -266,4 +266,61 @@ describe("layout", function()
     assert.are.equal(80, tree.layout.height)
     assert.are.same({ "abc", "def", "ghi", "j" }, tree.wrappedText.lines)
   end)
+
+  it("uses typography font size and text scale when no measurement hook is available", function()
+    local theme = {
+      fontSize = 10,
+      lineHeight = 14,
+      textScale = 2,
+      typography = {
+        text = { fontSize = 10, lineHeight = 14 },
+        h1 = { fontSize = 20, lineHeight = 26 },
+      },
+    }
+    local tree = ui.text("aa", { textStyle = "h1" })
+
+    Layout.compute(tree, { theme = theme })
+
+    assert.is_true(tree.layout.width > 40)
+    assert.are.equal(52, tree.layout.height)
+  end)
+
+  it("uses component typography when measuring button labels", function()
+    local theme = {
+      fontSize = 10,
+      lineHeight = 14,
+      textScale = 1,
+      typography = {
+        text = { fontSize = 10, lineHeight = 14 },
+        button = { fontSize = 18, lineHeight = 24 },
+      },
+    }
+    local tree = ui.button({ label = "Go" })
+
+    Layout.compute(tree, { theme = theme })
+
+    assert.is_true(tree.layout.width > 38)
+    assert.are.equal(34, tree.layout.height)
+  end)
+
+  it("wraps rich text by visible text instead of tag source width", function()
+    local theme = {
+      fontSize = 10,
+      lineHeight = 14,
+      textScale = 1,
+      typography = {
+        text = { fontSize = 10, lineHeight = 14 },
+      },
+    }
+    local tree = ui.richText("[color=#ff0000]alpha beta[/color]", {
+      wrap = true,
+      width = 42,
+    })
+
+    Layout.compute(tree, { theme = theme })
+
+    assert.are.equal(2, #tree.richText.lines)
+    assert.are.equal("alpha", tree.richText.lines[1].segments[1].text)
+    assert.are.equal("beta", tree.richText.lines[2].segments[1].text)
+  end)
 end)

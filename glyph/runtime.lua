@@ -7,6 +7,7 @@ local Layout = require(prefix .. ".layout")
 local Responsive = require(prefix .. ".responsive")
 local Scene = require(prefix .. ".scene")
 local Style = require(prefix .. ".style")
+local Typography = require(prefix .. ".typography")
 local ViewportBackend = require(prefix .. ".viewport_backend")
 local theme = require(prefix .. ".theme")
 
@@ -596,14 +597,9 @@ function Runtime:layoutRoot(root, availableWidth, availableHeight)
     theme = self.theme,
     availableWidth = availableWidth,
     availableHeight = availableHeight,
-    measureText = function(text, props)
+    measureText = function(text, props, _, nodeType)
       local love = self.love or _G.love
-      local font = props.font or self.theme.font or (love and love.graphics and love.graphics.getFont and love.graphics.getFont())
-      if font and font.getWidth and font.getHeight then
-        return font:getWidth(text), font:getHeight()
-      end
-
-      return #text * 7, self.theme.lineHeight
+      return Typography.measurePlain(text, props, self.theme, love, nil, nodeType)
     end,
   }
 
@@ -1126,6 +1122,133 @@ local function withOpacity(value, opacity)
     value[3],
     (value[4] or 1) * (opacity or 1),
   }
+end
+
+---@param love table
+---@param font any
+---@return any
+local function setFont(love, font)
+  if love and love.graphics and font and love.graphics.setFont then
+    local previous = love.graphics.getFont and love.graphics.getFont() or nil
+    love.graphics.setFont(font)
+    return previous
+  end
+
+  return nil
+end
+
+---@param love table
+---@param previous any
+---@return nil
+local function restoreFont(love, previous)
+  if previous and love and love.graphics and love.graphics.setFont then
+    love.graphics.setFont(previous)
+  end
+end
+
+---@param runtime table
+---@param node GlyphNode
+---@param value any
+---@param x number
+---@param y number
+---@param width number
+---@param love table
+---@param style table
+---@param opacity number
+---@param defaultStyle? string
+---@return nil
+local function drawPlainText(runtime, node, value, x, y, width, love, style, opacity, defaultStyle)
+  local props = node.props or {}
+  local graphics = love and love.graphics
+  if not graphics then
+    return
+  end
+
+  local textStyle = Typography.resolveDrawable(runtime.theme, props, style, defaultStyle or node.type, love)
+  local previousFont = setFont(love, textStyle.font)
+  color(love, withOpacity(textStyle.color or style.color or runtime.theme.textColor, opacity))
+  local text = tostring(value or "")
+
+  if props.wrap or node.wrappedText then
+    local limit = (node.wrappedText and node.wrappedText.width) or props.wrapWidth or props.width or width
+    if type(limit) ~= "number" then
+      limit = width
+    end
+    local align = props.textAlign or "left"
+    if graphics.printf then
+      graphics.printf(text, x, y, limit, align)
+    else
+      local lineHeight = textStyle.lineHeight or runtime.theme.lineHeight
+      local lines = node.wrappedText and node.wrappedText.lines or { text }
+      for index, line in ipairs(lines) do
+        graphics.print(line, x, y + (index - 1) * lineHeight)
+      end
+    end
+  else
+    graphics.print(text, x, y)
+  end
+
+  restoreFont(love, previousFont)
+end
+
+---@param runtime table
+---@param node GlyphNode
+---@param x number
+---@param y number
+---@param width number
+---@param love table
+---@param style table
+---@param opacity number
+---@return nil
+local function drawRichText(runtime, node, x, y, width, love, style, opacity)
+  local props = node.props or {}
+  local graphics = love and love.graphics
+  if not graphics then
+    return
+  end
+
+  local rich = node.richText
+  if not rich then
+    rich = Typography.layoutRich(Typography.parse(node.value or "", runtime.theme, props), props, runtime.theme, props.wrap and width or nil, love, style, node.type)
+  end
+
+  local previousFont = graphics.getFont and graphics.getFont() or nil
+  local cursorY = y
+  local align = props.textAlign or "left"
+  local verticalAlign = props.richVerticalAlign or "baseline"
+  for _, line in ipairs(rich.lines or {}) do
+    local offsetX = 0
+    if align == "center" then
+      offsetX = math.max(0, (width - (line.width or 0)) / 2)
+    elseif align == "right" then
+      offsetX = math.max(0, width - (line.width or 0))
+    end
+
+    local cursorX = x + offsetX
+    for _, segment in ipairs(line.segments or {}) do
+      local segmentProps = {}
+      for key, value in pairs(props) do
+        segmentProps[key] = value
+      end
+      for key, value in pairs(segment.style or {}) do
+        segmentProps[key] = value
+      end
+      local segmentStyle = Typography.resolveDrawable(runtime.theme, segmentProps, style, node.type, love)
+      setFont(love, segmentStyle.font)
+      color(love, withOpacity(segmentStyle.color or style.color or runtime.theme.textColor, opacity))
+      local segmentY = cursorY
+      if verticalAlign == "center" then
+        segmentY = cursorY + math.max(0, ((line.height or 0) - (segment.height or 0)) / 2)
+      elseif verticalAlign == "bottom" or verticalAlign == "baseline" then
+        segmentY = cursorY + math.max(0, (line.baseline or line.height or 0) - (segment.height or line.height or 0))
+      end
+      graphics.print(tostring(segment.text or ""), cursorX, segmentY)
+      cursorX = cursorX + (segment.width or 0)
+    end
+    cursorY = cursorY + (line.height or runtime.theme.lineHeight or 18)
+  end
+
+  restoreFont(love, previousFont)
 end
 
 ---@param a number
@@ -1971,7 +2094,10 @@ local function applyDrawState(love, style, node, runtime)
 
   if graphics.getFont and graphics.setFont and style.font then
     previous.font = graphics.getFont()
-    graphics.setFont(style.font)
+    local textStyle = Typography.resolveDrawable(runtime.theme, node and node.props or {}, style, node and node.type or "text", love)
+    if textStyle.font then
+      graphics.setFont(textStyle.font)
+    end
   end
 
   return function()
@@ -2046,25 +2172,10 @@ function Runtime:drawNode(node, x, y)
     ctx = createDrawContext(self, node, absX, absY, width, height, love, drawStyle)
     props.draw(node, absX, absY, width, height, love, drawStyle, ctx)
   elseif node.type == "text" then
-    color(love, withOpacity(style.color or self.theme.textColor, opacity))
-    local text = tostring(node.value or "")
-    if props.wrap or node.wrappedText then
-      local limit = (node.wrappedText and node.wrappedText.width) or props.wrapWidth or props.width or width
-      if type(limit) ~= "number" then
-        limit = width
-      end
-      local align = props.textAlign or "left"
-      if love.graphics.printf then
-        love.graphics.printf(text, absX, absY, limit, align)
-      else
-        local lineHeight = props.lineHeight or self.theme.lineHeight
-        local lines = node.wrappedText and node.wrappedText.lines or { text }
-        for index, line in ipairs(lines) do
-          love.graphics.print(line, absX, absY + (index - 1) * lineHeight)
-        end
-      end
+    if Typography.isRich(props) then
+      drawRichText(self, node, absX, absY, width, love, style, opacity)
     else
-      love.graphics.print(text, absX, absY)
+      drawPlainText(self, node, node.value or "", absX, absY, width, love, style, opacity, "text")
     end
   elseif node.type == "button" then
     local nodeShape = props.shape or style.shape
@@ -2085,8 +2196,7 @@ function Runtime:drawNode(node, x, y)
         drawRect(love, "line", absX, absY, width, height, radius)
       end
     end
-    color(love, withOpacity(style.color or self.theme.textColor, opacity))
-    love.graphics.print(tostring(props.label or ""), absX + 10, absY + 5)
+    drawPlainText(self, node, props.label or "", absX + 10, absY + 5, width - 20, love, style, opacity, "button")
   elseif node.type == "input" then
     if style.background then
       color(love, withOpacity(style.background, opacity))
@@ -2097,12 +2207,20 @@ function Runtime:drawNode(node, x, y)
       drawRect(love, "line", absX, absY, width, height, radius)
     end
     local value = tostring(props.value or "")
-    color(love, withOpacity(value == "" and (style.placeholderColor or self.theme.mutedTextColor) or (style.color or self.theme.textColor), opacity))
-    love.graphics.print(value ~= "" and value or tostring(props.placeholder or ""), absX + 8, absY + 6)
+    local inputStyle = style
+    if value == "" and style.placeholderColor then
+      inputStyle = Style.copyValue(style)
+      inputStyle.color = style.placeholderColor
+    elseif value == "" then
+      inputStyle = Style.copyValue(style)
+      inputStyle.color = self.theme.mutedTextColor
+    end
+    drawPlainText(self, node, value ~= "" and value or tostring(props.placeholder or ""), absX + 8, absY + 6, width - 16, love, inputStyle, opacity, "input")
     if self.focusNode == node then
       local cursor = self.inputCursors[self:cursorKey(node)] or #value
       local prefix = value:sub(1, cursor)
-      local font = love.graphics.getFont and love.graphics.getFont()
+      local inputTextStyle = Typography.resolveDrawable(self.theme, props, style, "input", love)
+      local font = inputTextStyle.font or (love.graphics.getFont and love.graphics.getFont())
       local cursorX = absX + 8 + (font and font:getWidth(prefix) or #prefix * 7)
       color(love, withOpacity(style.cursorColor or self.theme.accentColor, opacity))
       love.graphics.rectangle("fill", cursorX, absY + 6, self.theme.inputCursorWidth, math.max(12, height - 12))
@@ -2115,8 +2233,8 @@ function Runtime:drawNode(node, x, y)
       if type(label) == "function" then
         label = label(props.value or 0, props.min or 0, props.max or 1)
       end
-      color(love, withOpacity(style.color or self.theme.textColor, opacity))
-      love.graphics.print(tostring(label), absX + 8, absY + math.max(2, height / 2 - (self.theme.lineHeight or 14) / 2))
+      local labelTextStyle = Typography.resolve(self.theme, props, style, "text")
+      drawPlainText(self, node, label, absX + 8, absY + math.max(2, height / 2 - (labelTextStyle.lineHeight or self.theme.lineHeight or 14) / 2), width - 16, love, style, opacity, "text")
     end
   else
     local nodeShape = props.shape or style.shape

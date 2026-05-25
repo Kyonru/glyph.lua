@@ -1,3 +1,6 @@
+local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local Typography = require(prefix .. ".typography")
+
 local Layout = {}
 
 local function spacing(value)
@@ -205,6 +208,14 @@ local function charWidth(context, props, theme)
   return 7
 end
 
+local function measureText(context, text, props, theme, nodeType)
+  if context.measureText then
+    return context.measureText(text, props, theme, nodeType)
+  end
+
+  return Typography.measurePlain(text, props, theme, nil, nil, nodeType)
+end
+
 local function wrapText(text, maxWidth, context, props, theme)
   local measuredLineHeight = nil
   if context.measureText then
@@ -311,6 +322,17 @@ function Layout.measureNode(node, context)
     if props.wrap or props.width or node.layout.assignedWidth then
       local widthLimit = props.wrapWidth or resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or node.layout.assignedWidth or (props.wrap and node.layout.availableWidth) or props.maxWidth
       if widthLimit then
+        if Typography.isRich(props) then
+          local segments = Typography.parse(text, theme, props)
+          local rich = Typography.layoutRich(segments, props, theme, widthLimit, nil, nil, node.type)
+          node.richText = rich
+          node.wrappedText = {
+            lines = rich.lines,
+            width = rich.width,
+            height = rich.height,
+          }
+          return rich.width, rich.height
+        end
         local lines, wrappedWidth, wrappedHeight = wrapText(text, widthLimit, context, props, theme)
         node.wrappedText = {
           lines = lines,
@@ -321,11 +343,14 @@ function Layout.measureNode(node, context)
       end
     end
 
-    if context.measureText then
-      return context.measureText(text, props, theme)
+    if Typography.isRich(props) then
+      local segments = Typography.parse(text, theme, props)
+      local rich = Typography.layoutRich(segments, props, theme, nil, nil, nil, node.type)
+      node.richText = rich
+      return rich.width, rich.height
     end
 
-    return #text * 7, theme.lineHeight
+    return measureText(context, text, props, theme, node.type)
   end
 
   if node.type == "input" then
@@ -335,11 +360,7 @@ function Layout.measureNode(node, context)
   if node.type == "button" then
     local label = tostring(props.label or "")
     local textWidth, textHeight
-    if context.measureText then
-      textWidth, textHeight = context.measureText(label, props, theme)
-    else
-      textWidth, textHeight = #label * 7, theme.lineHeight
-    end
+    textWidth, textHeight = measureText(context, label, props, theme, node.type)
 
     local pad = spacing(props.padding or { x = 10, y = 5 })
     return textWidth + pad.left + pad.right, textHeight + pad.top + pad.bottom

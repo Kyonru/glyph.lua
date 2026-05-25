@@ -44,6 +44,17 @@ describe("ui helpers", function()
     assert.are.equal("skew", meter.props.shape.kind)
   end)
 
+  it("creates rich text and typography convenience nodes", function()
+    local rich = ui.richText("Ready [color=#ffff00]go[/color]")
+    local title = ui.h1("Mission")
+    local paragraph = ui.p("Long copy")
+
+    assert.are.equal("text", rich.type)
+    assert.are.equal("tags", rich.props.format)
+    assert.are.equal("h1", title.props.textStyle)
+    assert.are.equal("paragraph", paragraph.props.textStyle)
+  end)
+
   it("does not draw linear meter fill when value is zero", function()
     local runtime = Runtime.new()
     local fills = {}
@@ -305,6 +316,190 @@ describe("ui helpers", function()
     assert.are.equal("table", type(received:skewBox({ skew = 4 })))
     assert.are.equal("table", type(receivedPolygon))
     assert.are.equal(8, receivedPolygon[7])
+  end)
+
+  it("resolves registered typography fonts and restores graphics font", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    local defaultFont = {
+      getWidth = function(_, text)
+        return #text * 6
+      end,
+      getHeight = function()
+        return 12
+      end,
+    }
+    local headingFont = {
+      getWidth = function(_, text)
+        return #text * 12
+      end,
+      getHeight = function()
+        return 24
+      end,
+    }
+    local currentFont = defaultFont
+    local previousHeadingFont = runtime.theme.fonts.heading
+    local previousH1Font = runtime.theme.typography.h1.font
+
+    runtime.theme.fonts.heading = headingFont
+    runtime.theme.typography.h1.font = "heading"
+    runtime:setLove({
+      graphics = {
+        getFont = function()
+          return currentFont
+        end,
+        setFont = function(font)
+          currentFont = font
+          calls[#calls + 1] = { "font", font }
+        end,
+        setColor = function() end,
+        print = function(text)
+          calls[#calls + 1] = { "print", text }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.h1("Title")
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(defaultFont, currentFont)
+    assert.are.same({ "font", headingFont }, calls[1])
+    assert.are.same({ "print", "Title" }, calls[2])
+
+    runtime.theme.fonts.heading = previousHeadingFont
+    runtime.theme.typography.h1.font = previousH1Font
+  end)
+
+  it("draws rich text tags and unknown tags literally", function()
+    local runtime = Runtime.new()
+    local printed = {}
+    local colors = {}
+
+    runtime:setLove({
+      graphics = {
+        getFont = function()
+          return nil
+        end,
+        setFont = function() end,
+        setColor = function(r, g, b, a)
+          colors[#colors + 1] = { r, g, b, a }
+        end,
+        print = function(text)
+          printed[#printed + 1] = text
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.richText("A [color=#ff0000]B[/color] [nope]C")
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "A ", "B", " ", "[nope]C" }, printed)
+    assert.are.same({ 1, 0, 0, 1 }, colors[2])
+  end)
+
+  it("baseline-aligns mixed-size rich text segments", function()
+    local runtime = Runtime.new()
+    local prints = {}
+
+    runtime:setLove({
+      graphics = {
+        getFont = function()
+          return nil
+        end,
+        setFont = function() end,
+        setColor = function() end,
+        print = function(text, x, y)
+          prints[#prints + 1] = { text = text, x = x, y = y }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.richText("Big [size=30]Tall[/size] small")
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal("Big ", prints[1].text)
+    assert.are.equal("Tall", prints[2].text)
+    assert.are.equal(" small", prints[3].text)
+    assert.is_true(prints[1].y > prints[2].y)
+    assert.are.equal(prints[1].y, prints[3].y)
+  end)
+
+  it("can top-align mixed-size rich text segments", function()
+    local runtime = Runtime.new()
+    local prints = {}
+
+    runtime:setLove({
+      graphics = {
+        getFont = function()
+          return nil
+        end,
+        setFont = function() end,
+        setColor = function() end,
+        print = function(text, x, y)
+          prints[#prints + 1] = { text = text, x = x, y = y }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.richText("Big [size=30]Tall[/size] small", {
+        richVerticalAlign = "top",
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(prints[1].y, prints[2].y)
+    assert.are.equal(prints[2].y, prints[3].y)
+  end)
+
+  it("does not hang on rich text segments with leading spaces", function()
+    local Typography = require("glyph.typography")
+    local segments = Typography.parse("Alpha [color=#ff0000] Beta[/color] Gamma", ui.theme, { format = "tags" })
+    local rich = Typography.layoutRich(segments, { format = "tags" }, ui.theme, 220)
+
+    assert.is_true(#rich.lines >= 1)
+    assert.are.equal("Alpha ", rich.lines[1].segments[1].text)
+    assert.are.equal("Beta", rich.lines[1].segments[2].text)
+  end)
+
+  it("preserves spaces and punctuation across rich tag boundaries", function()
+    local Typography = require("glyph.typography")
+    local source = "[font=mono]tags[/font] are [color=0.45,0.9,1,1]inline[/color], [size=19]measured[/size], and [style=caption]opt-in[/style]."
+    local segments = Typography.parse(source, ui.theme, { format = "tags" })
+    local rich = Typography.layoutRich(segments, { format = "tags" }, ui.theme, 600)
+    local text = {}
+
+    for _, segment in ipairs(rich.lines[1].segments) do
+      text[#text + 1] = segment.text
+    end
+
+    assert.are.equal("tags are inline, measured, and opt-in.", table.concat(text))
+  end)
+
+  it("resolves rich text keys before parsing tags", function()
+    ui.i18n.configure({
+      translate = function(key)
+        if key == "ready" then
+          return "[color=#00ff00]Ready[/color]"
+        end
+      end,
+    })
+
+    local node = ui.richTextKey("ready")
+    local segments = require("glyph.typography").parse(node.value, ui.theme, node.props)
+
+    assert.are.equal("Ready", segments[1].text)
+    assert.are.same({ 0, 1, 0, 1 }, segments[1].style.color)
   end)
 
   it("translates keys with fallback and custom missing behavior", function()

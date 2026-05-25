@@ -26,6 +26,7 @@ Add to core:
 - Event routing and focus/hover/press behavior.
 - Generic style, theme, shader, and transition hooks.
 - Generic meters, shapes, clipping, stencil, and custom draw helpers.
+- Theme-driven typography, font refs, text scaling, and opt-in lightweight rich text tags.
 - Scene/layer/modal mechanics.
 - Spatial navigation primitives and opt-in gamepad mapping.
 - Backend-agnostic i18n and accessibility adapter surfaces.
@@ -42,6 +43,7 @@ Keep out of core:
 - Native screen-reader, TTS, locale-file, plural-rule, or app-policy ownership.
 - Dashboard-specific cards or tables.
 - Feather-specific inspectors, logs, or debugger panels.
+- Full dialogue/textbox engines, typewriter timing, sound/image tags, or branded text effects.
 
 If a feature feels specific, implement it as an example using existing primitives. If that example reveals missing primitives, add the primitive instead.
 
@@ -119,6 +121,16 @@ Rules:
 - Any shader, blend, line width, font, scissor, stencil, canvas, or transform mutation must be restored.
 - `style.audio` and component `audio` tables are cue metadata; core emits events only.
 - Shape/clip/stencil/meter drawing is visual-only. Hit testing remains rectangular unless an explicit shape-hit API is added later.
+
+## Typography Work
+
+Typography lives in `glyph/typography.lua` and is shared by layout and runtime drawing.
+
+- Keep `ui.text` plain by default; rich tags are opt-in through `ui.richText`, `format = "tags"`, or `rich = true`.
+- Resolve text through theme typography presets, registered fonts, and `theme.textScale` before measuring and drawing.
+- Font refs may be Love font objects, theme font names, or lazy font specs; do not load fonts repeatedly in component builds.
+- Unknown or malformed rich text tags should render literally.
+- Core rich text should stay lightweight: color, font, size, style, and line break tags only. Leave typewriter effects, sounds, icons, images, and per-character animation to examples or future adapters.
 
 ## Animation Work
 

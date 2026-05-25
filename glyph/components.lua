@@ -69,6 +69,61 @@ function Components.textKey(key, props)
   return Components.text(key, props)
 end
 
+---@param value string
+---@param props? GlyphTextProps
+---@return GlyphNode
+function Components.richText(value, props)
+  props = normalizeProps(props)
+  props.format = props.format or "tags"
+  return Components.text(value, props)
+end
+
+---@param key string
+---@param props? GlyphTextProps
+---@return GlyphNode
+function Components.richTextKey(key, props)
+  props = normalizeProps(props)
+  props.textKey = key
+  props.format = props.format or "tags"
+  return Components.text(key, props)
+end
+
+---@param value string
+---@param props? GlyphTextProps
+---@return GlyphNode
+function Components.h1(value, props)
+  props = normalizeProps(props)
+  props.textStyle = props.textStyle or "h1"
+  return Components.text(value, props)
+end
+
+---@param value string
+---@param props? GlyphTextProps
+---@return GlyphNode
+function Components.h2(value, props)
+  props = normalizeProps(props)
+  props.textStyle = props.textStyle or "h2"
+  return Components.text(value, props)
+end
+
+---@param value string
+---@param props? GlyphTextProps
+---@return GlyphNode
+function Components.p(value, props)
+  props = normalizeProps(props)
+  props.textStyle = props.textStyle or "paragraph"
+  return Components.text(value, props)
+end
+
+---@param value string
+---@param props? GlyphTextProps
+---@return GlyphNode
+function Components.caption(value, props)
+  props = normalizeProps(props)
+  props.textStyle = props.textStyle or "caption"
+  return Components.text(value, props)
+end
+
 ---@param props? GlyphProps
 ---@param children? GlyphNode[]|GlyphNode
 ---@return GlyphNode
@@ -202,6 +257,7 @@ function Components.panel(props, children)
   if title then
     panelChildren[#panelChildren + 1] = Components.text(resolvedTitle, {
       color = props.titleColor,
+      textStyle = props.titleTextStyle,
     })
   end
 
@@ -232,6 +288,7 @@ function Components.panel(props, children)
     inset = props.inset,
     zIndex = props.zIndex,
     align = props.align,
+    justify = props.justify,
     navGroup = props.navGroup,
     navScope = props.navScope,
     navTrap = props.navTrap,

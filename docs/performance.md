@@ -14,6 +14,15 @@ Glyph is intended for debugger panels and game UI, so performance matters.
 - Mount only what needs to be visible for large lists.
 - Prefer primitives that compose over specialized components.
 
+## Typography
+
+Theme font specs are loaded lazily and cached by resolved size. Prefer named
+fonts and `textStyle` presets over creating Love2D fonts inside component
+functions.
+
+Rich text tag parsing is opt-in. Use plain `ui.text` for hot-path labels, and
+reserve `ui.richText` for copy that actually needs inline formatting.
+
 ## Memo
 
 Use `ui.memo(component, deps)` to reuse a subtree when dependencies are unchanged.

@@ -102,6 +102,16 @@ ui.text(longMessage, {
 ```
 
 Text measurement uses Love2D fonts at runtime and test-friendly measurement hooks outside Love2D.
+Typography props such as `textStyle`, `fontSize`, `lineHeight`, and theme-level
+`textScale` affect both measurement and drawing. Rich text tags are ignored for
+width calculation except for their visible text and inline font/size/style changes.
+
+```lua
+ui.richText("[style=h2]Alert[/style][br]Return to extraction.", {
+  wrap = true,
+  width = 360,
+})
+```
 
 ## Common Pitfalls
 

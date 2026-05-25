@@ -35,6 +35,7 @@ build = {
     ["glyph.style"] = "glyph/style.lua",
     ["glyph.theme"] = "glyph/theme.lua",
     ["glyph.transitions"] = "glyph/transitions.lua",
+    ["glyph.typography"] = "glyph/typography.lua",
     ["glyph.viewport_backend"] = "glyph/viewport_backend.lua",
     ["glyph.vendor.flux"] = "glyph/vendor/flux.lua",
   },
