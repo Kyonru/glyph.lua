@@ -1,11 +1,11 @@
 ---
 name: glyph-development
-description: Use when changing glyph.lua internals, public APIs, runtime behavior, layout, styling, animation, navigation, i18n, accessibility, viewport backends, tests, or docs.
+description: Use when changing glyph.lua internals, public APIs, runtime behavior, layout, styling, animation, feedback, navigation, i18n, accessibility, viewport backends, tests, or docs.
 ---
 
 # Glyph Development Skill
 
-Use this skill when changing Glyph internals: components, layout, runtime, style resolution, scenes/modals, transitions, animation, navigation, i18n, accessibility, viewport backends, callback bus, or performance behavior.
+Use this skill when changing Glyph internals: components, layout, runtime, style resolution, scenes/modals, transitions, animation, feedback, navigation, i18n, accessibility, viewport backends, callback bus, or performance behavior.
 
 ## First Pass
 
@@ -31,12 +31,13 @@ Add to core:
 - Backend-agnostic i18n and accessibility adapter surfaces.
 - Backend-agnostic fixed viewport adapter hooks.
 - Visual-only animation primitives.
+- Modular feedback primitives for node animation, audio cue metadata, callbacks, and app-owned FX events.
 
 Keep out of core:
 
 - Persona-style menu widgets.
 - Health/mana-specific widgets; use generic `ui.meter`.
-- Blob-specific transitions.
+- Branded blob/splat/sticker button widgets.
 - Push/Shove-specific public APIs such as `ui.push` or `ui.shove`.
 - Native screen-reader, TTS, locale-file, plural-rule, or app-policy ownership.
 - Dashboard-specific cards or tables.
@@ -72,6 +73,7 @@ The runtime in `glyph/runtime.lua` owns:
 - Focus, hover, press, input, scroll state.
 - Scene layer rendering.
 - Audio cue and accessibility event emission.
+- Feedback trigger lifecycle and event emission.
 - Viewport coordinate conversion for pointer/touch input.
 
 Draw order and hit order must match. If `zIndex` or stack order changes drawing, hit testing must follow the same order in reverse.
@@ -126,6 +128,19 @@ Animation lives in `glyph/animation.lua` and uses vendored Flux.
 - Animations are visual-only and must not affect layout, hit testing, focus, navigation geometry, or semantic snapshots.
 - Apply transforms with graphics push/pop and restore state.
 - Exit ghosts should render only until exit completes; avoid duplicate descendant exits for an exiting parent.
+
+## Feedback Work
+
+Feedback lives in `glyph/feedback.lua`.
+
+- Public API is `ui.feedback`, not `ui.juice`.
+- Feedback steps should stay generic: `animate`, `audio`, `emit`, and `callback`.
+- Feedback animation composes with node animation and remains visual-only.
+- Trigger hooks should follow the shared lifecycle: hover enter, focus enter, press down, release up, activate before successful button click.
+- Disabled controls should not emit press/release/activate feedback.
+- `emit` steps dispatch app-owned `"feedback"` events for particles, shake, haptics, splats, or custom shader systems.
+- Core should not own particles, cameras, sound playback, or branded visual widgets.
+- Generic blob shape support is acceptable; more specific shape packs should start in examples.
 
 ## Adapter Work
 

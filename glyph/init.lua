@@ -9,6 +9,7 @@ local Accessibility = require(prefix .. ".accessibility")
 local Animation = require(prefix .. ".animation")
 local Components = require(prefix .. ".components")
 local CallbackBus = require(prefix .. ".callback_bus")
+local Feedback = require(prefix .. ".feedback")
 local I18n = require(prefix .. ".i18n")
 local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
@@ -35,6 +36,7 @@ local runtime = Runtime.new()
 ---@field static fun(node: GlyphNode): GlyphNode
 ---@field animation GlyphAnimationApi
 ---@field accessibility GlyphAccessibilityApi
+---@field feedback GlyphFeedbackApi
 ---@field i18n GlyphI18nApi
 ---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
 ---@field viewportBackend GlyphViewportBackendApi
@@ -51,6 +53,7 @@ local ui = {
   accessibility = nil,
   CallbackBus = CallbackBus,
   animation = Animation,
+  feedback = nil,
   i18n = I18n,
   Navigate = Navigate,
   Responsive = Responsive,
@@ -90,6 +93,26 @@ ui.accessibility = {
   ---@return GlyphAccessibilityEvent|nil
   announce = function(message, opts)
     return Accessibility.announce(runtime, message, opts)
+  end,
+}
+
+ui.feedback = {
+  ---@param name string
+  ---@param sequence GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)
+  ---@return GlyphFeedbackSequence|nil
+  define = function(name, sequence)
+    return Feedback.define(name, sequence)
+  end,
+  ---@param nameOrSequence any
+  ---@param node? GlyphNode
+  ---@param opts? GlyphFeedbackPlayOpts
+  ---@return GlyphFeedbackContext|nil
+  play = function(nameOrSequence, node, opts)
+    return Feedback.play(runtime, nameOrSequence, node, opts)
+  end,
+  ---@return nil
+  clear = function()
+    Feedback.clear(runtime)
   end,
 }
 

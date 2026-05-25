@@ -2,6 +2,7 @@ local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
 local Accessibility = require(prefix .. ".accessibility")
 local Animation = require(prefix .. ".animation")
 local CallbackBus = require(prefix .. ".callback_bus")
+local Feedback = require(prefix .. ".feedback")
 local Layout = require(prefix .. ".layout")
 local Responsive = require(prefix .. ".responsive")
 local Scene = require(prefix .. ".scene")
@@ -18,6 +19,7 @@ local runtimeCallbacks = {
   "navigate",
   "audio",
   "accessibility",
+  "feedback",
   "focusChanged",
   "hoverChanged",
   "event",
@@ -156,6 +158,28 @@ local function isActivationKey(key)
   return key == "return" or key == "kpenter" or key == "space"
 end
 
+---@param base? GlyphAnimationValues|table
+---@param feedback? GlyphAnimationValues|table
+---@return GlyphAnimationValues|table|nil
+local function combineAnimationValues(base, feedback)
+  if not base then
+    return feedback
+  end
+  if not feedback then
+    return base
+  end
+
+  return {
+    opacity = (base.opacity or 1) * (feedback.opacity or 1),
+    x = (base.x or 0) + (feedback.x or 0),
+    y = (base.y or 0) + (feedback.y or 0),
+    scale = (base.scale or 1) * (feedback.scale or 1),
+    scaleX = (base.scaleX or 1) * (feedback.scaleX or 1),
+    scaleY = (base.scaleY or 1) * (feedback.scaleY or 1),
+    rotation = (base.rotation or 0) + (feedback.rotation or 0),
+  }
+end
+
 function Runtime.new()
   local self = setmetatable({
     root = nil,
@@ -186,6 +210,7 @@ function Runtime.new()
     animationMounted = {},
     animationMountedByRoot = {},
     exitAnimations = {},
+    feedbackStates = {},
     styleClock = 0,
     lastDt = 0,
     responsive = Responsive.new(),
@@ -544,6 +569,7 @@ function Runtime:build(component)
   self.mouseDownNode = findByPath(root, self.mouseDownPath)
   self.keyDownNode = findByPath(root, self.keyDownPath)
   Accessibility.scanLive(self, root)
+  Feedback.prepare(self, root)
   self.needsRender = false
   self:runEffects()
   return root
@@ -560,6 +586,7 @@ function Runtime:buildLayer(layer)
 
   layer.root = root
   Accessibility.scanLive(self, root)
+  Feedback.prepare(self, root)
   layer.needsRender = false
   return root
 end
@@ -854,6 +881,7 @@ function Runtime:setHover(node)
     self.bus:dispatch("hoverChanged", node, previous)
     if node then
       self:emitAudio("hover", node)
+      Feedback.trigger(self, node, "hover")
     end
   end
 end
@@ -871,6 +899,7 @@ function Runtime:setFocus(node)
     self.bus:dispatch("focusChanged", node, previous)
     if node then
       self:emitAudio("focus", node)
+      Feedback.trigger(self, node, "focus")
       Accessibility.emit(self, "focus", node)
     end
     self:markDirty()
@@ -911,6 +940,7 @@ function Runtime:mousepressed(x, y, button)
   self.mouseDownPath = node and node.path or nil
   self:setHover(node)
   self:emitAudio("press", node)
+  Feedback.trigger(self, node, "press")
 
   if node and (node.type == "input" or node.type == "button" or node.props.focusable) then
     self:setFocus(node)
@@ -936,8 +966,13 @@ function Runtime:mousereleased(x, y, button)
   self.mouseDownNode = nil
   self.mouseDownPath = nil
 
+  if down then
+    Feedback.trigger(self, down, "release")
+  end
+
   if node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
     self:emitAudio("activate", node)
+    Feedback.trigger(self, node, "activate")
     Accessibility.emit(self, "activate", node)
     node.props.onClick(node)
   end
@@ -1018,6 +1053,7 @@ function Runtime:keypressed(key)
       self.keyDownPath = node.path
       self.keyDownKey = key
       self:emitAudio("press", node)
+      Feedback.trigger(self, node, "press")
       self:markDirty()
     end
   end
@@ -1036,8 +1072,13 @@ function Runtime:keyreleased(key)
     self.keyDownPath = nil
     self.keyDownKey = nil
 
+    if down then
+      Feedback.trigger(self, down, "release")
+    end
+
     if node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
       self:emitAudio("activate", node)
+      Feedback.trigger(self, node, "activate")
       Accessibility.emit(self, "activate", node)
       node.props.onClick(node)
     end
@@ -1158,6 +1199,26 @@ local function polygonBox(x, y, width, height, opts)
   }
 end
 
+---@param value any
+---@return number
+local function stableSeed(value)
+  local text = tostring(value or "glyph")
+  local hash = 0
+  for index = 1, #text do
+    hash = (hash * 33 + text:byte(index)) % 2147483647
+  end
+  return hash
+end
+
+---@param seed number
+---@param index number
+---@param phase number
+---@return number
+local function blobNoise(seed, index, phase)
+  local value = math.sin(seed * 12.9898 + index * 78.233 + phase * 37.719) * 43758.5453
+  return value - math.floor(value)
+end
+
 ---@param x number
 ---@param y number
 ---@param width number
@@ -1222,6 +1283,33 @@ local function ellipsePoints(bounds, segments)
   return result
 end
 
+---@param bounds GlyphBounds
+---@param opts? table
+---@return number[]
+local function blobPoints(bounds, opts)
+  opts = opts or {}
+  local result = {}
+  local count = math.max(5, math.floor(opts.points or opts.segments or 10))
+  local variance = math.max(0, math.min(0.85, opts.variance or 0.16))
+  local phase = opts.phase or 0
+  local seed = stableSeed(opts.seed or count)
+  local cx = bounds.x + bounds.width / 2
+  local cy = bounds.y + bounds.height / 2
+  local rx = bounds.width / 2
+  local ry = bounds.height / 2
+  local inset = opts.inset or 0
+
+  for index = 0, count - 1 do
+    local angle = (index / count) * math.pi * 2
+    local noise = blobNoise(seed, index, phase)
+    local radius = 1 + (noise * 2 - 1) * variance
+    result[#result + 1] = cx + math.cos(angle) * math.max(0, rx - inset) * radius
+    result[#result + 1] = cy + math.sin(angle) * math.max(0, ry - inset) * radius
+  end
+
+  return result
+end
+
 ---@param shape? boolean|GlyphShape|number[]|fun(ctx: GlyphDrawContext): any
 ---@param bounds GlyphBounds
 ---@param ctx? GlyphDrawContext
@@ -1249,6 +1337,8 @@ local function shapePoints(shape, bounds, ctx)
     return polygonBox(bounds.x, bounds.y, bounds.width, bounds.height, shape)
   elseif kind == "polygon" then
     return normalizePoints(shape.points, bounds, shape.absolute == true)
+  elseif kind == "blob" then
+    return blobPoints(bounds, shape)
   elseif kind == "circle" or kind == "ellipse" then
     return ellipsePoints(bounds, shape.segments)
   end
@@ -1601,7 +1691,9 @@ local function drawLinearMeter(graphics, bounds, props, style, ctx)
       end
     end
   else
-    drawMeterPart(graphics, linearFillBounds(bounds, ratio, props.direction), shape, fill, ctx)
+    if ratio > 0 then
+      drawMeterPart(graphics, linearFillBounds(bounds, ratio, props.direction), shape, fill, ctx)
+    end
   end
 
   if overfill > 0 then
@@ -1635,8 +1727,10 @@ local function drawRadialMeter(graphics, bounds, props, style, ctx)
   if graphics.arc then
     color(ctx.love, track.color or track.background)
     graphics.arc("line", cx, cy, radius, startAngle, endAngle, props.segments or 32)
-    color(ctx.love, fill.color or fill.background)
-    graphics.arc("line", cx, cy, radius, startAngle, fillEnd, props.segments or 32)
+    if ratio > 0 then
+      color(ctx.love, fill.color or fill.background)
+      graphics.arc("line", cx, cy, radius, startAngle, fillEnd, props.segments or 32)
+    end
   end
 
   if previousLineWidth and graphics.setLineWidth then
@@ -1803,6 +1897,13 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     return polygonBox(self.x, self.y, self.width, self.height, opts)
   end
 
+  ---@param bounds? GlyphBounds
+  ---@param opts? table
+  ---@return number[]
+  function ctx:blob(bounds, opts)
+    return blobPoints(bounds or self, opts)
+  end
+
   return ctx
 end
 
@@ -1901,7 +2002,7 @@ function Runtime:drawNode(node, x, y)
   local absY = y + (layout.y or 0)
   local width = layout.width or 0
   local height = layout.height or 0
-  local animation = node._glyphAnimation
+  local animation = combineAnimationValues(node._glyphAnimation, node._glyphFeedback)
   local didPushAnimation = false
   local nodeAnimationId = node._glyphAnimationId or animationId(node)
   local animationEntry = nodeAnimationId and self.animationMounted[nodeAnimationId] or nil
@@ -1966,13 +2067,23 @@ function Runtime:drawNode(node, x, y)
       love.graphics.print(text, absX, absY)
     end
   elseif node.type == "button" then
+    local nodeShape = props.shape or style.shape
+    local shapeCtx = nodeShape and (ctx or createDrawContext(self, node, absX, absY, width, height, love, style)) or nil
     if style.background then
       color(love, withOpacity(style.background, opacity))
-      drawRect(love, "fill", absX, absY, width, height, radius)
+      if nodeShape then
+        drawShape(love.graphics, "fill", nodeShape, boundsFor(absX, absY, width, height), shapeCtx)
+      else
+        drawRect(love, "fill", absX, absY, width, height, radius)
+      end
     end
     if style.borderColor and (style.borderWidth or 0) > 0 then
       color(love, withOpacity(style.borderColor, opacity))
-      drawRect(love, "line", absX, absY, width, height, radius)
+      if nodeShape then
+        drawShape(love.graphics, "line", nodeShape, boundsFor(absX, absY, width, height), shapeCtx)
+      else
+        drawRect(love, "line", absX, absY, width, height, radius)
+      end
     end
     color(love, withOpacity(style.color or self.theme.textColor, opacity))
     love.graphics.print(tostring(props.label or ""), absX + 10, absY + 5)

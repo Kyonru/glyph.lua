@@ -44,6 +44,95 @@ describe("ui helpers", function()
     assert.are.equal("skew", meter.props.shape.kind)
   end)
 
+  it("does not draw linear meter fill when value is zero", function()
+    local runtime = Runtime.new()
+    local fills = {}
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function()
+          return 1
+        end,
+        setLineWidth = function() end,
+        getShader = function()
+          return nil
+        end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function(mode, x, y, width, height)
+          if mode == "fill" then
+            fills[#fills + 1] = { x = x, y = y, width = width, height = height }
+          end
+        end,
+        print = function() end,
+      },
+    })
+
+    local function App()
+      return Components.meter({
+        value = 0,
+        max = 10,
+        width = 120,
+        height = 12,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(1, #fills)
+    assert.are.equal(120, fills[1].width)
+  end)
+
+  it("does not draw radial meter fill arc when value is zero", function()
+    local runtime = Runtime.new()
+    local arcs = {}
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function()
+          return 1
+        end,
+        setLineWidth = function() end,
+        getShader = function()
+          return nil
+        end,
+        setShader = function() end,
+        setColor = function() end,
+        arc = function(mode, x, y, radius, startAngle, endAngle)
+          arcs[#arcs + 1] = {
+            mode = mode,
+            x = x,
+            y = y,
+            radius = radius,
+            startAngle = startAngle,
+            endAngle = endAngle,
+          }
+        end,
+        rectangle = function() end,
+        print = function() end,
+      },
+    })
+
+    local function App()
+      return Components.meter({
+        kind = "arc",
+        value = 0,
+        max = 10,
+        width = 80,
+        height = 80,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(1, #arcs)
+    assert.is_true(arcs[1].endAngle > arcs[1].startAngle)
+  end)
+
   it("converts pointer input through the viewport backend", function()
     local previousBackend = ui.runtime.viewportBackend
     local clicks = 0
@@ -355,6 +444,70 @@ describe("ui helpers", function()
     assert.are.equal("Power", ui.accessibility.describe(meter).valueText)
     assert.are.equal("panel", ui.accessibility.describe(panel).role)
     assert.are.equal("Status", ui.accessibility.describe(panel).label)
+  end)
+
+  it("defines, plays, and clears feedback sequences", function()
+    local events = {}
+    local unregister = ui.on("feedback", function(event)
+      events[#events + 1] = event.kind
+    end)
+
+    ui.feedback.define("test.ping", {
+      { kind = "emit", event = "ping" },
+    })
+    ui.feedback.play("test.ping", nil, { trigger = "error" })
+
+    assert.are.same({ "ping" }, events)
+    ui.feedback.clear()
+    assert.is_nil(ui.feedback.play("test.ping"))
+
+    unregister()
+  end)
+
+  it("draws deterministic blob shapes from the draw context", function()
+    local runtime = Runtime.new()
+    local first
+    local second
+    local polygon
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function()
+          return 1
+        end,
+        setLineWidth = function() end,
+        getShader = function()
+          return nil
+        end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function() end,
+        print = function() end,
+        polygon = function(_, ...)
+          polygon = { ... }
+        end,
+      },
+    })
+
+    local function App()
+      return Components.box({
+        width = 100,
+        height = 50,
+        draw = function(_, _, _, _, _, _, _, ctx)
+          first = ctx:blob(nil, { points = 8, variance = 0.2, seed = "same" })
+          second = ctx:blob(nil, { points = 8, variance = 0.2, seed = "same" })
+          ctx:shape("fill", { kind = "blob", points = 8, variance = 0.2, seed = "same" })
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same(first, second)
+    assert.are.equal(16, #first)
+    assert.are.equal(16, #polygon)
   end)
 
   it("uses explicit accessibility props and i18n semantic keys", function()

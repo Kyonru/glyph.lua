@@ -47,6 +47,7 @@ Useful methods:
 - `ctx:line(...)`
 - `ctx:polygon(mode, points)`
 - `ctx:shape(mode, shape, bounds?)`
+- `ctx:blob(bounds?, opts?)`
 - `ctx:clip(shape, fn)`
 - `ctx:stencil(shapeOrFn, fn, opts?)`
 - `ctx:meter(bounds, opts)`
@@ -84,6 +85,7 @@ Glyph shape descriptors are plain tables:
 { kind = "polygon", points = { 0, 0, 140, 10, 120, 64, 8, 56 } }
 { kind = "circle" }
 { kind = "ellipse" }
+{ kind = "blob", points = 10, variance = 0.16, seed = "play-button" }
 ```
 
 Polygon points are local to the node bounds unless `absolute = true` is set.
@@ -143,6 +145,33 @@ draw = function(_, x, y, width, height, love, style, ctx)
   end)
 end
 ```
+
+`ctx:blob(bounds, opts)` returns deterministic polygon points for organic
+buttons, panels, masks, and meters:
+
+```lua
+draw = function(_, x, y, width, height, love, style, ctx)
+  local shape = {
+    kind = "blob",
+    points = 12,
+    variance = 0.18,
+    seed = "launch",
+    phase = ctx.time,
+  }
+
+  ctx:clip(shape, function()
+    ctx:color(style.background)
+    ctx:rect("fill", x, y, width, height)
+  end)
+
+  ctx:color(ctx.focused and { 1, 0.9, 0.2, 1 } or style.borderColor)
+  ctx:shape("line", shape)
+end
+```
+
+Blob, stencil, shader, particle, and splat-style visuals are usually app or
+example code. Keep the core primitive generic, then layer the visual identity in
+custom draw and feedback sequences.
 
 ## Public Helper APIs
 

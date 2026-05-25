@@ -131,6 +131,7 @@ Supported names:
 - `layout`
 - `audio`
 - `accessibility`
+- `feedback`
 - `focusChanged`
 - `hoverChanged`
 - `event`
@@ -167,6 +168,23 @@ end)
 The event includes `cue`, `kind`, `node`, `type`, `path`, `variant`,
 `styleType`, and a best-effort `label`. Supported cue kinds are `hover`,
 `press`, `activate`, and `focus`.
+
+## Feedback Events
+
+Glyph emits `feedback` callbacks from `ui.feedback` `emit` steps. These events
+are for app-owned effects such as particles, camera shake, haptics, splats, or
+custom shader systems.
+
+```lua
+ui.on("feedback", function(event)
+  if event.kind == "particles" then
+    spawnParticles(event.node, event.name)
+  end
+end)
+```
+
+Feedback events include `kind`, `name`, `trigger`, `node`, `path`, `payload`,
+and the original `step`. See [Feedback](feedback.md) for sequence definitions.
 
 ## Accessibility Events
 

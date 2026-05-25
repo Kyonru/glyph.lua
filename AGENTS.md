@@ -10,6 +10,7 @@ This repository is `glyph.lua`: a declarative UI runtime for Love2D 11.x, shaped
 - Layout engine: `glyph/layout.lua`
 - Styling: `glyph/style.lua`, `glyph/theme.lua`
 - Animation: `glyph/animation.lua`, vendored `glyph/vendor/flux.lua`
+- Feedback sequences: `glyph/feedback.lua`
 - Navigation: `glyph/navigate.lua`
 - I18n/accessibility adapters: `glyph/i18n.lua`, `glyph/accessibility.lua`
 - Fixed virtual viewport adapters: `glyph/viewport_backend.lua`
@@ -57,6 +58,7 @@ Glyph should provide primitives and reusable systems:
 - Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus.
 - Input systems: pointer/touch, keyboard activation, spatial navigation, and opt-in digital gamepad mapping.
 - Style systems: themes, variants, state styles, transitions, shaders, custom draw context, and audio cue metadata.
+- Feedback systems: triggerable visual-only animation, audio metadata, callback, and app-owned FX event sequences.
 - Scene systems: scene stack, overlays, modals, layer transitions, input blocking/pass-through.
 - Adapter systems: backend-agnostic i18n, accessibility semantics/events, optional Push/Shove fixed viewport support.
 - Animation systems: first-class visual-only enter/exit animation powered by vendored Flux.
@@ -71,6 +73,7 @@ Good core API examples:
 - `ui.scene.push`
 - `ctx:polygon`
 - `ui.meter`
+- `ui.feedback.define`
 - `ui.i18n.configure`
 - `ui.accessibility.snapshot`
 - `style.shader`
@@ -81,6 +84,8 @@ Poor core API examples:
 - `ui.personaMenu`
 - `ui.healthBar`
 - `ui.blobModal`
+- `ui.splatButton`
+- `ui.juiceButton`
 - `ui.finalFantasyMenu`
 - `ui.personaHud`
 - Any widget whose look or behavior belongs to one game or one example.
@@ -135,7 +140,7 @@ Poor core API examples:
 - Use state tables for interaction: `hover`, `pressed`, `focused`, `active`, `disabled`.
 - Shaders may be values or functions. Always restore Love2D graphics state after applying shader/blend/line/font/scissor/stencil changes.
 - `style.audio` / component `audio` tables are cue metadata only. Glyph emits events; apps load and play sounds.
-- `style.transition` is state-style interpolation; `enter`/`exit` animation props are visual-only node lifecycle animation.
+- `style.transition` is state-style interpolation; `enter`/`exit` animation props are visual-only node lifecycle animation; `ui.feedback` is triggerable game-feel sequencing.
 - Shape, clip, stencil, and meter drawing must not alter layout or hit-testing geometry unless a later explicit API adds shape-aware hit tests.
 
 ## Animation Rules
@@ -145,6 +150,14 @@ Poor core API examples:
 - Animations are visual-only: they must not change layout, hit testing, focus/navigation geometry, or semantic snapshots.
 - Apply transforms with graphics push/pop and transform around the node center. Opacity multiplies resolved style opacity.
 - Exiting nodes may be retained as visual ghosts until exit completes. Avoid duplicate exit animations for descendants of an exiting parent.
+
+## Feedback Rules
+
+- Feedback lives in `glyph/feedback.lua` and is exposed as `ui.feedback`.
+- Keep feedback modular: `animate`, `audio`, `emit`, and `callback` steps compose into named sequences.
+- Feedback animation is visual-only and must not alter layout, hit testing, focus, navigation geometry, or accessibility snapshots.
+- Use `"feedback"` events for app-owned particles, camera shake, haptics, splats, shader systems, and other FX. Core should not own cameras, particle systems, sound packs, or branded button widgets.
+- Blob shapes are a generic primitive. Splat/star/sticker/ink shape packs should start in examples unless they prove broadly reusable.
 
 ## Example Standards
 
@@ -159,6 +172,7 @@ Examples should demonstrate real workflows, not marketing pages:
 - `examples/dashboard`: dense debugger/admin UI.
 - `examples/hud-primitives`: meters, shapes, clipping, stencil, dynamic HUD panels.
 - `examples/i18n`: backend-agnostic translation, cache keys, memoization.
+- `examples/juice`: feedback sequences, blob buttons, app-owned particles/shake, and audio metadata.
 - `examples/hud-menu`: custom draw and animated game UI.
 - `examples/modal`: scene-backed modals, custom shader/stencil transitions, moving background.
 - `examples/navigate`: spatial navigation, nav scopes, submenu patterns.
@@ -197,6 +211,7 @@ At minimum:
 - I18n behavior: update `docs/i18n.md`.
 - Accessibility behavior: update `docs/accessibility.md`.
 - Fixed viewport behavior: update `docs/responsive.md` and `docs/runtime.md` when input conversion changes.
+- Feedback behavior: update `docs/feedback.md`, `docs/runtime.md`, and related style/custom-draw docs.
 - Performance pattern: update `docs/performance.md`.
 - New example: update `docs/examples.md`.
 

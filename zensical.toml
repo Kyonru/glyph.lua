@@ -59,6 +59,7 @@ nav = [
     { "Responsive Helpers" = "responsive.md" },
     { "Custom Draw And Helpers" = "custom-draw.md" },
     { "Animations" = "animations.md" },
+    { "Feedback" = "feedback.md" },
   ] },
   { "Scenes" = [
     { "Scenes And Modals" = "scenes-and-modals.md" },

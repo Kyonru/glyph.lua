@@ -4,12 +4,14 @@ local Runtime = require("glyph.runtime")
 local Components = require("glyph.components")
 local Accessibility = require("glyph.accessibility")
 local Animation = require("glyph.animation")
+local Feedback = require("glyph.feedback")
 local Style = require("glyph.style")
 
 describe("runtime", function()
   before_each(function()
     Animation.clear()
     Accessibility.configure({})
+    Feedback.clear()
   end)
 
   it("persists useState values across renders", function()
@@ -372,6 +374,163 @@ describe("runtime", function()
     runtime:build(App)
 
     assert.are.same({ "Enemy sighted" }, events)
+  end)
+
+  it("emits feedback for hover, focus, press, release, and activate triggers", function()
+    local runtime = Runtime.new()
+    local events = {}
+
+    Feedback.define("mark", {
+      { kind = "emit", event = "mark" },
+    })
+    runtime:register("feedback", function(event)
+      events[#events + 1] = event.trigger .. ":" .. event.kind
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Go",
+        feedback = {
+          hover = "mark",
+          focus = "mark",
+          press = "mark",
+          release = "mark",
+          activate = "mark",
+        },
+        onClick = function() end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousemoved(1, 1)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+
+    assert.are.same({
+      "hover:mark",
+      "press:mark",
+      "focus:mark",
+      "release:mark",
+      "activate:mark",
+    }, events)
+  end)
+
+  it("does not emit activate feedback for disabled buttons", function()
+    local runtime = Runtime.new()
+    local events = {}
+
+    Feedback.define("mark", {
+      { kind = "emit", event = "mark" },
+    })
+    runtime:register("feedback", function(event)
+      events[#events + 1] = event.trigger
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Nope",
+        disabled = true,
+        feedback = {
+          activate = "mark",
+        },
+        onClick = function() end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+
+    assert.are.same({}, events)
+  end)
+
+  it("runs manual error feedback", function()
+    local runtime = Runtime.new()
+    local events = {}
+
+    Feedback.define("error.bump", {
+      { kind = "emit", event = "error" },
+    })
+    runtime:register("feedback", function(event)
+      events[#events + 1] = event.trigger .. ":" .. event.kind
+    end)
+
+    local function App()
+      return Components.button({ label = "Go" })
+    end
+
+    runtime:build(App)
+    Feedback.play(runtime, "error.bump", runtime.root, { trigger = "error" })
+
+    assert.are.same({ "error:error" }, events)
+  end)
+
+  it("runs feedback animation without changing layout or hit testing", function()
+    local runtime = Runtime.new()
+
+    Feedback.define("shift", {
+      {
+        kind = "animate",
+        duration = 0.1,
+        to = { x = 10, scale = 1.2 },
+      },
+    })
+
+    local function App()
+      return Components.button({
+        label = "Go",
+        width = 80,
+        height = 30,
+        feedback = {
+          press = "shift",
+        },
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    local layoutX = runtime.root.layout.x
+    local layoutWidth = runtime.root.layout.width
+
+    runtime:mousepressed(1, 1, 1)
+    runtime:update(0.1)
+
+    assert.are.equal(layoutX, runtime.root.layout.x)
+    assert.are.equal(layoutWidth, runtime.root.layout.width)
+    assert.are.equal(10, runtime.root._glyphFeedback.x)
+    assert.are.equal(1.2, runtime.root._glyphFeedback.scale)
+    assert.are.equal(runtime.root, runtime:hitTest(1, 1))
+  end)
+
+  it("emits audio from feedback steps", function()
+    local runtime = Runtime.new()
+    local cues = {}
+
+    Feedback.define("pop", {
+      { kind = "audio", cue = "ui-pop" },
+    })
+    runtime:register("audio", function(event)
+      cues[#cues + 1] = event.kind .. ":" .. event.cue .. ":" .. tostring(event.label)
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Go",
+        feedback = {
+          activate = "pop",
+        },
+        onClick = function() end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+
+    assert.are.same({ "feedback:ui-pop:Go" }, cues)
   end)
 
   it("keeps button taps valid across a rerender between press and release", function()

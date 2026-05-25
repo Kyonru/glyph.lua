@@ -41,6 +41,30 @@ describe("layout", function()
     assert.are.equal(20, tree.children[2].layout.x)
   end)
 
+  it("justifies row children along the main axis", function()
+    local tree = ui.row({ width = 100, gap = 10, justify = "center" }, {
+      ui.box({ width = 20, height = 10 }),
+      ui.box({ width = 30, height = 10 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(20, tree.children[1].layout.x)
+    assert.are.equal(50, tree.children[2].layout.x)
+  end)
+
+  it("justifies column children along the main axis", function()
+    local tree = ui.column({ height = 100, gap = 10, justify = "center" }, {
+      ui.box({ width = 20, height = 20 }),
+      ui.box({ width = 30, height = 30 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(20, tree.children[1].layout.y)
+    assert.are.equal(50, tree.children[2].layout.y)
+  end)
+
   it("distributes grow space", function()
     local tree = ui.row({ width = 100, gap = 0 }, {
       ui.box({ width = 10, height = 10, grow = 1 }),

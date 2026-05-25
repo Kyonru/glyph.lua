@@ -86,6 +86,21 @@ Buttons can resolve labels from i18n keys:
 ui.button({ labelKey = "actions.confirm", onClick = confirm })
 ```
 
+Buttons and other nodes can run triggerable feedback sequences:
+
+```lua
+ui.button({
+  label = "Launch",
+  feedback = {
+    press = "button.squash",
+    release = "button.release",
+    activate = "button.pop",
+  },
+})
+```
+
+See [Feedback](feedback.md) for sequence steps and app-owned FX events.
+
 ## Input
 
 ```lua
@@ -123,7 +138,7 @@ Meters support:
 
 - `kind = "linear" | "radial" | "arc"`
 - `direction = "right" | "left" | "up" | "down"` for linear meters
-- `shape` for rectangular, skewed, polygon, circle, or ellipse fills
+- `shape` for rectangular, skewed, polygon, circle, ellipse, or blob fills
 - `segments`, `gap`, `thickness`, `startAngle`, and `endAngle`
 - `label`, children overlays, `trackStyle`, `fillStyle`, `overfillStyle`, and `backgroundStyle`
 - `labelKey`, `labelParams`, and `labelCacheKey` for localized labels

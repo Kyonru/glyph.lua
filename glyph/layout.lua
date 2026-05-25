@@ -608,7 +608,15 @@ function Layout.compute(root, context)
     end
 
     local align = props.align or "start"
-    local cursor = direction == "row" and pad.left or pad.top
+    local justify = props.justify or "start"
+    local remainingMain = math.max(0, innerMain - totalMain)
+    local offsetMain = 0
+    if justify == "center" then
+      offsetMain = remainingMain / 2
+    elseif justify == "end" then
+      offsetMain = remainingMain
+    end
+    local cursor = (direction == "row" and pad.left or pad.top) + offsetMain
 
     for _, child in ipairs(children) do
       if not isAbsolute(child) then

@@ -24,6 +24,7 @@ build = {
     ["glyph.init"] = "glyph/init.lua",
     ["glyph.callback_bus"] = "glyph/callback_bus.lua",
     ["glyph.components"] = "glyph/components.lua",
+    ["glyph.feedback"] = "glyph/feedback.lua",
     ["glyph.i18n"] = "glyph/i18n.lua",
     ["glyph.layout"] = "glyph/layout.lua",
     ["glyph.modal"] = "glyph/modal.lua",

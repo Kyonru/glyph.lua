@@ -15,6 +15,7 @@ love examples/dashboard
 love examples/hud-menu
 love examples/hud-primitives
 love examples/i18n
+love examples/juice
 love examples/modal
 love examples/navigate
 love examples/scene
@@ -56,6 +57,10 @@ Native meters, filled sweep gauges with centered overlays, d-pad/card navigation
 ## I18n
 
 Responsive game-console localization demo with locale switching, keyed command/status UI, meters, tabs, fallback text, cached parameter translations, and `ui.i18n.version()` in memo deps.
+
+## Juice
+
+Pattern-repeat mini game built from normal Glyph buttons, with press/release/activate feedback, click-position particles, ripples, screen shake, generated audio tones, keyboard and d-pad navigation, progress meters, and a scoped pause menu.
 
 ## Navigate
 

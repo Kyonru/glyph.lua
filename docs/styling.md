@@ -164,3 +164,15 @@ Style transitions should only mark style dirty unless animating layout fields.
 For mount/unmount motion, use node `enter` and `exit` animations instead. Those
 animations are visual transforms powered by Glyph's vendored flux runner and do
 not affect layout or input geometry.
+
+## Feedback Vs Transitions
+
+Use state styles for steady interaction appearance, such as hover colors or
+focused borders. Use `style.transition` to interpolate those style fields.
+
+Use `enter` / `exit` for lifecycle motion when nodes mount or unmount.
+
+Use `ui.feedback` for triggerable game-feel stacks such as squash/stretch on
+press, a pop on activation, audio cue metadata, or app-owned particle/shake
+events. Feedback animation is visual-only and composes with node enter/exit
+animation during drawing.

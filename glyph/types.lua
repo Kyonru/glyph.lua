@@ -60,12 +60,16 @@ local GlyphStyle = {}
 local GlyphBounds = {}
 
 ---@class GlyphShape
----@field kind? "rect"|"skew"|"polygon"|"circle"|"ellipse"
+---@field kind? "rect"|"skew"|"polygon"|"circle"|"ellipse"|"blob"
 ---@field radius? number
 ---@field skew? number
 ---@field inset? number
 ---@field points? number[] local point coordinates relative to node bounds
 ---@field absolute? boolean
+---@field variance? number
+---@field seed? string|number
+---@field phase? number
+---@field segments? number
 local GlyphShape = {}
 
 ---@class GlyphStencil
@@ -103,6 +107,7 @@ local GlyphStencil = {}
 ---@field text fun(self: GlyphDrawContext, value: any, x: number, y: number)
 ---@field printf fun(self: GlyphDrawContext, value: any, x: number, y: number, limit: number, align?: string)
 ---@field skewBox fun(self: GlyphDrawContext, opts?: table): number[]
+---@field blob fun(self: GlyphDrawContext, bounds?: GlyphBounds, opts?: table): number[]
 local GlyphDrawContext = {}
 
 ---@class GlyphAnimationValues
@@ -134,6 +139,74 @@ local GlyphAnimationSpec = {}
 ---@field onComplete? fun(subject: table)
 local GlyphAnimationTweenOpts = {}
 
+---@class GlyphFeedbackStep
+---@field kind? "animate"|"audio"|"emit"|"callback"|string
+---@field target? "node"|string
+---@field from? GlyphAnimationValues
+---@field to? GlyphAnimationValues
+---@field duration? number
+---@field delay? number
+---@field ease? string
+---@field cue? string
+---@field audioKind? string
+---@field event? string
+---@field name? string
+---@field payload? table
+---@field callback? fun(ctx: GlyphFeedbackContext)
+---@field fn? fun(ctx: GlyphFeedbackContext)
+---@field onStart? fun(subject: GlyphAnimationValues)
+---@field onUpdate? fun(subject: GlyphAnimationValues, ctx: GlyphFeedbackContext)
+---@field onComplete? fun(subject: GlyphAnimationValues, ctx: GlyphFeedbackContext)
+local GlyphFeedbackStep = {}
+
+---@alias GlyphFeedbackSequence GlyphFeedbackStep[]
+
+---@class GlyphFeedbackProps
+---@field hover? string|GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)|false
+---@field focus? string|GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)|false
+---@field press? string|GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)|false
+---@field release? string|GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)|false
+---@field activate? string|GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)|false
+---@field error? string|GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)|false
+local GlyphFeedbackProps = {}
+
+---@class GlyphFeedbackPlayOpts
+---@field trigger? "hover"|"focus"|"press"|"release"|"activate"|"error"|string
+---@field [string] any
+local GlyphFeedbackPlayOpts = {}
+
+---@class GlyphFeedbackContext
+---@field runtime table
+---@field node? GlyphNode
+---@field trigger string
+---@field source any
+---@field opts GlyphFeedbackPlayOpts
+local GlyphFeedbackContext = {}
+
+---@class GlyphFeedbackState
+---@field id string
+---@field subject GlyphAnimationValues
+---@field active number
+---@field node? GlyphNode
+---@field tweens? table[]
+local GlyphFeedbackState = {}
+
+---@class GlyphFeedbackEvent
+---@field kind string
+---@field name? string
+---@field trigger? string
+---@field node? GlyphNode
+---@field path? string
+---@field payload? table
+---@field step? GlyphFeedbackStep
+local GlyphFeedbackEvent = {}
+
+---@class GlyphFeedbackApi
+---@field define fun(name: string, sequence: GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)): GlyphFeedbackSequence|nil
+---@field play fun(nameOrSequence: any, node?: GlyphNode, opts?: GlyphFeedbackPlayOpts): GlyphFeedbackContext|nil
+---@field clear fun()
+local GlyphFeedbackApi = {}
+
 -- ---------------------------------------------------------------------------
 -- Props
 -- ---------------------------------------------------------------------------
@@ -156,6 +229,8 @@ local GlyphPadding = {}
 ---@field maxHeight? number
 ---@field padding? number|GlyphPadding
 ---@field gap? number
+---@field align? "start"|"center"|"end"|"stretch"
+---@field justify? "start"|"center"|"end"
 ---@field flex? number|boolean
 ---@field grow? number
 ---@field shrink? number
@@ -173,6 +248,7 @@ local GlyphPadding = {}
 ---@field active? boolean
 ---@field disabled? boolean
 ---@field interactive? boolean
+---@field feedback? GlyphFeedbackProps|false
 ---@field role? "button"|"text"|"input"|"panel"|"tab"|"meter"|"dialog"|"group"|"none"|string
 ---@field accessibilityLabel? string
 ---@field accessibilityLabelKey? string
@@ -414,6 +490,8 @@ local GlyphDirty = {}
 ---@field dirty? GlyphDirty
 ---@field parent? GlyphNode
 ---@field path? string
+---@field _glyphFeedback? GlyphAnimationValues
+---@field _glyphFeedbackId? string
 local GlyphNode = {}
 
 -- ---------------------------------------------------------------------------

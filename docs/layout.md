@@ -17,17 +17,28 @@ Common props:
 - `padding`
 - `gap`
 - `align = "start" | "center" | "end" | "stretch"`
+- `justify = "start" | "center" | "end"`
 - `grow`
 - `flex`
 - `shrink`
 - `basis` or `flexBasis`
 
 `flex = 1` means “take remaining space” using a zero basis unless width or height is provided.
+`align` controls the cross axis; `justify` controls the main axis. In a row, `justify = "center"`
+centers children horizontally. In a column, it centers children vertically.
 
 ```lua
 ui.row({ width = 600, gap = 8 }, {
   ui.button({ label = "Fixed" }),
   ui.input({ flex = 1, value = query, onChange = setQuery }),
+})
+```
+
+```lua
+ui.column({ width = "100%", height = "100%", align = "center", justify = "center" }, {
+  ui.panel({ title = "Paused", width = 320 }, {
+    ui.button({ label = "Resume" }),
+  }),
 })
 ```
 

@@ -1,6 +1,6 @@
 ---
 name: glyph-ui-building
-description: Use when building Glyph examples, game HUDs, panels, overlays, menus, accessible/localized UI, animated screens, themed demos, or Love2D UI workflows.
+description: Use when building Glyph examples, game HUDs, panels, overlays, menus, accessible/localized UI, animated or juicy feedback screens, themed demos, or Love2D UI workflows.
 ---
 
 # Glyph UI Building Skill
@@ -137,6 +137,7 @@ Use `ctx` helpers for color, rectangles, lines, polygons, shapes, clips, stencil
 For Persona-style or JRPG-style HUD shapes, prefer generic primitives:
 
 - `shape = { kind = "skew", skew = 12 }`
+- `shape = { kind = "blob", points = 10, variance = 0.14, seed = "command" }`
 - `clip = true` or `clip = shape`
 - `stencil = { shape = ..., mode = "inside" }`
 - `ctx:shape`, `ctx:clip`, `ctx:stencil`, and `ctx:meter`
@@ -210,6 +211,31 @@ ui.panel({
 ```
 
 When animating size in examples, include real content and let layout handle spacing with rows/columns/gaps rather than manual overlap calculations.
+
+## Feedback And Juice
+
+Use `ui.feedback` for game-feel stacks that respond to interaction without creating app-specific widgets:
+
+```lua
+ui.feedback.define("button.pop", {
+  { kind = "animate", to = { scaleX = 1.08, scaleY = 0.92 }, duration = 0.06 },
+  { kind = "audio", cue = "ui-pop" },
+  { kind = "emit", event = "particles", name = "spark" },
+  { kind = "animate", to = { scale = 1 }, duration = 0.16, ease = "backout" },
+})
+
+ui.button({
+  label = "Play",
+  feedback = {
+    hover = "button.hover",
+    press = "button.squash",
+    release = "button.release",
+    activate = "button.pop",
+  },
+})
+```
+
+Keep particles, shake, splats, haptics, and sound playback in app/example code by listening for `"feedback"` and `"audio"` events. Use custom draw, blob shapes, clipping, and stencil masks for organic buttons or ink reveals; avoid adding `ui.splatButton`-style widgets to core.
 
 ## I18n
 

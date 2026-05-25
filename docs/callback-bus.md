@@ -43,6 +43,7 @@ ui.dispatch("event", "custom", payload)
 - `layout`
 - `audio`
 - `accessibility`
+- `feedback`
 - `focusChanged`
 - `hoverChanged`
 - `event`
