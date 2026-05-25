@@ -18,6 +18,14 @@ ui.text("Hello", {
 
 Use `wrap = true` with a known width for text that may overflow.
 
+For localized text, use `ui.textKey` after configuring `ui.i18n`:
+
+```lua
+ui.textKey("hud.ready", {
+  textFallback = "Ready",
+})
+```
+
 ## Box
 
 `ui.box(props, children)` is a visual/container primitive. It does not lay out children unless you provide a layout mode with `display`, or use `ui.row`, `ui.column`, or `ui.stack`.
@@ -72,6 +80,12 @@ ui.button({
 
 Buttons are focusable by default.
 
+Buttons can resolve labels from i18n keys:
+
+```lua
+ui.button({ labelKey = "actions.confirm", onClick = confirm })
+```
+
 ## Input
 
 ```lua
@@ -84,6 +98,7 @@ ui.input({
 ```
 
 Inputs are controlled: keep the value in state and update it through `onChange`.
+Use `placeholderKey` for localized placeholder text.
 
 ## Meter
 
@@ -111,6 +126,7 @@ Meters support:
 - `shape` for rectangular, skewed, polygon, circle, or ellipse fills
 - `segments`, `gap`, `thickness`, `startAngle`, and `endAngle`
 - `label`, children overlays, `trackStyle`, `fillStyle`, `overfillStyle`, and `backgroundStyle`
+- `labelKey`, `labelParams`, and `labelCacheKey` for localized labels
 
 ```lua
 ui.meter({
@@ -145,6 +161,15 @@ ui.tabs({ defaultActive = 1 }, {
 })
 ```
 
+Tabs also accept `labelKey`:
+
+```lua
+ui.tabs({}, {
+  { labelKey = "tabs.logs", content = LogsPanel() },
+  { labelKey = "tabs.stats", content = StatsPanel() },
+})
+```
+
 Controlled tabs:
 
 ```lua
@@ -163,3 +188,5 @@ ui.panel({ title = "Logs", width = "100%", flex = 1 }, {
   ui.text("Ready"),
 })
 ```
+
+Use `titleKey` for localized panel titles.

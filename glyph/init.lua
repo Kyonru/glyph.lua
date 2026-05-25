@@ -8,6 +8,7 @@ end
 local Animation = require(prefix .. ".animation")
 local Components = require(prefix .. ".components")
 local CallbackBus = require(prefix .. ".callback_bus")
+local I18n = require(prefix .. ".i18n")
 local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
 local Responsive = require(prefix .. ".responsive")
@@ -20,6 +21,7 @@ local runtime = Runtime.new()
 
 ---@class glyph
 ---@field text fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field textKey fun(key: string, props?: GlyphTextProps): GlyphNode
 ---@field box fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field row fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field column fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
@@ -31,6 +33,8 @@ local runtime = Runtime.new()
 ---@field panel fun(props?: GlyphPanelProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field static fun(node: GlyphNode): GlyphNode
 ---@field animation GlyphAnimationApi
+---@field i18n GlyphI18nApi
+---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
 ---@field viewportBackend GlyphViewportBackendApi
 ---@field transitions GlyphTransitionApi
 ---@field scene GlyphSceneApi
@@ -44,6 +48,7 @@ local runtime = Runtime.new()
 local ui = {
   CallbackBus = CallbackBus,
   animation = Animation,
+  i18n = I18n,
   Navigate = Navigate,
   Responsive = Responsive,
   Style = Style,
@@ -51,6 +56,10 @@ local ui = {
   runtime = runtime,
   theme = theme,
 }
+
+I18n.setInvalidationCallback(function()
+  runtime:markDirty()
+end)
 
 for name, fn in pairs(Components) do
   ui[name] = fn
@@ -102,6 +111,14 @@ end
 ---@return GlyphNode
 function ui.memo(component, deps)
   return runtime:memo(component, deps)
+end
+
+---@param key string
+---@param params? table
+---@param opts? GlyphI18nTranslateOpts
+---@return string
+function ui.t(key, params, opts)
+  return I18n.t(key, params, opts)
 end
 
 ---@param nextTheme GlyphTheme

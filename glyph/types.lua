@@ -150,10 +150,18 @@ local GlyphPadding = {}
 local GlyphProps = {}
 
 ---@class GlyphTextProps : GlyphProps
+---@field textKey? string
+---@field textParams? table
+---@field textFallback? string
+---@field textCacheKey? string|number
 local GlyphTextProps = {}
 
 ---@class GlyphButtonProps : GlyphProps
 ---@field label? string
+---@field labelKey? string
+---@field labelParams? table
+---@field labelFallback? string
+---@field labelCacheKey? string|number
 ---@field onClick? fun()
 ---@field focusable? boolean
 local GlyphButtonProps = {}
@@ -161,6 +169,10 @@ local GlyphButtonProps = {}
 ---@class GlyphInputProps : GlyphProps
 ---@field value? string
 ---@field placeholder? string
+---@field placeholderKey? string
+---@field placeholderParams? table
+---@field placeholderFallback? string
+---@field placeholderCacheKey? string|number
 ---@field onChange? fun(value: string)
 ---@field onSubmit? fun(value: string)
 ---@field focusable? boolean
@@ -183,6 +195,10 @@ local GlyphInputProps = {}
 ---@field startAngle? number
 ---@field endAngle? number
 ---@field label? string|fun(value: number, min: number, max: number): string
+---@field labelKey? string
+---@field labelParams? table
+---@field labelFallback? string
+---@field labelCacheKey? string|number
 local GlyphMeterProps = {}
 
 ---@class GlyphTabsProps : GlyphProps
@@ -197,6 +213,10 @@ local GlyphTabsProps = {}
 
 ---@class GlyphPanelProps : GlyphProps
 ---@field title? string
+---@field titleKey? string
+---@field titleParams? table
+---@field titleFallback? string
+---@field titleCacheKey? string|number
 ---@field titleColor? GlyphColor
 local GlyphPanelProps = {}
 
@@ -217,8 +237,35 @@ local GlyphPanelProps = {}
 
 ---@class GlyphTab
 ---@field label? string
+---@field labelKey? string
+---@field labelParams? table
+---@field labelFallback? string
+---@field labelCacheKey? string|number
 ---@field content? GlyphNode
 local GlyphTab = {}
+
+---@class GlyphI18nTranslateOpts
+---@field fallback? string
+---@field default? string
+---@field cacheKey? string|number
+local GlyphI18nTranslateOpts = {}
+
+---@class GlyphI18nConfig
+---@field translate? fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string|nil
+---@field missing? fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string|nil
+---@field setLocale? fun(locale: any)
+---@field getLocale? fun(): any
+---@field locale? any
+local GlyphI18nConfig = {}
+
+---@class GlyphI18nApi
+---@field configure fun(opts?: GlyphI18nConfig|fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string|nil)
+---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
+---@field setLocale fun(locale: any)
+---@field locale fun(): any
+---@field invalidate fun()
+---@field version fun(): number
+local GlyphI18nApi = {}
 
 -- ---------------------------------------------------------------------------
 -- Node

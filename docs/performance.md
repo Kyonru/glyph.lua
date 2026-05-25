@@ -32,6 +32,32 @@ Use `ui.static(node)` for stable labels, icons, or repeated rows that do not nee
 local label = ui.static(ui.text("Ready"))
 ```
 
+## I18n
+
+Glyph caches translations that are safe to reuse. Plain keys are cached until
+`ui.i18n.invalidate()` or `ui.i18n.setLocale(locale)`.
+
+```lua
+ui.textKey("menu.play")
+```
+
+Parameterized translations are translated fresh unless you provide a stable
+cache key:
+
+```lua
+ui.textKey("messages", {
+  textParams = { count = count },
+  textCacheKey = "messages:" .. tostring(count),
+})
+```
+
+For memoized translated subtrees, include `ui.i18n.version()` in the deps so
+locale changes rebuild the cached nodes:
+
+```lua
+local panel = ui.memo(buildPanel, { ui.i18n.version(), dataVersion })
+```
+
 ## Large Lists
 
 For large log/table views:

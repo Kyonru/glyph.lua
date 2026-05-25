@@ -1,5 +1,6 @@
 local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
 local CallbackBus = require(prefix .. ".callback_bus")
+local I18n = require(prefix .. ".i18n")
 
 local Components = {}
 
@@ -53,9 +54,19 @@ end
 ---@param props? GlyphTextProps
 ---@return GlyphNode
 function Components.text(value, props)
+  props = normalizeProps(props)
   local node = createNode("text", props, nil)
-  node.value = value
+  node.value = I18n.resolveText(value, props)
   return node
+end
+
+---@param key string
+---@param props? GlyphTextProps
+---@return GlyphNode
+function Components.textKey(key, props)
+  props = normalizeProps(props)
+  props.textKey = key
+  return Components.text(key, props)
 end
 
 ---@param props? GlyphProps
@@ -97,6 +108,7 @@ end
 function Components.button(props)
   props = normalizeProps(props)
   props.focusable = props.focusable ~= false
+  props.label = I18n.resolveLabel(props)
   return createNode("button", props, nil)
 end
 
@@ -105,6 +117,7 @@ end
 function Components.input(props)
   props = normalizeProps(props)
   props.focusable = props.focusable ~= false
+  props.placeholder = I18n.resolvePlaceholder(props)
   return createNode("input", props, nil)
 end
 
@@ -119,6 +132,7 @@ function Components.meter(props, children)
   props.kind = props.kind or "linear"
   props.direction = props.direction or "right"
   props.display = props.display or "stack"
+  props.label = I18n.resolveLabel(props)
   return createNode("meter", props, children)
 end
 
@@ -141,7 +155,7 @@ function Components.tabs(props, tabs)
 
   for index, tab in ipairs(tabs or {}) do
     children[#children + 1] = Components.button({
-      label = tab.label or tostring(index),
+      label = I18n.resolveLabel(tab) or tostring(index),
       onClick = function()
         if props.onChange then
           props.onChange(index, tab)
@@ -172,7 +186,11 @@ function Components.panel(props, children)
   local panelChildren = {}
 
   if props.title then
-    panelChildren[#panelChildren + 1] = Components.text(props.title, {
+    panelChildren[#panelChildren + 1] = Components.text(I18n.resolveTitle(props), {
+      color = props.titleColor,
+    })
+  elseif props.titleKey then
+    panelChildren[#panelChildren + 1] = Components.text(I18n.resolveTitle(props), {
       color = props.titleColor,
     })
   end

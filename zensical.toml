@@ -54,6 +54,7 @@ nav = [
     { "Styling And Themes" = "styling.md" },
     { "Runtime, Hooks, And Events" = "runtime.md" },
     { "Callback Bus" = "callback-bus.md" },
+    { "I18n" = "i18n.md" },
     { "Responsive Helpers" = "responsive.md" },
     { "Custom Draw And Helpers" = "custom-draw.md" },
     { "Animations" = "animations.md" },

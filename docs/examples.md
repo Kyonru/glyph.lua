@@ -13,6 +13,7 @@ love examples/basic
 love examples/dashboard
 love examples/hud-menu
 love examples/hud-primitives
+love examples/i18n
 love examples/modal
 love examples/navigate
 love examples/scene
@@ -46,6 +47,10 @@ Custom-drawn game UI with animated command buttons. This example demonstrates wh
 ## HUD Primitives
 
 Native meters, filled sweep gauges with centered overlays, d-pad/card navigation, shape descriptors, visual clipping, stencil masks, and dynamic backgrounds for game HUDs without adding game-specific core widgets.
+
+## I18n
+
+Backend-agnostic localization adapter demo with locale switching, keyed text/labels/placeholders/tabs, fallback text, cached parameter translations, and `ui.i18n.version()` in memo deps.
 
 ## Navigate
 

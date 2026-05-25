@@ -217,4 +217,125 @@ describe("ui helpers", function()
     assert.are.equal("table", type(receivedPolygon))
     assert.are.equal(8, receivedPolygon[7])
   end)
+
+  it("translates keys with fallback and custom missing behavior", function()
+    ui.i18n.configure({
+      translate = function(key)
+        if key == "hello" then
+          return "Hello"
+        end
+      end,
+      missing = function(key, _, opts)
+        if opts and opts.fallback then
+          return opts.fallback
+        end
+        return "missing:" .. key
+      end,
+    })
+
+    assert.are.equal("Hello", ui.t("hello"))
+    assert.are.equal("missing:unknown", ui.t("unknown"))
+    assert.are.equal("Fallback", ui.t("unknown", nil, { fallback = "Fallback" }))
+
+    ui.i18n.configure({})
+  end)
+
+  it("invalidates cached translations when locale changes", function()
+    local calls = 0
+    local locale = "en"
+    ui.i18n.configure({
+      getLocale = function()
+        return locale
+      end,
+      setLocale = function(nextLocale)
+        locale = nextLocale
+      end,
+      translate = function(key)
+        calls = calls + 1
+        return locale .. ":" .. key
+      end,
+    })
+
+    local version = ui.i18n.version()
+    assert.are.equal("en:menu.play", ui.t("menu.play"))
+    assert.are.equal("en:menu.play", ui.t("menu.play"))
+    assert.are.equal(1, calls)
+
+    ui.runtime.needsRender = false
+    ui.i18n.setLocale("es")
+    assert.is_true(ui.i18n.version() > version)
+    assert.is_true(ui.runtime.needsRender)
+    assert.are.equal("es:menu.play", ui.t("menu.play"))
+    assert.are.equal(2, calls)
+
+    ui.i18n.configure({})
+  end)
+
+  it("caches params only when a cache key is provided", function()
+    local calls = 0
+    ui.i18n.configure({
+      translate = function(_, params)
+        calls = calls + 1
+        return "Count " .. tostring(params.count)
+      end,
+    })
+
+    local params = { count = 1 }
+    assert.are.equal("Count 1", ui.t("count", params))
+    params.count = 2
+    assert.are.equal("Count 2", ui.t("count", params))
+    assert.are.equal(2, calls)
+
+    assert.are.equal("Count 2", ui.t("count", params, { cacheKey = "two" }))
+    params.count = 3
+    assert.are.equal("Count 2", ui.t("count", params, { cacheKey = "two" }))
+    assert.are.equal(3, calls)
+
+    ui.i18n.configure({})
+  end)
+
+  it("resolves keyed component props before layout and drawing", function()
+    ui.i18n.configure({
+      translate = function(key, params, opts)
+        local values = {
+          title = "Status",
+          message = "Ready",
+          button = "Launch",
+          input = "Filter",
+          tab = "Log",
+          meter = "Power " .. tostring(params and params.value or ""),
+        }
+        return values[key] or (opts and opts.fallback)
+      end,
+    })
+
+    local tree = ui.panel({ titleKey = "title" }, {
+      ui.textKey("message"),
+      ui.button({ labelKey = "button" }),
+      ui.input({ value = "", placeholderKey = "input" }),
+      ui.tabs({ active = 1 }, {
+        { labelKey = "tab", content = ui.text("tab content") },
+      }),
+      ui.meter({
+        value = 7,
+        max = 10,
+        labelKey = "meter",
+        labelParams = { value = 7 },
+        labelCacheKey = "7",
+      }),
+      ui.text("unchanged"),
+      ui.textKey("missing", { textFallback = "Fallback" }),
+    })
+
+    assert.are.equal("Status", tree.children[1].value)
+    assert.are.equal("Ready", tree.children[2].value)
+    assert.are.equal("Launch", tree.children[3].props.label)
+    assert.are.equal("Filter", tree.children[4].props.placeholder)
+    assert.are.equal("Log", tree.children[5].children[1].children[1].props.label)
+    assert.are.equal("Power 7", tree.children[6].props.label)
+    assert.are.equal("unchanged", tree.children[7].value)
+    assert.are.equal("Fallback", tree.children[8].value)
+
+    ui.i18n.configure({})
+  end)
 end)

@@ -167,13 +167,12 @@ The event includes `cue`, `kind`, `node`, `type`, `path`, `variant`,
 `styleType`, and a best-effort `label`. Supported cue kinds are `hover`,
 `press`, `activate`, and `focus`.
 
-## Future Accessibility And I18n
+## Future Accessibility
 
-Glyph does not implement accessibility or i18n behavior yet. The intended shape
-is layout-agnostic metadata and app-provided resolvers rather than fixed widgets:
+Glyph does not implement accessibility behavior yet. The intended shape is
+layout-agnostic metadata and app-provided resolvers rather than fixed widgets:
 
 - semantic props such as `role`, `label`, `description`, and `valueText`
-- translation helpers such as `t(key, params)` and translated labels/placeholders
 - queryable runtime metadata for tools, overlays, and platform adapters
 
 ## Interaction Helpers
