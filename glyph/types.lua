@@ -326,6 +326,16 @@ local GlyphLayerOpts = {}
 ---@field active fun(): number
 local GlyphAnimationApi = {}
 
+---@class GlyphViewportBackendApi
+---@field isEnabled fun(): boolean
+---@field backend fun(): "push"|"shove"|nil
+---@field screenToViewport fun(x: number, y: number): boolean, number|false, number|false
+---@field viewportToScreen fun(x: number, y: number): number, number
+---@field beginDraw fun(): boolean
+---@field endDraw fun(): boolean
+---@field raw fun(): table|nil
+local GlyphViewportBackendApi = {}
+
 -- ---------------------------------------------------------------------------
 -- Theme
 -- ---------------------------------------------------------------------------
@@ -354,6 +364,10 @@ local GlyphTheme = {}
 ---@class GlyphViewport
 ---@field width number
 ---@field height number
+---@field breakpoint? string
+---@field backend? "push"|"shove"
+---@field virtual? boolean
+---@field screen? GlyphBounds
 local GlyphViewport = {}
 
 ---@class GlyphVariant
@@ -366,9 +380,27 @@ local GlyphVariant = {}
 ---@field height? number
 ---@field title? string
 ---@field resizable? boolean
+---@field minWidth? number
+---@field minHeight? number
 ---@field minwidth? number
 ---@field minheight? number
+---@field breakpoints? table<string, number>
+---@field viewport? GlyphViewportBackendOpts
 local GlyphWindowOpts = {}
+
+---@class GlyphViewportBackendOpts
+---@field backend? "push"|"shove"
+---@field instance? table
+---@field width? number
+---@field height? number
+---@field fit? "aspect"|"pixel"|"stretch"|"none"
+---@field fitMethod? "aspect"|"pixel"|"stretch"|"none"
+---@field filter? "nearest"|"linear"
+---@field scalingFilter? "nearest"|"linear"
+---@field canvas? boolean
+---@field managed? boolean
+---@field renderMode? "direct"|"layer"
+local GlyphViewportBackendOpts = {}
 
 ---@class GlyphLoadOpts
 ---@field love? table

@@ -5,6 +5,7 @@ local Layout = require(prefix .. ".layout")
 local Responsive = require(prefix .. ".responsive")
 local Scene = require(prefix .. ".scene")
 local Style = require(prefix .. ".style")
+local ViewportBackend = require(prefix .. ".viewport_backend")
 local theme = require(prefix .. ".theme")
 
 local runtimeCallbacks = {
@@ -178,6 +179,7 @@ function Runtime.new()
     styleClock = 0,
     lastDt = 0,
     responsive = Responsive.new(),
+    viewportBackend = ViewportBackend.new(),
     love = nil,
     scene = nil,
     currentScope = nil,
@@ -521,22 +523,33 @@ local viewportSize
 function Runtime:render(component)
   self.bus:dispatch("beforeRender")
   local root = self.root
+  local wrapped = self.viewportBackend and self.viewportBackend:isManaged() and self.viewportBackend:beginDraw()
 
-  local hasSceneRoot = self.scene and #self.scene.layers > 0 and component == nil
+  local ok, err = xpcall(function()
+    local hasSceneRoot = self.scene and #self.scene.layers > 0 and component == nil
 
-  if not hasSceneRoot and (self.needsRender or component ~= self.rootComponent or self.root == nil) then
-    root = self:build(component)
+    if not hasSceneRoot and (self.needsRender or component ~= self.rootComponent or self.root == nil) then
+      root = self:build(component)
+    end
+
+    if not hasSceneRoot and root then
+      local loveModule = self.love or _G.love
+      local viewportWidth, viewportHeight = viewportSize(self, loveModule)
+      self:layoutRoot(root, viewportWidth, viewportHeight)
+      self:draw(root)
+    end
+
+    if self.scene then
+      self:renderLayers()
+    end
+  end, debug.traceback)
+
+  if wrapped then
+    self.viewportBackend:endDraw()
   end
 
-  if not hasSceneRoot and root then
-    local loveModule = self.love or _G.love
-    local viewportWidth, viewportHeight = viewportSize(loveModule)
-    self:layoutRoot(root, viewportWidth, viewportHeight)
-    self:draw(root)
-  end
-
-  if self.scene then
-    self:renderLayers()
+  if not ok then
+    error(err, 0)
   end
 
   self.bus:dispatch("afterRender", root)
@@ -567,7 +580,14 @@ local function graphicsPushAll(graphics)
   end
 end
 
-function viewportSize(loveModule)
+function viewportSize(runtime, loveModule)
+  if runtime and runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
+    local width, height = runtime.viewportBackend:dimensions()
+    if width and height then
+      return width, height
+    end
+  end
+
   if loveModule and loveModule.graphics and loveModule.graphics.getDimensions then
     return loveModule.graphics.getDimensions()
   end
@@ -676,7 +696,7 @@ function Runtime:renderLayers()
   end
 
   local loveModule = self.love or _G.love
-  local viewportWidth, viewportHeight = viewportSize(loveModule)
+  local viewportWidth, viewportHeight = viewportSize(self, loveModule)
   for _, layer in ipairs(self.scene.layers) do
     self:renderLayer(layer, viewportWidth, viewportHeight)
   end
@@ -775,7 +795,9 @@ function Runtime:mousepressed(x, y, button)
   local node, activeLayer = nil, nil
 
   if self.scene then
-    node, activeLayer = self.scene:topInteractiveHit(x, y, walkHitTest)
+    node, activeLayer = self.scene:topInteractiveHit(x, y, function(root, ox, oy, hitX, hitY)
+      return walkHitTest(self, root, ox, oy, hitX, hitY)
+    end)
   end
 
   if activeLayer then
@@ -1128,7 +1150,25 @@ local function restoreScissor(graphics, previous)
   end
 end
 
-local function setScissorBounds(graphics, bounds, previous)
+local function viewportScissorBounds(runtime, bounds)
+  if runtime and runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
+    local x1, y1 = runtime.viewportBackend:viewportToScreen(bounds.x, bounds.y)
+    local x2, y2 = runtime.viewportBackend:viewportToScreen(bounds.x + bounds.width, bounds.y + bounds.height)
+    local left = math.min(x1, x2)
+    local top = math.min(y1, y2)
+    return {
+      x = left,
+      y = top,
+      width = math.abs(x2 - x1),
+      height = math.abs(y2 - y1),
+    }
+  end
+
+  return bounds
+end
+
+local function setScissorBounds(graphics, bounds, previous, runtime)
+  bounds = viewportScissorBounds(runtime, bounds)
   if previous then
     local x1 = math.max(previous[1], bounds.x)
     local y1 = math.max(previous[2], bounds.y)
@@ -1157,7 +1197,7 @@ local function withClip(graphics, shape, bounds, ctx, fn)
   if shape == true then
     if graphics.setScissor then
       local previous = currentScissor(graphics)
-      setScissorBounds(graphics, bounds, previous)
+      setScissorBounds(graphics, bounds, previous, ctx and ctx.runtime)
       runWithRestore(fn, function()
         restoreScissor(graphics, previous)
       end)
@@ -1699,7 +1739,7 @@ function Runtime:drawNode(node, x, y)
       local previousScissor = nil
       if love.graphics.setScissor then
         previousScissor = currentScissor(love.graphics)
-        setScissorBounds(love.graphics, boundsFor(absX, absY, width, height), previousScissor)
+        setScissorBounds(love.graphics, boundsFor(absX, absY, width, height), previousScissor, self)
       end
       local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - height))
       local offset = math.min(maxScroll, math.max(0, self.scrollOffsets[node.path] or 0))

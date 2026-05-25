@@ -455,6 +455,53 @@ describe("runtime", function()
     assert.are.same({ 10, 8, 200, 200 }, calls[#calls])
   end)
 
+  it("converts rectangular clip scissor bounds through the viewport backend", function()
+    local runtime = Runtime.new()
+    local calls = {}
+
+    runtime.viewportBackend = {
+      isEnabled = function()
+        return true
+      end,
+      viewportToScreen = function(x, y)
+        return 20 + x * 2, 30 + y * 2
+      end,
+    }
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        getScissor = function() return nil end,
+        setScissor = function(x, y, width, height)
+          calls[#calls + 1] = { x, y, width, height }
+        end,
+        setColor = function() end,
+        rectangle = function() end,
+        print = function() end,
+      },
+    })
+
+    local function App()
+      return Components.box({
+        width = 100,
+        height = 60,
+        clip = true,
+      }, {
+        Components.text("inside"),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ 20, 30, 200, 120 }, calls[1])
+    assert.is_nil(calls[#calls][1])
+  end)
+
   it("keeps clipping visual-only for hit testing", function()
     local runtime = Runtime.new()
     local clicked = false
@@ -614,5 +661,85 @@ describe("runtime", function()
     runtime:mousereleased(10, 10, 1)
 
     assert.is_true(clicked)
+  end)
+
+  it("renders inside a managed viewport backend", function()
+    local runtime = Runtime.new()
+    local calls = {}
+
+    runtime.viewportBackend = {
+      isEnabled = function() return true end,
+      isManaged = function() return true end,
+      dimensions = function() return 320, 180 end,
+      beginDraw = function()
+        calls[#calls + 1] = "begin"
+        return true
+      end,
+      endDraw = function()
+        calls[#calls + 1] = "end"
+        return true
+      end,
+    }
+    runtime:setLove({
+      graphics = {
+        getDimensions = function() return 999, 999 end,
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function() end,
+        print = function() end,
+      },
+    })
+
+    runtime:render(function()
+      return Components.box({
+        width = "100%",
+        height = "100%",
+        style = { background = { 1, 1, 1, 1 } },
+      })
+    end)
+
+    assert.are.same({ "begin", "end" }, calls)
+    assert.are.equal(320, runtime.root.layout.width)
+    assert.are.equal(180, runtime.root.layout.height)
+  end)
+
+  it("does not wrap rendering when the viewport backend is attached", function()
+    local runtime = Runtime.new()
+    local calls = 0
+
+    runtime.viewportBackend = {
+      isEnabled = function() return true end,
+      isManaged = function() return false end,
+      dimensions = function() return 320, 180 end,
+      beginDraw = function()
+        calls = calls + 1
+        return false
+      end,
+      endDraw = function()
+        calls = calls + 1
+      end,
+    }
+    runtime:setLove({
+      graphics = {
+        getDimensions = function() return 999, 999 end,
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function() end,
+        print = function() end,
+      },
+    })
+
+    runtime:render(function()
+      return Components.box({ width = "100%", height = "100%" })
+    end)
+
+    assert.are.equal(0, calls)
+    assert.are.equal(320, runtime.root.layout.width)
   end)
 end)

@@ -1,4 +1,4 @@
-package.path = "?.lua;?/init.lua;examples/?/example.lua;examples/?.lua;../../?.lua;../../?/init.lua;../?/example.lua;" .. package.path
+package.path = "?.lua;?/init.lua;dev/vendor/?.lua;../dev/vendor/?.lua;../../dev/vendor/?.lua;examples/?/example.lua;examples/?.lua;../../?.lua;../../?/init.lua;../?/example.lua;" .. package.path
 
 local ui = require("glyph")
 
@@ -14,6 +14,7 @@ local examples = {
 	{ id = "settings", label = "Settings", module = "settings" },
 	{ id = "styles", label = "Styles", module = "styles" },
 	{ id = "themes", label = "Themes", module = "themes" },
+	{ id = "viewport", label = "Viewport", module = "viewport" },
 }
 
 local active = nil

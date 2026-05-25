@@ -31,6 +31,7 @@ local runtime = Runtime.new()
 ---@field panel fun(props?: GlyphPanelProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field static fun(node: GlyphNode): GlyphNode
 ---@field animation GlyphAnimationApi
+---@field viewportBackend GlyphViewportBackendApi
 ---@field transitions GlyphTransitionApi
 ---@field scene GlyphSceneApi
 ---@field modal GlyphModalApi
@@ -143,13 +144,25 @@ end
 ---@param width number
 ---@param height number
 function ui.resize(width, height)
-  Responsive.resize(runtime.responsive, width, height)
+  if runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
+    runtime.viewportBackend:resize(width, height)
+    local viewportWidth, viewportHeight = runtime.viewportBackend:dimensions()
+    Responsive.resize(runtime.responsive, viewportWidth, viewportHeight)
+  else
+    Responsive.resize(runtime.responsive, width, height)
+  end
   runtime:markDirty()
 end
 
 ---@return GlyphViewport
 function ui.viewport()
-  return Responsive.viewport(runtime.responsive)
+  local viewport = Responsive.viewport(runtime.responsive)
+  if runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
+    viewport.backend = runtime.viewportBackend:backend()
+    viewport.virtual = true
+    viewport.screen = runtime.viewportBackend:getViewport()
+  end
+  return viewport
 end
 
 ---@return string
@@ -325,26 +338,44 @@ function ui.render(component)
   return runtime:render(component)
 end
 
+local viewportPoint
+local clearPointerTarget
+
 ---@param x number
 ---@param y number
 ---@param dx number
 ---@param dy number
 function ui.mousemoved(x, y, dx, dy)
-  return runtime:mousemoved(x, y, dx, dy)
+  local inside, viewX, viewY = viewportPoint(x, y)
+  if not inside then
+    clearPointerTarget(false)
+    return nil
+  end
+  return runtime:mousemoved(viewX, viewY, dx, dy)
 end
 
 ---@param x number
 ---@param y number
 ---@param button number
 function ui.mousepressed(x, y, button)
-  return runtime:mousepressed(x, y, button)
+  local inside, viewX, viewY = viewportPoint(x, y)
+  if not inside then
+    clearPointerTarget(true)
+    return nil
+  end
+  return runtime:mousepressed(viewX, viewY, button)
 end
 
 ---@param x number
 ---@param y number
 ---@param button number
 function ui.mousereleased(x, y, button)
-  return runtime:mousereleased(x, y, button)
+  local inside, viewX, viewY = viewportPoint(x, y)
+  if not inside then
+    clearPointerTarget(false)
+    return nil
+  end
+  return runtime:mousereleased(viewX, viewY, button)
 end
 
 ---@param dx number
@@ -368,6 +399,49 @@ end
 function ui.navigate(direction)
   return Navigate.move(runtime, direction)
 end
+
+function viewportPoint(x, y)
+  if runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
+    return runtime.viewportBackend:screenToViewport(x, y)
+  end
+  return true, x, y
+end
+
+function clearPointerTarget(clearFocus)
+  runtime:setHover(nil)
+  runtime.mouseDownNode = nil
+  runtime.mouseDownPath = nil
+  if clearFocus then
+    runtime:setFocus(nil)
+  end
+end
+
+ui.viewportBackend = {
+  isEnabled = function()
+    return runtime.viewportBackend and runtime.viewportBackend:isEnabled() or false
+  end,
+  backend = function()
+    return runtime.viewportBackend and runtime.viewportBackend:backend() or nil
+  end,
+  screenToViewport = function(x, y)
+    return viewportPoint(x, y)
+  end,
+  viewportToScreen = function(x, y)
+    if runtime.viewportBackend then
+      return runtime.viewportBackend:viewportToScreen(x, y)
+    end
+    return x, y
+  end,
+  beginDraw = function()
+    return runtime.viewportBackend and runtime.viewportBackend:beginDraw() or false
+  end,
+  endDraw = function()
+    return runtime.viewportBackend and runtime.viewportBackend:endDraw() or false
+  end,
+  raw = function()
+    return runtime.viewportBackend and runtime.viewportBackend:raw() or nil
+  end,
+}
 
 local autoCallbacks = {
   resize = function(width, height)

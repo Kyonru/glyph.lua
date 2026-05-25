@@ -123,12 +123,17 @@ end
 function Responsive.configureWindow(runtime, opts)
   opts = opts or {}
   local love = runtime.love or _G.love
+  local backend = runtime.viewportBackend
+  local viewportOpts = opts.viewport
 
   if opts.breakpoints then
     Responsive.setBreakpoints(runtime.responsive, opts.breakpoints)
   end
 
-  if love and love.window and love.window.setMode then
+  local backendHandlesWindow = backend and viewportOpts and backend:willHandleWindow(viewportOpts)
+  local attachedViewport = viewportOpts and viewportOpts.managed == false
+
+  if love and love.window and love.window.setMode and not backendHandlesWindow and not attachedViewport then
     love.window.setMode(opts.width or runtime.responsive.width, opts.height or runtime.responsive.height, {
       resizable = opts.resizable ~= false,
       minwidth = opts.minWidth,
@@ -139,7 +144,16 @@ function Responsive.configureWindow(runtime, opts)
     })
   end
 
-  if love and love.graphics and love.graphics.getDimensions then
+  if backend and viewportOpts then
+    backend:configure(viewportOpts, opts, love)
+  elseif backend then
+    backend:disable()
+  end
+
+  if backend and backend:isEnabled() then
+    local width, height = backend:dimensions()
+    Responsive.resize(runtime.responsive, width, height)
+  elseif love and love.graphics and love.graphics.getDimensions then
     local width, height = love.graphics.getDimensions()
     Responsive.resize(runtime.responsive, width, height)
   else

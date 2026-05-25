@@ -82,6 +82,11 @@ end
 
 `ui.install` and `ui.load` can install common callbacks automatically.
 
+> [!NOTE]
+> If a fixed viewport backend is active, Glyph converts mouse and touch screen
+> coordinates into virtual viewport coordinates before hover, focus, click, and
+> scroll routing. Pointer events outside the virtual viewport do not hit UI.
+
 ## Runtime Callbacks
 
 Use `ui.on(name, fn, opts)` to subscribe to runtime callbacks.

@@ -18,6 +18,7 @@ love examples/scene
 love examples/showcase
 love examples/styles
 love examples/themes
+love examples/viewport
 love examples/performance
 ```
 
@@ -68,6 +69,12 @@ Theme switching, variants, state styles, transitions, custom draw, and shader-ba
 ## Themes
 
 A full-screen game-tool HUD showing four theme presets, live radius/border/density/accent token controls, component variants, inputs, tabs, meters, and themed scrollbars.
+
+## Viewport
+
+Fixed virtual-resolution rendering with backend-agnostic Push/Shove adapters, scaled pointer input, fit/filter controls, scrolling, and modal rendering.
+
+This demo uses development copies of Push and Shove from `dev/vendor`; Glyph apps should install or provide their own viewport backend.
 
 ## Performance
 
