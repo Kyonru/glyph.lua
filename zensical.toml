@@ -56,6 +56,7 @@ nav = [
     { "Callback Bus" = "callback-bus.md" },
     { "Responsive Helpers" = "responsive.md" },
     { "Custom Draw And Helpers" = "custom-draw.md" },
+    { "Animations" = "animations.md" },
   ] },
   { "Scenes" = [
     { "Scenes And Modals" = "scenes-and-modals.md" },

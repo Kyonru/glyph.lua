@@ -7,6 +7,7 @@ icon: lucide/play
 Run examples with Love2D:
 
 ```sh
+love examples/animations
 love examples/basic
 love examples/dashboard
 love examples/hud-menu
@@ -18,6 +19,10 @@ love examples/showcase
 love examples/styles
 love examples/performance
 ```
+
+## Animations
+
+Flux-backed animation lab for declarative show/hide, animated meters, custom-drawn movement, selection feedback, and size tweens.
 
 ## Basic
 

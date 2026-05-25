@@ -3,6 +3,7 @@ package.path = "?.lua;?/init.lua;examples/?/example.lua;examples/?.lua;../../?.l
 local ui = require("glyph")
 
 local examples = {
+	{ id = "animations", label = "Animations", module = "animations" },
 	{ id = "basic", label = "Basic", module = "basic" },
 	{ id = "dashboard", label = "Dashboard", module = "dashboard" },
 	{ id = "hud-menu", label = "HUD Menu", module = "hud-menu" },

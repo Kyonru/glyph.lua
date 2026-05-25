@@ -144,6 +144,11 @@ function Scene:set(id, component, opts)
   opts = copyOptions(opts)
   opts.kind = opts.kind or "scene"
   opts.blocking = opts.blocking ~= false
+  for _, layer in ipairs(self.layers) do
+    if self.runtime and self.runtime.clearAnimationRoot then
+      self.runtime:clearAnimationRoot("layer:" .. tostring(layer.id))
+    end
+  end
   self.layers = {}
   local layer = self:createLayer(id, component, opts)
   self.layers[1] = layer
@@ -262,6 +267,10 @@ function Scene:update(dt)
   end
 
   for index = #remove, 1, -1 do
+    local layer = self.layers[remove[index]]
+    if layer and self.runtime and self.runtime.clearAnimationRoot then
+      self.runtime:clearAnimationRoot("layer:" .. tostring(layer.id))
+    end
     table.remove(self.layers, remove[index])
   end
 end

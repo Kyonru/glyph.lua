@@ -4,6 +4,7 @@ local activeTab = 1
 local themeName = "dark"
 local shader = nil
 local shaderEnabled = false
+local showAnimatedCard = true
 
 local themes = {
   dark = {
@@ -105,6 +106,41 @@ local function swatch(label, color)
       },
     }),
     ui.text(label),
+  })
+end
+
+local function openAnimatedModal()
+  ui.modal.open("animated-style-modal", function()
+    return ui.panel({
+      title = "Animated Modal",
+      width = 300,
+      height = 150,
+      style = softCard,
+    }, {
+      ui.text("This modal uses ui.transitions.animate."),
+      ui.button({
+        label = "Close",
+        onClick = function()
+          ui.modal.close("animated-style-modal")
+        end,
+      }),
+    })
+  end, {
+    width = 300,
+    height = 150,
+    transition = ui.transitions.animate({
+      enter = {
+        duration = 0.22,
+        ease = "backout",
+        from = { opacity = 0, y = 24, scale = 0.92 },
+        to = { opacity = 1, y = 0, scale = 1 },
+      },
+      exit = {
+        duration = 0.14,
+        ease = "quadin",
+        to = { opacity = 0, y = 18, scale = 0.96 },
+      },
+    }),
   })
 end
 
@@ -218,6 +254,48 @@ local function App()
               label = "Disabled style",
               disabled = true,
             }),
+            ui.row({ gap = 8 }, {
+              ui.button({
+                label = showAnimatedCard and "Hide animated card" or "Show animated card",
+                onClick = function()
+                  showAnimatedCard = not showAnimatedCard
+                end,
+              }),
+              ui.button({
+                label = "Animated modal",
+                onClick = openAnimatedModal,
+              }),
+            }),
+            showAnimatedCard and ui.box({
+              key = "styles-animated-card",
+              width = 340,
+              height = 72,
+              enter = {
+                duration = 0.24,
+                ease = "backout",
+                from = { opacity = 0, y = 18, scale = 0.94 },
+                to = { opacity = 1, y = 0, scale = 1 },
+              },
+              exit = {
+                duration = 0.16,
+                ease = "quadin",
+                to = { opacity = 0, y = -12, scale = 0.96 },
+              },
+              style = {
+                background = { 0.08, 0.12, 0.16, 1 },
+                borderColor = ui.theme.accentColor,
+                borderWidth = 2,
+                radius = 8,
+              },
+              draw = function(_, x, y, width, height, loveModule, style, ctx)
+                ctx:color(style.background, style.opacity)
+                loveModule.graphics.rectangle("fill", x, y, width, height, style.radius, style.radius)
+                ctx:color(style.borderColor, style.opacity)
+                loveModule.graphics.rectangle("line", x, y, width, height, style.radius, style.radius)
+                ctx:color(style.color or ui.theme.textColor, style.opacity)
+                loveModule.graphics.print("Node enter/exit animation + custom draw", x + 14, y + 26)
+              end,
+            }) or nil,
           }),
         },
       }),

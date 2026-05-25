@@ -2,8 +2,13 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local Runtime = require("glyph.runtime")
 local Components = require("glyph.components")
+local Animation = require("glyph.animation")
 
 describe("runtime", function()
+  before_each(function()
+    Animation.clear()
+  end)
+
   it("persists useState values across renders", function()
     local runtime = Runtime.new()
     local setCount
@@ -413,6 +418,138 @@ describe("runtime", function()
     runtime:layoutRoot(runtime.root)
     runtime:mousepressed(2, 2, 1)
     runtime:mousereleased(2, 2, 1)
+
+    assert.is_true(clicked)
+  end)
+
+  it("starts enter animations on mounted nodes", function()
+    local runtime = Runtime.new()
+    local colors = {}
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        setColor = function(...)
+          colors[#colors + 1] = { ... }
+        end,
+        rectangle = function() end,
+        print = function() end,
+        push = function() end,
+        pop = function() end,
+        translate = function() end,
+        scale = function() end,
+      },
+    })
+
+    local function App()
+      return Components.box({
+        key = "animated",
+        width = 20,
+        height = 20,
+        enter = {
+          duration = 1,
+          ease = "linear",
+          from = { opacity = 0 },
+          to = { opacity = 1 },
+        },
+        style = { background = { 1, 1, 1, 1 } },
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+    assert.are.equal(0, colors[1][4])
+
+    runtime:update(0.5)
+    colors = {}
+    runtime:draw(runtime.root)
+    assert.are.equal(0.5, colors[1][4])
+  end)
+
+  it("keeps removed nodes drawable until exit animation completes", function()
+    local runtime = Runtime.new()
+    local show = true
+    local rects = 0
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function()
+          rects = rects + 1
+        end,
+        print = function() end,
+        push = function() end,
+        pop = function() end,
+        translate = function() end,
+        scale = function() end,
+      },
+    })
+
+    local function App()
+      local children = {}
+      if show then
+        children[1] = Components.box({
+          key = "panel",
+          width = 20,
+          height = 20,
+          exit = {
+            duration = 1,
+            ease = "linear",
+            to = { opacity = 0, x = 10 },
+          },
+          style = { background = { 1, 1, 1, 1 } },
+        })
+      end
+      return Components.column({ width = 100, height = 100 }, children)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    show = false
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    rects = 0
+    runtime:draw(runtime.root)
+    assert.are.equal(1, rects)
+
+    runtime:update(1)
+    assert.are.equal(0, #runtime.exitAnimations)
+  end)
+
+  it("keeps animation visual-only for hit testing", function()
+    local runtime = Runtime.new()
+    local clicked = false
+
+    local function App()
+      return Components.button({
+        label = "Move visually",
+        width = 100,
+        height = 40,
+        enter = {
+          duration = 1,
+          from = { x = 120 },
+          to = { x = 120 },
+        },
+        onClick = function()
+          clicked = true
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(10, 10, 1)
+    runtime:mousereleased(10, 10, 1)
 
     assert.is_true(clicked)
   end)

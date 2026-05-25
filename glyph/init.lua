@@ -5,6 +5,7 @@ elseif prefix:sub(-5) == ".init" then
   prefix = prefix:sub(1, -6)
 end
 
+local Animation = require(prefix .. ".animation")
 local Components = require(prefix .. ".components")
 local CallbackBus = require(prefix .. ".callback_bus")
 local Modal = require(prefix .. ".modal")
@@ -29,12 +30,15 @@ local runtime = Runtime.new()
 ---@field scrollView fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field panel fun(props?: GlyphPanelProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field static fun(node: GlyphNode): GlyphNode
+---@field animation GlyphAnimationApi
+---@field transitions GlyphTransitionApi
 ---@field scene GlyphSceneApi
 ---@field modal GlyphModalApi
 ---@field setFocus fun(node?: GlyphNode)
 ---@field navigate fun(direction: "up"|"down"|"left"|"right"): GlyphNode|nil
 local ui = {
   CallbackBus = CallbackBus,
+  animation = Animation,
   Navigate = Navigate,
   Responsive = Responsive,
   Style = Style,

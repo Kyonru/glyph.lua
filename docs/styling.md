@@ -119,3 +119,7 @@ style = {
 ```
 
 Style transitions should only mark style dirty unless animating layout fields.
+
+For mount/unmount motion, use node `enter` and `exit` animations instead. Those
+animations are visual transforms powered by Glyph's vendored flux runner and do
+not affect layout or input geometry.

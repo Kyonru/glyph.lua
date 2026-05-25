@@ -1,4 +1,5 @@
 local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local Animation = require(prefix .. ".animation")
 local CallbackBus = require(prefix .. ".callback_bus")
 local Layout = require(prefix .. ".layout")
 local Responsive = require(prefix .. ".responsive")
@@ -114,6 +115,34 @@ local function findByPath(node, path)
   return nil
 end
 
+local function animationId(node)
+  local props = node and node.props or {}
+  local key = props.key
+  if key ~= nil then
+    return "key:" .. tostring(key)
+  end
+  return node and node.path and ("path:" .. node.path) or nil
+end
+
+local function hasAnimationProps(node)
+  local props = node and node.props or {}
+  return props.enter ~= nil or props.exit ~= nil
+end
+
+local function walkNodes(node, fn)
+  if not node then
+    return
+  end
+  fn(node)
+  for _, child in ipairs(node.children or {}) do
+    walkNodes(child, fn)
+  end
+end
+
+local function pathIsDescendant(path, ancestorPath)
+  return type(path) == "string" and type(ancestorPath) == "string" and path:sub(1, #ancestorPath + 1) == ancestorPath .. "."
+end
+
 local function contains(node, x, y, absX, absY)
   local layout = node.layout or {}
   return x >= absX and y >= absY and x <= absX + (layout.width or 0) and y <= absY + (layout.height or 0)
@@ -142,6 +171,10 @@ function Runtime.new()
     styleCache = {},
     previousStyles = {},
     animatedStyles = {},
+    animationStates = {},
+    animationMounted = {},
+    animationMountedByRoot = {},
+    exitAnimations = {},
     styleClock = 0,
     lastDt = 0,
     responsive = Responsive.new(),
@@ -233,6 +266,149 @@ function Runtime:runEffects()
   self.pendingEffects = {}
 end
 
+local function copyAnimationSpecWithFrom(spec, from)
+  local copy = {}
+  for key, value in pairs(spec or {}) do
+    copy[key] = value
+  end
+  copy.from = copy.from or from
+  return copy
+end
+
+function Runtime:prepareAnimations(root, rootKey)
+  rootKey = rootKey or "root"
+  local current = {}
+  local previousMounted = self.animationMountedByRoot[rootKey] or {}
+
+  walkNodes(root, function(node)
+    if not hasAnimationProps(node) then
+      return
+    end
+
+    local rawId = animationId(node)
+    if not rawId then
+      return
+    end
+    local id = rootKey .. "|" .. rawId
+
+    local previous = previousMounted[id]
+    local state = self.animationStates[id] or {
+      id = id,
+      subject = Animation.subject(),
+    }
+
+    state.node = node
+    state.exiting = false
+    node._glyphAnimationId = id
+    node._glyphAnimation = state.subject
+    self.animationStates[id] = state
+    for _, ghost in ipairs(self.exitAnimations) do
+      if ghost.id == id then
+        ghost.done = true
+      end
+    end
+    current[id] = {
+      id = id,
+      node = node,
+      parentX = previous and previous.parentX or 0,
+      parentY = previous and previous.parentY or 0,
+    }
+    self.animationMounted[id] = current[id]
+
+    if not previous and node.props and node.props.enter then
+      local subject = nil
+      subject = Animation.start(node.props.enter, "enter", state.subject, {
+        onComplete = function()
+          state.entering = false
+          self:markDirty()
+        end,
+      })
+      state.subject = subject or state.subject
+      node._glyphAnimation = state.subject
+      state.entering = true
+      self:markDirty()
+    end
+  end)
+
+  local removed = {}
+  for id, previous in pairs(previousMounted) do
+    if not current[id] and previous.node and previous.node.props and previous.node.props.exit then
+      removed[#removed + 1] = previous
+    elseif not current[id] then
+      self.animationMounted[id] = nil
+      self.animationStates[id] = nil
+    end
+  end
+
+  table.sort(removed, function(a, b)
+    return tostring(a.node.path or "") < tostring(b.node.path or "")
+  end)
+
+  local ghostedPaths = {}
+  for _, previous in ipairs(removed) do
+    local path = previous.node.path
+    local skip = false
+    for _, parentPath in ipairs(ghostedPaths) do
+      if pathIsDescendant(path, parentPath) then
+        skip = true
+        break
+      end
+    end
+
+    if not skip then
+      local id = previous.id
+      local state = self.animationStates[id] or { id = id, subject = Animation.subject() }
+      local from = Animation.subject(state.subject)
+      local ghost = {
+        id = id,
+        node = previous.node,
+        parentX = previous.parentX or 0,
+        parentY = previous.parentY or 0,
+        subject = state.subject,
+      }
+      previous.node._glyphAnimation = state.subject
+      self.exitAnimations[#self.exitAnimations + 1] = ghost
+      state.exiting = true
+      state.node = previous.node
+      self.animationStates[id] = state
+
+      Animation.start(copyAnimationSpecWithFrom(previous.node.props.exit, from), "exit", state.subject, {
+        onComplete = function()
+          ghost.done = true
+          self.animationStates[id] = nil
+          self.animationMounted[id] = nil
+          self:markDirty()
+        end,
+      })
+
+      if path then
+        ghostedPaths[#ghostedPaths + 1] = path
+      end
+      self:markDirty()
+    end
+  end
+
+  self.animationMountedByRoot[rootKey] = current
+end
+
+function Runtime:clearAnimationRoot(rootKey)
+  local mounted = self.animationMountedByRoot[rootKey]
+  if not mounted then
+    return
+  end
+
+  for id in pairs(mounted) do
+    self.animationMounted[id] = nil
+    self.animationStates[id] = nil
+    for _, ghost in ipairs(self.exitAnimations) do
+      if ghost.id == id then
+        ghost.done = true
+      end
+    end
+  end
+  self.animationMountedByRoot[rootKey] = nil
+end
+
 function Runtime:withHookScope(scope, fn)
   scope = scope or {}
   local saved = {
@@ -278,6 +454,7 @@ function Runtime:build(component)
   self.hookCursor = 0
   local root = self.rootComponent()
   assignPaths(root, "0", nil)
+  self:prepareAnimations(root, "root")
   self.root = root
   self.focusNode = findByPath(root, self.focusPath)
   self.hoverNode = findByPath(root, self.hoverPath)
@@ -291,6 +468,7 @@ function Runtime:buildLayer(layer)
   local root = self:withHookScope(layer.scope, function()
     local nextRoot = layer.component(layer.props)
     assignPaths(nextRoot, "layer:" .. tostring(layer.id), nil)
+    self:prepareAnimations(nextRoot, "layer:" .. tostring(layer.id))
     self:runEffects()
     return nextRoot
   end)
@@ -323,6 +501,14 @@ end
 function Runtime:update(dt)
   self.lastDt = dt or 0
   self.styleClock = self.styleClock + (dt or 0)
+  if Animation.update(dt or 0) then
+    self:markDirty()
+  end
+  for index = #self.exitAnimations, 1, -1 do
+    if self.exitAnimations[index].done then
+      table.remove(self.exitAnimations, index)
+    end
+  end
   self.bus:dispatch("beforeUpdate", dt)
   if self.scene then
     self.scene:update(dt or 0)
@@ -1188,6 +1374,7 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     love = love,
     graphics = graphics,
     style = style,
+    animation = node._glyphAnimation,
     runtime = runtime,
     hovered = runtime.hoverNode == node or runtime.hoverPath == node.path,
     pressed = runtime.mouseDownNode == node or runtime.mouseDownPath == node.path,
@@ -1360,16 +1547,49 @@ function Runtime:drawNode(node, x, y)
   local absY = y + (layout.y or 0)
   local width = layout.width or 0
   local height = layout.height or 0
+  local animation = node._glyphAnimation
+  local didPushAnimation = false
+  local nodeAnimationId = node._glyphAnimationId or animationId(node)
+  local animationEntry = nodeAnimationId and self.animationMounted[nodeAnimationId] or nil
+  if animationEntry then
+    animationEntry.parentX = x
+    animationEntry.parentY = y
+  end
+  if animation and love.graphics.push then
+    local scale = animation.scale or 1
+    local scaleX = animation.scaleX or 1
+    local scaleY = animation.scaleY or 1
+    local rotation = animation.rotation or 0
+    local tx = animation.x or 0
+    local ty = animation.y or 0
+    local cx = absX + width / 2
+    local cy = absY + height / 2
+    love.graphics.push()
+    love.graphics.translate(cx + tx, cy + ty)
+    if love.graphics.rotate and rotation ~= 0 then
+      love.graphics.rotate(rotation)
+    end
+    if love.graphics.scale and (scale ~= 1 or scaleX ~= 1 or scaleY ~= 1) then
+      love.graphics.scale(scale * scaleX, scale * scaleY)
+    end
+    love.graphics.translate(-cx, -cy)
+    didPushAnimation = true
+  end
   local style = self:animatedStyle(node, Style.resolve(node, self))
   local restore = applyDrawState(love, style, node, self)
   local radius = style.radius or self.theme.radius
-  local opacity = style.opacity or 1
+  local opacity = (style.opacity or 1) * (animation and animation.opacity or 1)
+  local drawStyle = style
+  if animation and animation.opacity ~= nil then
+    drawStyle = Style.copyValue(style)
+    drawStyle.opacity = opacity
+  end
 
   local ctx = nil
 
   if type(props.draw) == "function" then
-    ctx = createDrawContext(self, node, absX, absY, width, height, love, style)
-    props.draw(node, absX, absY, width, height, love, style, ctx)
+    ctx = createDrawContext(self, node, absX, absY, width, height, love, drawStyle)
+    props.draw(node, absX, absY, width, height, love, drawStyle, ctx)
   elseif node.type == "text" then
     color(love, withOpacity(style.color or self.theme.textColor, opacity))
     local text = tostring(node.value or "")
@@ -1524,10 +1744,20 @@ function Runtime:drawNode(node, x, y)
   else
     drawChildren()
   end
+
+  if didPushAnimation then
+    love.graphics.pop()
+  end
 end
 
 function Runtime:draw(root)
   self:drawNode(root, 0, 0)
+  for _, ghost in ipairs(self.exitAnimations) do
+    if not ghost.done then
+      ghost.node._glyphAnimation = ghost.subject
+      self:drawNode(ghost.node, ghost.parentX or 0, ghost.parentY or 0)
+    end
+  end
 end
 
 function Runtime:memo(component, deps)

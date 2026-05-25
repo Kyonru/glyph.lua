@@ -46,6 +46,25 @@ Transition context fields:
 - `transition`
 - `drawLayer`
 
+## Animation Transitions
+
+`ui.transitions.animate` uses the same visual animation spec as node `enter`
+and `exit` animations:
+
+```lua
+transition = ui.transitions.animate({
+  enter = {
+    duration = 0.24,
+    from = { opacity = 0, y = 24, scale = 0.96 },
+    to = { opacity = 1, y = 0, scale = 1 },
+  },
+  exit = {
+    duration = 0.16,
+    to = { opacity = 0, y = 18, scale = 0.98 },
+  },
+})
+```
+
 ## Shader Transition
 
 ```lua

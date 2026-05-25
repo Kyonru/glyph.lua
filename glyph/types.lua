@@ -66,6 +66,27 @@ local GlyphShape = {}
 ---@field mode? "inside"|"outside"
 local GlyphStencil = {}
 
+---@class GlyphAnimationValues
+---@field opacity? number
+---@field x? number
+---@field y? number
+---@field scale? number
+---@field scaleX? number
+---@field scaleY? number
+---@field rotation? number
+local GlyphAnimationValues = {}
+
+---@class GlyphAnimationSpec
+---@field duration? number
+---@field delay? number
+---@field ease? string
+---@field from? GlyphAnimationValues
+---@field to? GlyphAnimationValues
+---@field onStart? fun(subject: GlyphAnimationValues)
+---@field onUpdate? fun(subject: GlyphAnimationValues)
+---@field onComplete? fun(subject: GlyphAnimationValues)
+local GlyphAnimationSpec = {}
+
 -- ---------------------------------------------------------------------------
 -- Props
 -- ---------------------------------------------------------------------------
@@ -108,6 +129,9 @@ local GlyphPadding = {}
 ---@field variant? string
 ---@field styleType? string
 ---@field callbacks? table
+---@field key? string|number
+---@field enter? GlyphAnimationSpec|false
+---@field exit? GlyphAnimationSpec|false
 ---@field clip? boolean|GlyphShape|fun(ctx: table): any
 ---@field stencil? GlyphStencil
 ---@field shape? GlyphShape|fun(ctx: table): any
@@ -256,7 +280,18 @@ local GlyphTransitionCtx = {}
 ---@field exitDuration number
 ---@field draw fun(ctx: GlyphTransitionCtx)
 ---@field direction? "top"|"bottom"|"left"|"right"
+---@field enter? GlyphAnimationSpec
+---@field exit? GlyphAnimationSpec
 local GlyphTransition = {}
+
+---@class GlyphTransitionApi
+---@field none fun(opts?: table): GlyphTransition
+---@field fade fun(opts?: table): GlyphTransition
+---@field slide fun(opts?: table): GlyphTransition
+---@field scale fun(opts?: table): GlyphTransition
+---@field custom fun(spec: GlyphTransition|fun(ctx: GlyphTransitionCtx)): GlyphTransition
+---@field animate fun(opts: { enter?: GlyphAnimationSpec, exit?: GlyphAnimationSpec, duration?: number, exitDuration?: number }): GlyphTransition
+local GlyphTransitionApi = {}
 
 ---@class GlyphLayerOpts
 ---@field kind? "scene"|"modal"|"overlay"
@@ -283,6 +318,13 @@ local GlyphTransition = {}
 ---@field navTrap? boolean
 ---@field onNavigateExit? fun(direction: GlyphNavDirection, origin: GlyphNode, scope: GlyphNode|GlyphLayer, candidates: GlyphNavCandidate[]): GlyphNode|false|nil
 local GlyphLayerOpts = {}
+
+---@class GlyphAnimationApi
+---@field to fun(subject: table, duration: number, target: table, opts?: table): table
+---@field update fun(dt: number): boolean
+---@field clear fun()
+---@field active fun(): number
+local GlyphAnimationApi = {}
 
 -- ---------------------------------------------------------------------------
 -- Theme
@@ -358,7 +400,7 @@ local GlyphSceneApi = {}
 ---@field close fun(id: string|number|nil)
 ---@field closeAll fun()
 ---@field isOpen fun(id: string|number): boolean
----@field transitions table
+---@field transitions GlyphTransitionApi
 local GlyphModalApi = {}
 
 -- ---------------------------------------------------------------------------

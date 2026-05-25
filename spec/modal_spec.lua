@@ -33,6 +33,9 @@ local function makeLove(overrides)
     scale = overrides.scale or function(...)
       calls[#calls + 1] = { "scale", ... }
     end,
+    rotate = overrides.rotate or function(...)
+      calls[#calls + 1] = { "rotate", ... }
+    end,
     getDimensions = overrides.getDimensions or function()
       return 800, 600
     end,
@@ -288,5 +291,39 @@ describe("transitions", function()
 
     assert.is_true(hasPushAll)
     assert.is_true(hasPop)
+  end)
+
+  it("animates layer transitions with animation specs", function()
+    local runtime = Runtime.new()
+    local loveModule = makeLove()
+
+    runtime:setLove(loveModule)
+    runtime.scene:push("animated", textComponent("A"), {
+      transition = Transitions.animate({
+        enter = {
+          duration = 1,
+          from = { y = 20, scale = 0.5 },
+          to = { y = 0, scale = 1 },
+        },
+        exit = {
+          duration = 1,
+          to = { y = 20, scale = 0.8 },
+        },
+      }),
+    })
+    runtime:render()
+
+    local translated = false
+    local scaled = false
+    for _, call in ipairs(loveModule.calls) do
+      if call[1] == "translate" then
+        translated = true
+      elseif call[1] == "scale" then
+        scaled = true
+      end
+    end
+
+    assert.is_true(translated)
+    assert.is_true(scaled)
   end)
 end)
