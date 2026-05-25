@@ -190,6 +190,68 @@ describe("runtime", function()
     assert.are.equal(0, runtime.scrollOffsets["0"])
   end)
 
+  it("hit tests scroll view children at their scrolled visual position", function()
+    local runtime = Runtime.new()
+    local clicked = nil
+
+    local function App()
+      local rows = {}
+      for index = 1, 6 do
+        rows[index] = Components.button({
+          label = "Row " .. index,
+          width = 100,
+          height = 20,
+          onClick = function()
+            clicked = index
+          end,
+        })
+      end
+
+      return Components.scrollView({
+        width = 100,
+        height = 60,
+        gap = 0,
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime.scrollOffsets["0"] = 40
+
+    runtime:mousemoved(10, 10)
+    assert.are.equal("Row 3", runtime.hoverNode.props.label)
+
+    runtime:mousepressed(10, 10, 1)
+    runtime:mousereleased(10, 10, 1)
+    assert.are.equal(3, clicked)
+  end)
+
+  it("does not hit scroll view children outside the clipped viewport", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      local rows = {}
+      for index = 1, 6 do
+        rows[index] = Components.button({
+          label = "Row " .. index,
+          width = 100,
+          height = 20,
+        })
+      end
+
+      return Components.scrollView({
+        width = 100,
+        height = 60,
+        gap = 0,
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+
+    assert.is_nil(runtime:hitTest(10, 80))
+  end)
+
   it("draws a customizable scroll indicator when content overflows", function()
     local runtime = Runtime.new()
     local rects = {}

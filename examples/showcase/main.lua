@@ -13,6 +13,7 @@ local examples = {
 	{ id = "scene", label = "Scene", module = "scene" },
 	{ id = "settings", label = "Settings", module = "settings" },
 	{ id = "styles", label = "Styles", module = "styles" },
+	{ id = "themes", label = "Themes", module = "themes" },
 }
 
 local active = nil

@@ -682,15 +682,33 @@ function Runtime:renderLayers()
   end
 end
 
-local function hitTestNode(node, parentX, parentY, x, y)
+local function hitTestNode(runtime, node, parentX, parentY, x, y)
   local layout = node.layout or {}
   local absX = parentX + (layout.x or 0)
   local absY = parentY + (layout.y or 0)
+  local childX = absX
+  local childY = absY
+  local hitChildren = true
 
-  for _, child in ipairs(orderedChildren(node, true)) do
-    local hit = hitTestNode(child, absX, absY, x, y)
-    if hit then
-      return hit
+  if node.type == "scrollView" then
+    hitChildren = contains(node, x, y, absX, absY)
+    if hitChildren then
+      local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - (layout.height or 0)))
+      local scrollKey = node.path
+      local offset = math.min(maxScroll, math.max(0, (scrollKey and runtime.scrollOffsets[scrollKey]) or 0))
+      if scrollKey then
+        runtime.scrollOffsets[scrollKey] = offset
+      end
+      childY = absY - offset
+    end
+  end
+
+  if hitChildren then
+    for _, child in ipairs(orderedChildren(node, true)) do
+      local hit = hitTestNode(runtime, child, childX, childY, x, y)
+      if hit then
+        return hit
+      end
     end
   end
 
@@ -703,13 +721,15 @@ local function hitTestNode(node, parentX, parentY, x, y)
   return nil
 end
 
-local function walkHitTest(root, ox, oy, x, y)
-  return hitTestNode(root, ox, oy, x, y)
+local function walkHitTest(runtime, root, ox, oy, x, y)
+  return hitTestNode(runtime, root, ox, oy, x, y)
 end
 
 function Runtime:hitTest(x, y)
   if self.scene then
-    local node, layer = self.scene:topInteractiveHit(x, y, walkHitTest)
+    local node, layer = self.scene:topInteractiveHit(x, y, function(root, ox, oy, hitX, hitY)
+      return walkHitTest(self, root, ox, oy, hitX, hitY)
+    end)
     if node or layer then
       return node
     end
@@ -719,7 +739,7 @@ function Runtime:hitTest(x, y)
     return nil
   end
 
-  return walkHitTest(self.root, 0, 0, x, y)
+  return walkHitTest(self, self.root, 0, 0, x, y)
 end
 
 function Runtime:setHover(node)

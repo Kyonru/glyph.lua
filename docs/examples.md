@@ -17,6 +17,7 @@ love examples/navigate
 love examples/scene
 love examples/showcase
 love examples/styles
+love examples/themes
 love examples/performance
 ```
 
@@ -63,6 +64,10 @@ one window and compare how the real demos adapt.
 ## Styles
 
 Theme switching, variants, state styles, transitions, custom draw, and shader-backed styling.
+
+## Themes
+
+A full-screen game-tool HUD showing four theme presets, live radius/border/density/accent token controls, component variants, inputs, tabs, meters, and themed scrollbars.
 
 ## Performance
 
