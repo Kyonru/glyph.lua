@@ -108,6 +108,20 @@ function Components.input(props)
   return createNode("input", props, nil)
 end
 
+---@param props? GlyphMeterProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
+function Components.meter(props, children)
+  props = normalizeProps(props)
+  props.value = props.value or 0
+  props.min = props.min or 0
+  props.max = props.max or 1
+  props.kind = props.kind or "linear"
+  props.direction = props.direction or "right"
+  props.display = props.display or "stack"
+  return createNode("meter", props, children)
+end
+
 ---@param props? GlyphProps
 ---@param children? GlyphNode[]|GlyphNode
 ---@return GlyphNode
@@ -194,6 +208,10 @@ function Components.panel(props, children)
     navScope = props.navScope,
     navTrap = props.navTrap,
     onNavigateExit = props.onNavigateExit,
+    clip = props.clip,
+    stencil = props.stencil,
+    shape = props.shape,
+    draw = props.draw,
     backgroundColor = props.backgroundColor,
     borderColor = props.borderColor,
     radius = props.radius,

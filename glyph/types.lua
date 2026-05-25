@@ -19,6 +19,7 @@ local GlyphColor = {}
 ---@field borderColor? GlyphColor
 ---@field borderWidth? number
 ---@field radius? number
+---@field shape? GlyphShape|fun(ctx: table): any
 ---@field fontSize? number
 ---@field opacity? number
 local GlyphStateStyle = {}
@@ -33,6 +34,7 @@ local GlyphStateStyle = {}
 ---@field font? any
 ---@field opacity? number
 ---@field lineWidth? number
+---@field shape? GlyphShape|fun(ctx: table): any
 ---@field shader? any
 ---@field blendMode? string
 ---@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table)
@@ -42,6 +44,27 @@ local GlyphStateStyle = {}
 ---@field active? GlyphStateStyle
 ---@field disabled? GlyphStateStyle
 local GlyphStyle = {}
+
+---@class GlyphBounds
+---@field x number
+---@field y number
+---@field width number
+---@field height number
+local GlyphBounds = {}
+
+---@class GlyphShape
+---@field kind? "rect"|"skew"|"polygon"|"circle"|"ellipse"
+---@field radius? number
+---@field skew? number
+---@field inset? number
+---@field points? number[] local point coordinates relative to node bounds
+---@field absolute? boolean
+local GlyphShape = {}
+
+---@class GlyphStencil
+---@field shape? GlyphShape|fun(ctx: table): any
+---@field mode? "inside"|"outside"
+local GlyphStencil = {}
 
 -- ---------------------------------------------------------------------------
 -- Props
@@ -56,6 +79,7 @@ local GlyphPadding = {}
 
 ---@class GlyphProps
 ---@field style? GlyphStyle
+---@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table, style: GlyphStyle, ctx: table)
 ---@field width? number|string
 ---@field height? number|string
 ---@field minWidth? number
@@ -84,10 +108,13 @@ local GlyphPadding = {}
 ---@field variant? string
 ---@field styleType? string
 ---@field callbacks? table
+---@field clip? boolean|GlyphShape|fun(ctx: table): any
+---@field stencil? GlyphStencil
+---@field shape? GlyphShape|fun(ctx: table): any
 ---@field navGroup? string|number
 ---@field navScope? boolean
 ---@field navTrap? boolean
----@field onNavigateExit? fun(direction: GlyphNavDirection, origin: GlyphNode, scope: GlyphNode, candidates: GlyphNavCandidate[]): GlyphNode|false|nil
+---@field onNavigateExit? fun(direction: GlyphNavDirection, origin: GlyphNode, scope: GlyphNode|GlyphLayer, candidates: GlyphNavCandidate[]): GlyphNode|false|nil
 local GlyphProps = {}
 
 ---@class GlyphTextProps : GlyphProps
@@ -106,6 +133,25 @@ local GlyphButtonProps = {}
 ---@field onSubmit? fun(value: string)
 ---@field focusable? boolean
 local GlyphInputProps = {}
+
+---@class GlyphMeterProps : GlyphProps
+---@field value? number
+---@field min? number
+---@field max? number
+---@field kind? "linear"|"radial"|"arc"
+---@field direction? "right"|"left"|"up"|"down"
+---@field shape? GlyphShape|fun(ctx: table): any
+---@field trackStyle? GlyphStyle
+---@field fillStyle? GlyphStyle
+---@field overfillStyle? GlyphStyle
+---@field backgroundStyle? GlyphStyle
+---@field segments? number
+---@field gap? number
+---@field thickness? number
+---@field startAngle? number
+---@field endAngle? number
+---@field label? string|fun(value: number, min: number, max: number): string
+local GlyphMeterProps = {}
 
 ---@class GlyphTabsProps : GlyphProps
 ---@field active? number
@@ -166,13 +212,6 @@ local GlyphNode = {}
 -- ---------------------------------------------------------------------------
 -- Transitions
 -- ---------------------------------------------------------------------------
-
----@class GlyphBounds
----@field x number
----@field y number
----@field width number
----@field height number
-local GlyphBounds = {}
 
 -- ---------------------------------------------------------------------------
 -- Scene / Layer

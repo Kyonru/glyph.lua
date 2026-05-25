@@ -25,6 +25,7 @@ local runtime = Runtime.new()
 ---@field stack fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field button fun(props?: GlyphButtonProps): GlyphNode
 ---@field input fun(props?: GlyphInputProps): GlyphNode
+---@field meter fun(props?: GlyphMeterProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field scrollView fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field panel fun(props?: GlyphPanelProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field static fun(node: GlyphNode): GlyphNode

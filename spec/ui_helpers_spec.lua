@@ -29,9 +29,48 @@ describe("ui helpers", function()
     assert.are.equal("button", custom.type)
   end)
 
+  it("creates generic meter nodes", function()
+    local meter = ui.meter({
+      value = 7,
+      max = 10,
+      width = 120,
+      shape = { kind = "skew", skew = 10 },
+    })
+
+    assert.are.equal("meter", meter.type)
+    assert.are.equal(7, meter.props.value)
+    assert.are.equal("linear", meter.props.kind)
+    assert.are.equal("right", meter.props.direction)
+    assert.are.equal("skew", meter.props.shape.kind)
+  end)
+
+  it("lays out meter children as overlays", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      return Components.meter({
+        value = 7,
+        max = 10,
+        width = 120,
+        height = 16,
+      }, {
+        Components.text("70%"),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+
+    assert.are.equal(120, runtime.root.layout.width)
+    assert.are.equal(16, runtime.root.layout.height)
+    assert.are.equal(0, runtime.root.children[1].layout.x)
+    assert.are.equal(0, runtime.root.children[1].layout.y)
+  end)
+
   it("passes draw context to custom draw callbacks", function()
     local runtime = Runtime.new()
     local received
+    local receivedPolygon
 
     runtime:setLove({
       timer = {
@@ -51,7 +90,9 @@ describe("ui helpers", function()
         setColor = function() end,
         rectangle = function() end,
         print = function() end,
-        polygon = function() end,
+        polygon = function(_, ...)
+          receivedPolygon = { ... }
+        end,
       },
     })
 
@@ -62,6 +103,7 @@ describe("ui helpers", function()
         active = true,
         draw = function(_, _, _, _, _, _, _, ctx)
           received = ctx
+          ctx:shape("fill", { kind = "skew", skew = 8 })
         end,
       })
     end
@@ -76,5 +118,7 @@ describe("ui helpers", function()
     assert.is_true(received.hot)
     assert.are.equal(2, received.time)
     assert.are.equal("table", type(received:skewBox({ skew = 4 })))
+    assert.are.equal("table", type(receivedPolygon))
+    assert.are.equal(8, receivedPolygon[7])
   end)
 end)

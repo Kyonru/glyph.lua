@@ -345,6 +345,14 @@ function Layout.measureNode(node, context)
     return textWidth + pad.left + pad.right, textHeight + pad.top + pad.bottom
   end
 
+  if node.type == "meter" then
+    local kind = props.kind or "linear"
+    local defaultWidth = kind == "linear" and 120 or 72
+    local defaultHeight = kind == "linear" and 16 or 72
+    return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or defaultWidth,
+      resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or defaultHeight
+  end
+
   return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or 0, resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or 0
 end
 
@@ -415,8 +423,12 @@ function Layout.compute(root, context)
   local function visitStack(node, availableWidth, availableHeight, props, children, pad)
     local resolvedWidth = resolveSize(props.width, availableWidth)
     local resolvedHeight = resolveSize(props.height, availableHeight)
-    local width = node.layout.assignedWidth or resolvedWidth or numericSize(props.width)
-    local height = node.layout.assignedHeight or resolvedHeight or numericSize(props.height)
+    local measuredWidth, measuredHeight = nil, nil
+    if node.type == "meter" then
+      measuredWidth, measuredHeight = Layout.measureNode(node, context)
+    end
+    local width = node.layout.assignedWidth or resolvedWidth or numericSize(props.width) or measuredWidth
+    local height = node.layout.assignedHeight or resolvedHeight or numericSize(props.height) or measuredHeight
     local innerWidth = width and math.max(0, width - pad.left - pad.right) or availableWidth
     local innerHeight = height and math.max(0, height - pad.top - pad.bottom) or availableHeight
     local maxWidth = 0

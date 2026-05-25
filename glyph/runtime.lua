@@ -771,6 +771,410 @@ local function polygonBox(x, y, width, height, opts)
   }
 end
 
+local function boundsFor(x, y, width, height)
+  return {
+    x = x,
+    y = y,
+    width = width,
+    height = height,
+  }
+end
+
+local function normalizePoints(points, bounds, absolute)
+  local result = {}
+
+  if not points then
+    return result
+  end
+
+  if type(points[1]) == "table" then
+    for _, point in ipairs(points) do
+      local px = point.x or point[1] or 0
+      local py = point.y or point[2] or 0
+      result[#result + 1] = absolute and px or bounds.x + px
+      result[#result + 1] = absolute and py or bounds.y + py
+    end
+  else
+    for index = 1, #points, 2 do
+      local px = points[index] or 0
+      local py = points[index + 1] or 0
+      result[#result + 1] = absolute and px or bounds.x + px
+      result[#result + 1] = absolute and py or bounds.y + py
+    end
+  end
+
+  return result
+end
+
+local function ellipsePoints(bounds, segments)
+  local result = {}
+  local count = segments or 32
+  local cx = bounds.x + bounds.width / 2
+  local cy = bounds.y + bounds.height / 2
+  local rx = bounds.width / 2
+  local ry = bounds.height / 2
+
+  for index = 0, count - 1 do
+    local angle = (index / count) * math.pi * 2
+    result[#result + 1] = cx + math.cos(angle) * rx
+    result[#result + 1] = cy + math.sin(angle) * ry
+  end
+
+  return result
+end
+
+local function shapePoints(shape, bounds, ctx)
+  shape = shape or { kind = "rect" }
+  if type(shape) == "function" then
+    local value = shape(ctx)
+    if type(value) == "table" and value.kind == nil then
+      return normalizePoints(value, bounds, false)
+    end
+    shape = value or { kind = "rect" }
+  end
+
+  if shape == true then
+    shape = { kind = "rect" }
+  end
+
+  if type(shape) == "table" and shape.kind == nil and shape[1] ~= nil then
+    return normalizePoints(shape, bounds, false)
+  end
+
+  local kind = shape.kind or "rect"
+  if kind == "skew" then
+    return polygonBox(bounds.x, bounds.y, bounds.width, bounds.height, shape)
+  elseif kind == "polygon" then
+    return normalizePoints(shape.points, bounds, shape.absolute == true)
+  elseif kind == "circle" or kind == "ellipse" then
+    return ellipsePoints(bounds, shape.segments)
+  end
+
+  return {
+    bounds.x,
+    bounds.y,
+    bounds.x + bounds.width,
+    bounds.y,
+    bounds.x + bounds.width,
+    bounds.y + bounds.height,
+    bounds.x,
+    bounds.y + bounds.height,
+  }
+end
+
+local function drawShape(graphics, mode, shape, bounds, ctx)
+  if not graphics then
+    return
+  end
+
+  shape = shape or { kind = "rect" }
+  if type(shape) == "function" then
+    local value = shape(ctx)
+    if type(value) == "function" then
+      value(mode, bounds, ctx)
+      return
+    end
+    shape = value or { kind = "rect" }
+  end
+
+  if shape == true then
+    shape = { kind = "rect" }
+  end
+
+  if type(shape) == "table" and shape.kind == nil and shape[1] ~= nil then
+    if graphics.polygon then
+      local points = normalizePoints(shape, bounds, false)
+      if #points >= 6 then
+        graphics.polygon(mode, (table.unpack or unpack)(points))
+      end
+    end
+    return
+  end
+
+  local kind = shape.kind or "rect"
+  if kind == "rect" and graphics.rectangle then
+    graphics.rectangle(mode, bounds.x, bounds.y, bounds.width, bounds.height, shape.radius or 0, shape.radius or 0)
+  elseif (kind == "circle" or kind == "ellipse") and graphics.ellipse then
+    graphics.ellipse(mode, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, bounds.width / 2, bounds.height / 2)
+  elseif graphics.polygon then
+    local points = shapePoints(shape, bounds, ctx)
+    if #points >= 6 then
+      graphics.polygon(mode, (table.unpack or unpack)(points))
+    end
+  end
+end
+
+local function currentScissor(graphics)
+  if graphics and graphics.getScissor then
+    local sx, sy, sw, sh = graphics.getScissor()
+    if sx ~= nil then
+      return { sx, sy, sw, sh }
+    end
+  end
+  return nil
+end
+
+local function restoreScissor(graphics, previous)
+  if previous then
+    graphics.setScissor(previous[1], previous[2], previous[3], previous[4])
+  else
+    graphics.setScissor()
+  end
+end
+
+local function setScissorBounds(graphics, bounds, previous)
+  if previous then
+    local x1 = math.max(previous[1], bounds.x)
+    local y1 = math.max(previous[2], bounds.y)
+    local x2 = math.min(previous[1] + previous[3], bounds.x + bounds.width)
+    local y2 = math.min(previous[2] + previous[4], bounds.y + bounds.height)
+    graphics.setScissor(x1, y1, math.max(0, x2 - x1), math.max(0, y2 - y1))
+  else
+    graphics.setScissor(bounds.x, bounds.y, bounds.width, bounds.height)
+  end
+end
+
+local function runWithRestore(fn, restore)
+  local ok, result = pcall(fn)
+  restore()
+  if not ok then
+    error(result, 0)
+  end
+end
+
+local function withClip(graphics, shape, bounds, ctx, fn)
+  if not graphics then
+    fn()
+    return
+  end
+
+  if shape == true then
+    if graphics.setScissor then
+      local previous = currentScissor(graphics)
+      setScissorBounds(graphics, bounds, previous)
+      runWithRestore(fn, function()
+        restoreScissor(graphics, previous)
+      end)
+      return
+    end
+
+    fn()
+    return
+  end
+
+  if graphics.stencil and graphics.setStencilTest then
+    local previousCompare, previousValue
+    if graphics.getStencilTest then
+      previousCompare, previousValue = graphics.getStencilTest()
+    end
+
+    graphics.stencil(function()
+      drawShape(graphics, "fill", shape, bounds, ctx)
+    end, "replace", 1)
+    graphics.setStencilTest("equal", 1)
+    runWithRestore(fn, function()
+      if previousCompare then
+        graphics.setStencilTest(previousCompare, previousValue)
+      else
+        graphics.setStencilTest()
+      end
+    end)
+  else
+    fn()
+  end
+end
+
+local function withStencil(graphics, spec, bounds, ctx, fn)
+  spec = spec or {}
+  local shape = spec.shape or spec
+  local mode = spec.mode or "inside"
+
+  if not graphics or not graphics.stencil or not graphics.setStencilTest then
+    fn()
+    return
+  end
+
+  local previousCompare, previousValue
+  if graphics.getStencilTest then
+    previousCompare, previousValue = graphics.getStencilTest()
+  end
+
+  graphics.stencil(function()
+    if type(shape) == "function" then
+      local value = shape(ctx)
+      if type(value) == "function" then
+        value("fill", bounds, ctx)
+      else
+        drawShape(graphics, "fill", value, bounds, ctx)
+      end
+    else
+      drawShape(graphics, "fill", shape, bounds, ctx)
+    end
+  end, "replace", 1)
+
+  graphics.setStencilTest(mode == "outside" and "notequal" or "equal", 1)
+  runWithRestore(fn, function()
+    if previousCompare then
+      graphics.setStencilTest(previousCompare, previousValue)
+    else
+      graphics.setStencilTest()
+    end
+  end)
+end
+
+local function clamp01(value)
+  if value < 0 then
+    return 0
+  elseif value > 1 then
+    return 1
+  end
+  return value
+end
+
+local function meterRatio(props)
+  local minValue = props.min or 0
+  local maxValue = props.max or 1
+  local span = maxValue - minValue
+  if span == 0 then
+    return 0, 0
+  end
+
+  local raw = ((props.value or 0) - minValue) / span
+  return clamp01(raw), math.max(0, raw - 1)
+end
+
+local function partStyle(base, override, fallback)
+  local style = Style.compose(fallback or {}, override or {})
+  if style.background == nil and style.color == nil and base then
+    style.background = base
+  end
+  return style
+end
+
+local function linearFillBounds(bounds, ratio, direction)
+  ratio = clamp01(ratio)
+  direction = direction or "right"
+
+  if direction == "left" then
+    local width = bounds.width * ratio
+    return { x = bounds.x + bounds.width - width, y = bounds.y, width = width, height = bounds.height }
+  elseif direction == "up" then
+    local height = bounds.height * ratio
+    return { x = bounds.x, y = bounds.y + bounds.height - height, width = bounds.width, height = height }
+  elseif direction == "down" then
+    return { x = bounds.x, y = bounds.y, width = bounds.width, height = bounds.height * ratio }
+  end
+
+  return { x = bounds.x, y = bounds.y, width = bounds.width * ratio, height = bounds.height }
+end
+
+local drawMeter
+
+local function drawMeterPart(graphics, bounds, shape, style, ctx)
+  if style.background or style.color then
+    color(ctx.love, style.background or style.color)
+    drawShape(graphics, "fill", shape, bounds, ctx)
+  end
+
+  if style.borderColor and (style.borderWidth or 0) > 0 then
+    color(ctx.love, style.borderColor)
+    local previousLineWidth = graphics.getLineWidth and graphics.getLineWidth() or nil
+    if graphics.setLineWidth then
+      graphics.setLineWidth(style.borderWidth)
+    end
+    drawShape(graphics, "line", shape, bounds, ctx)
+    if previousLineWidth and graphics.setLineWidth then
+      graphics.setLineWidth(previousLineWidth)
+    end
+  end
+end
+
+local function drawLinearMeter(graphics, bounds, props, style, ctx)
+  local ratio, overfill = meterRatio(props)
+  local shape = props.shape or style.shape or { kind = "rect", radius = style.radius or 0 }
+  local track = partStyle(style.background, props.trackStyle, { background = { 0, 0, 0, 0.28 } })
+  local fill = partStyle(style.color, props.fillStyle, { background = style.color or { 0.16, 0.72, 0.48, 1 } })
+  local over = partStyle(nil, props.overfillStyle, { background = { 1, 0.82, 0.18, 1 } })
+  local segments = props.segments or 0
+  local gap = props.gap or 0
+
+  drawMeterPart(graphics, bounds, shape, track, ctx)
+
+  if segments > 1 then
+    local horizontal = props.direction ~= "up" and props.direction ~= "down"
+    local totalGap = gap * (segments - 1)
+    local segmentLength = math.max(0, ((horizontal and bounds.width or bounds.height) - totalGap) / segments)
+    local filled = ratio * segments
+    for index = 1, segments do
+      local amount = clamp01(filled - (index - 1))
+      if amount > 0 then
+        local segmentBounds
+        if horizontal then
+          local x = bounds.x + (index - 1) * (segmentLength + gap)
+          segmentBounds = { x = x, y = bounds.y, width = segmentLength * amount, height = bounds.height }
+        else
+          local y = bounds.y + bounds.height - index * segmentLength - (index - 1) * gap
+          segmentBounds = { x = bounds.x, y = y + segmentLength * (1 - amount), width = bounds.width, height = segmentLength * amount }
+        end
+        drawMeterPart(graphics, segmentBounds, shape, fill, ctx)
+      end
+    end
+  else
+    drawMeterPart(graphics, linearFillBounds(bounds, ratio, props.direction), shape, fill, ctx)
+  end
+
+  if overfill > 0 then
+    drawMeterPart(graphics, linearFillBounds(bounds, clamp01(overfill), props.direction), shape, over, ctx)
+  end
+end
+
+local function drawRadialMeter(graphics, bounds, props, style, ctx)
+  local ratio = meterRatio(props)
+  local track = partStyle(nil, props.trackStyle, { color = style.background or { 0, 0, 0, 0.3 } })
+  local fill = partStyle(nil, props.fillStyle, { color = style.color or { 0.16, 0.72, 0.48, 1 } })
+  local thickness = props.thickness or style.lineWidth or style.borderWidth or 8
+  local radius = math.max(0, math.min(bounds.width, bounds.height) / 2 - thickness / 2)
+  local cx = bounds.x + bounds.width / 2
+  local cy = bounds.y + bounds.height / 2
+  local startAngle = props.startAngle or (props.kind == "arc" and math.rad(135) or -math.pi / 2)
+  local endAngle = props.endAngle or (props.kind == "arc" and math.rad(405) or (startAngle + math.pi * 2))
+  local fillEnd = startAngle + (endAngle - startAngle) * ratio
+  local previousLineWidth = graphics.getLineWidth and graphics.getLineWidth() or nil
+
+  if graphics.setLineWidth then
+    graphics.setLineWidth(thickness)
+  end
+
+  if graphics.arc then
+    color(ctx.love, track.color or track.background)
+    graphics.arc("line", cx, cy, radius, startAngle, endAngle, props.segments or 32)
+    color(ctx.love, fill.color or fill.background)
+    graphics.arc("line", cx, cy, radius, startAngle, fillEnd, props.segments or 32)
+  end
+
+  if previousLineWidth and graphics.setLineWidth then
+    graphics.setLineWidth(previousLineWidth)
+  end
+end
+
+drawMeter = function(graphics, bounds, props, style, ctx)
+  if not graphics then
+    return
+  end
+
+  local background = props.backgroundStyle
+  if background and background.background then
+    color(ctx.love, background.background)
+    drawShape(graphics, "fill", props.shape or style.shape, bounds, ctx)
+  end
+
+  if props.kind == "radial" or props.kind == "arc" then
+    drawRadialMeter(graphics, bounds, props, style, ctx)
+  else
+    drawLinearMeter(graphics, bounds, props, style, ctx)
+  end
+end
+
 local function createDrawContext(runtime, node, x, y, width, height, love, style)
   local props = node.props or {}
   local graphics = love and love.graphics
@@ -816,6 +1220,28 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     if graphics and graphics.polygon then
       graphics.polygon(mode, (table.unpack or unpack)(points))
     end
+  end
+
+  function ctx:shape(mode, shape, bounds)
+    drawShape(graphics, mode, shape or props.shape, bounds or self, self)
+  end
+
+  function ctx:clip(shape, fn)
+    if type(fn) == "function" then
+      withClip(graphics, shape or true, self, self, fn)
+    end
+  end
+
+  function ctx:stencil(shapeOrFn, fn, opts)
+    if type(fn) == "function" then
+      opts = opts or {}
+      opts.shape = shapeOrFn
+      withStencil(graphics, opts, self, self, fn)
+    end
+  end
+
+  function ctx:meter(bounds, opts)
+    drawMeter(graphics, bounds or self, opts or {}, style, self)
   end
 
   function ctx:text(value, tx, ty)
@@ -993,58 +1419,110 @@ function Runtime:drawNode(node, x, y)
       color(love, withOpacity(style.cursorColor or self.theme.accentColor, opacity))
       love.graphics.rectangle("fill", cursorX, absY + 6, self.theme.inputCursorWidth, math.max(12, height - 12))
     end
+  elseif node.type == "meter" then
+    ctx = createDrawContext(self, node, absX, absY, width, height, love, style)
+    drawMeter(love.graphics, boundsFor(absX, absY, width, height), props, style, ctx)
+    if props.label then
+      local label = props.label
+      if type(label) == "function" then
+        label = label(props.value or 0, props.min or 0, props.max or 1)
+      end
+      color(love, withOpacity(style.color or self.theme.textColor, opacity))
+      love.graphics.print(tostring(label), absX + 8, absY + math.max(2, height / 2 - (self.theme.lineHeight or 14) / 2))
+    end
   else
+    local nodeShape = props.shape or style.shape
+    local shapeCtx = nodeShape and (ctx or createDrawContext(self, node, absX, absY, width, height, love, style)) or nil
     if style.background then
       color(love, withOpacity(style.background, opacity))
-      drawRect(love, "fill", absX, absY, width, height, radius)
+      if nodeShape then
+        drawShape(love.graphics, "fill", nodeShape, boundsFor(absX, absY, width, height), shapeCtx)
+      else
+        drawRect(love, "fill", absX, absY, width, height, radius)
+      end
     end
     if style.borderColor and (style.borderWidth or 0) > 0 then
       color(love, withOpacity(style.borderColor, opacity))
-      drawRect(love, "line", absX, absY, width, height, radius)
+      if nodeShape then
+        drawShape(love.graphics, "line", nodeShape, boundsFor(absX, absY, width, height), shapeCtx)
+      else
+        drawRect(love, "line", absX, absY, width, height, radius)
+      end
     end
   end
 
   restore()
 
-  if node.type == "scrollView" and love.graphics.push then
-    love.graphics.push()
-    love.graphics.setScissor(absX, absY, width, height)
-    local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - height))
-    local offset = math.min(maxScroll, math.max(0, self.scrollOffsets[node.path] or 0))
-    self.scrollOffsets[node.path] = offset
-    for _, child in ipairs(orderedChildren(node)) do
-      self:drawNode(child, absX, absY - offset)
-    end
-    love.graphics.setScissor()
-    love.graphics.pop()
-
-    local scrollbar = mergeScrollbarStyle(self.theme, style, props)
-    local showScrollbar = props.showScrollbar ~= false and maxScroll > 0
-    if showScrollbar then
-      local barWidth = scrollbar.width or self.theme.scrollbarWidth
-      local padding = scrollbar.padding or 0
-      local trackX = absX + width - barWidth - padding
-      local trackY = absY + padding
-      local trackHeight = math.max(0, height - padding * 2)
-      local contentHeight = layout.scrollContentHeight or height
-      local thumbHeight = math.max(scrollbar.minThumbSize or 18, trackHeight * (height / contentHeight))
-      thumbHeight = math.min(trackHeight, thumbHeight)
-      local thumbTravel = math.max(0, trackHeight - thumbHeight)
-      local thumbY = trackY + (maxScroll > 0 and (offset / maxScroll) * thumbTravel or 0)
-      local barRadius = scrollbar.radius or barWidth / 2
-
-      if scrollbar.trackColor then
-        color(love, withOpacity(scrollbar.trackColor, opacity))
-        drawRect(love, "fill", trackX, trackY, barWidth, trackHeight, barRadius)
+  local function drawChildren()
+    if node.type == "scrollView" and love.graphics.push then
+      love.graphics.push()
+      local previousScissor = nil
+      if love.graphics.setScissor then
+        previousScissor = currentScissor(love.graphics)
+        setScissorBounds(love.graphics, boundsFor(absX, absY, width, height), previousScissor)
       end
+      local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - height))
+      local offset = math.min(maxScroll, math.max(0, self.scrollOffsets[node.path] or 0))
+      self.scrollOffsets[node.path] = offset
+      runWithRestore(function()
+        for _, child in ipairs(orderedChildren(node)) do
+          self:drawNode(child, absX, absY - offset)
+        end
+      end, function()
+        if love.graphics.setScissor then
+          restoreScissor(love.graphics, previousScissor)
+        end
+        love.graphics.pop()
+      end)
 
-      color(love, withOpacity(scrollbar.thumbColor or self.theme.scrollbarColor, opacity))
-      drawRect(love, "fill", trackX, thumbY, barWidth, thumbHeight, barRadius)
+      local scrollbar = mergeScrollbarStyle(self.theme, style, props)
+      local showScrollbar = props.showScrollbar ~= false and maxScroll > 0
+      if showScrollbar then
+        local barWidth = scrollbar.width or self.theme.scrollbarWidth
+        local padding = scrollbar.padding or 0
+        local trackX = absX + width - barWidth - padding
+        local trackY = absY + padding
+        local trackHeight = math.max(0, height - padding * 2)
+        local contentHeight = layout.scrollContentHeight or height
+        local thumbHeight = math.max(scrollbar.minThumbSize or 18, trackHeight * (height / contentHeight))
+        thumbHeight = math.min(trackHeight, thumbHeight)
+        local thumbTravel = math.max(0, trackHeight - thumbHeight)
+        local thumbY = trackY + (maxScroll > 0 and (offset / maxScroll) * thumbTravel or 0)
+        local barRadius = scrollbar.radius or barWidth / 2
+
+        if scrollbar.trackColor then
+          color(love, withOpacity(scrollbar.trackColor, opacity))
+          drawRect(love, "fill", trackX, trackY, barWidth, trackHeight, barRadius)
+        end
+
+        color(love, withOpacity(scrollbar.thumbColor or self.theme.scrollbarColor, opacity))
+        drawRect(love, "fill", trackX, thumbY, barWidth, thumbHeight, barRadius)
+      end
+    else
+      for _, child in ipairs(orderedChildren(node)) do
+        self:drawNode(child, absX, absY)
+      end
+    end
+  end
+
+  if props.clip or props.stencil then
+    local clipCtx = ctx or createDrawContext(self, node, absX, absY, width, height, love, style)
+    local childBounds = boundsFor(absX, absY, width, height)
+    local function drawClippedChildren()
+      if props.stencil then
+        withStencil(love.graphics, props.stencil, childBounds, clipCtx, drawChildren)
+      else
+        drawChildren()
+      end
+    end
+
+    if props.clip then
+      withClip(love.graphics, props.clip, childBounds, clipCtx, drawClippedChildren)
+    else
+      drawClippedChildren()
     end
   else
-    for _, child in ipairs(orderedChildren(node)) do
-      self:drawNode(child, absX, absY)
-    end
+    drawChildren()
   end
 end
 

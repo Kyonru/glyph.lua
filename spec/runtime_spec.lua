@@ -294,4 +294,126 @@ describe("runtime", function()
 
     assert.is_true(clicked)
   end)
+
+  it("restores stencil state after clipped child drawing", function()
+    local runtime = Runtime.new()
+    local calls = {}
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        getStencilTest = function() return "greater", 2 end,
+        stencil = function(fn, action, value)
+          calls[#calls + 1] = { "stencil", action, value }
+          fn()
+        end,
+        setStencilTest = function(compare, value)
+          calls[#calls + 1] = { "stencilTest", compare, value }
+        end,
+        setColor = function() end,
+        rectangle = function() end,
+        polygon = function() end,
+        print = function() end,
+      },
+    })
+
+    local function App()
+      return Components.box({
+        width = 100,
+        height = 60,
+        clip = { kind = "skew", skew = 12 },
+      }, {
+        Components.text("inside"),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "stencil", "replace", 1 }, calls[1])
+    assert.are.same({ "stencilTest", "equal", 1 }, calls[2])
+    assert.are.same({ "stencilTest", "greater", 2 }, calls[#calls])
+  end)
+
+  it("restores rectangular clip scissor state", function()
+    local runtime = Runtime.new()
+    local scissor = { 10, 8, 200, 200 }
+    local calls = {}
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        getScissor = function()
+          if scissor then
+            return scissor[1], scissor[2], scissor[3], scissor[4]
+          end
+          return nil
+        end,
+        setScissor = function(x, y, width, height)
+          calls[#calls + 1] = { x, y, width, height }
+          if x == nil then
+            scissor = nil
+          else
+            scissor = { x, y, width, height }
+          end
+        end,
+        setColor = function() end,
+        rectangle = function() end,
+        print = function() end,
+      },
+    })
+
+    local function App()
+      return Components.box({
+        width = 100,
+        height = 60,
+        clip = true,
+      }, {
+        Components.text("inside"),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ 10, 8, 90, 52 }, calls[1])
+    assert.are.same({ 10, 8, 200, 200 }, calls[#calls])
+  end)
+
+  it("keeps clipping visual-only for hit testing", function()
+    local runtime = Runtime.new()
+    local clicked = false
+
+    local function App()
+      return Components.box({
+        width = 100,
+        height = 60,
+        clip = { kind = "circle" },
+      }, {
+        Components.button({
+          label = "wide",
+          width = 100,
+          height = 60,
+          onClick = function()
+            clicked = true
+          end,
+        }),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(2, 2, 1)
+    runtime:mousereleased(2, 2, 1)
+
+    assert.is_true(clicked)
+  end)
 end)

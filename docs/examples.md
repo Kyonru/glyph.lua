@@ -10,6 +10,7 @@ Run examples with Love2D:
 love examples/basic
 love examples/dashboard
 love examples/hud-menu
+love examples/hud-primitives
 love examples/modal
 love examples/navigate
 love examples/scene
@@ -29,6 +30,10 @@ A dense shadcn-inspired dashboard translated into Glyph primitives. Useful for p
 ## HUD Menu
 
 Custom-drawn game UI with animated command buttons. This example demonstrates what belongs in app/example code rather than Glyph core.
+
+## HUD Primitives
+
+Native meters, filled sweep gauges with centered overlays, d-pad/card navigation, shape descriptors, visual clipping, stencil masks, and dynamic backgrounds for game HUDs without adding game-specific core widgets.
 
 ## Navigate
 

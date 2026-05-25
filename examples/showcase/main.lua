@@ -6,6 +6,7 @@ local examples = {
 	{ id = "basic", label = "Basic", module = "basic" },
 	{ id = "dashboard", label = "Dashboard", module = "dashboard" },
 	{ id = "hud-menu", label = "HUD Menu", module = "hud-menu" },
+	{ id = "hud-primitives", label = "HUD Primitives", module = "hud-primitives" },
 	{ id = "modal", label = "Modal", module = "modal" },
 	{ id = "performance", label = "Performance", module = "performance" },
 	{ id = "scene", label = "Scene", module = "scene" },

@@ -85,6 +85,47 @@ ui.input({
 
 Inputs are controlled: keep the value in state and update it through `onChange`.
 
+## Meter
+
+`ui.meter(props)` draws generic value displays such as health, mana, cooldown,
+durability, progress, or debug telemetry. It is intentionally not a game-specific
+`healthBar` component.
+
+```lua
+ui.meter({
+  value = hp,
+  min = 0,
+  max = maxHp,
+  width = 180,
+  height = 14,
+  shape = { kind = "skew", skew = 12 },
+  trackStyle = { background = { 0, 0, 0, 0.35 } },
+  fillStyle = { background = { 0.1, 0.9, 0.55, 1 } },
+})
+```
+
+Meters support:
+
+- `kind = "linear" | "radial" | "arc"`
+- `direction = "right" | "left" | "up" | "down"` for linear meters
+- `shape` for rectangular, skewed, polygon, circle, or ellipse fills
+- `segments`, `gap`, `thickness`, `startAngle`, and `endAngle`
+- `label`, children overlays, `trackStyle`, `fillStyle`, `overfillStyle`, and `backgroundStyle`
+
+```lua
+ui.meter({
+  kind = "arc",
+  value = charge,
+  max = 100,
+  width = 72,
+  height = 72,
+  thickness = 8,
+  startAngle = math.rad(135),
+  endAngle = math.rad(405),
+  fillStyle = { color = { 1, 0.8, 0.2, 1 } },
+})
+```
+
 ## Scroll View
 
 ```lua

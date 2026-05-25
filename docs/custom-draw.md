@@ -46,6 +46,10 @@ Useful methods:
 - `ctx:rect(mode, x, y, width, height, radius)`
 - `ctx:line(...)`
 - `ctx:polygon(mode, points)`
+- `ctx:shape(mode, shape, bounds?)`
+- `ctx:clip(shape, fn)`
+- `ctx:stencil(shapeOrFn, fn, opts?)`
+- `ctx:meter(bounds, opts)`
 - `ctx:text(value, x, y)`
 - `ctx:printf(value, x, y, limit, align)`
 - `ctx:pulse(speed, phase)`
@@ -70,6 +74,76 @@ ui.box({
 })
 ```
 
+## Shapes And Stencils
+
+Glyph shape descriptors are plain tables:
+
+```lua
+{ kind = "rect", radius = 8 }
+{ kind = "skew", skew = 18, inset = 2 }
+{ kind = "polygon", points = { 0, 0, 140, 10, 120, 64, 8, 56 } }
+{ kind = "circle" }
+{ kind = "ellipse" }
+```
+
+Polygon points are local to the node bounds unless `absolute = true` is set.
+Shape functions may also return local points or a mask/draw function when a shape
+needs animation or custom geometry.
+
+Use `clip` to mask children visually:
+
+```lua
+ui.stack({
+  width = 220,
+  height = 120,
+  clip = { kind = "skew", skew = 24 },
+}, {
+  ui.box({
+    position = "absolute",
+    inset = 0,
+    interactive = false,
+    draw = drawAnimatedBackground,
+  }),
+  ui.text("MASKED PANEL", { x = 16, y = 16 }),
+})
+```
+
+Use `stencil` when you want explicit inside/outside masking:
+
+```lua
+ui.box({
+  width = 160,
+  height = 160,
+  stencil = {
+    shape = { kind = "circle" },
+    mode = "inside",
+  },
+}, {
+  portraitNode,
+})
+```
+
+> [!NOTE]
+> `clip` and `stencil` are visual-only. Layout and hit testing still use the node's
+> rectangular bounds.
+
+Inside custom draw callbacks, use the same primitives:
+
+```lua
+draw = function(_, x, y, width, height, love, style, ctx)
+  ctx:clip({ kind = "skew", skew = 18 }, function()
+    ctx:color(style.background)
+    ctx:rect("fill", x, y, width, height)
+    ctx:meter({ x = x + 16, y = y + height - 22, width = width - 32, height = 10 }, {
+      value = 72,
+      max = 100,
+      shape = { kind = "skew", skew = 8 },
+      fillStyle = { background = { 0.1, 0.9, 0.55, 1 } },
+    })
+  end)
+end
+```
+
 ## Public Helper APIs
 
 - `ui.isHovered(node)`
@@ -83,6 +157,7 @@ ui.box({
 - `ui.time()`
 - `ui.pulse(speed, phase)`
 - `ui.polygonBox(x, y, width, height, opts)`
+- `ui.meter(props)`
 - `ui.customButton(props)`
 
 ## Core Boundary
