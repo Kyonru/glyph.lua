@@ -24,6 +24,13 @@ local GlyphColor = {}
 ---@field opacity? number
 local GlyphStateStyle = {}
 
+---@class GlyphAudioCues
+---@field hover? string|false
+---@field press? string|false
+---@field activate? string|false
+---@field focus? string|false
+local GlyphAudioCues = {}
+
 ---@class GlyphStyle
 ---@field background? GlyphColor
 ---@field color? GlyphColor
@@ -128,6 +135,7 @@ local GlyphPadding = {}
 ---@field interactive? boolean
 ---@field variant? string
 ---@field styleType? string
+---@field audio? GlyphAudioCues|false
 ---@field callbacks? table
 ---@field key? string|number
 ---@field enter? GlyphAnimationSpec|false
@@ -196,6 +204,16 @@ local GlyphPanelProps = {}
 ---@field direction "up"|"down"|"left"|"right"
 ---@field candidate GlyphNode|nil
 ---@field candidates table[]
+
+---@class GlyphAudioEvent
+---@field cue string
+---@field kind "hover"|"press"|"activate"|"focus"
+---@field node GlyphNode
+---@field type string
+---@field path? string
+---@field variant? string
+---@field styleType? string
+---@field label? string
 
 ---@class GlyphTab
 ---@field label? string

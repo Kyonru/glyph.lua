@@ -8,6 +8,7 @@ Run examples with Love2D:
 
 ```sh
 love examples/animations
+love examples/audio-cues
 love examples/basic
 love examples/dashboard
 love examples/hud-menu
@@ -25,6 +26,10 @@ love examples/performance
 ## Animations
 
 Flux-backed animation lab for declarative show/hide, animated meters, custom-drawn movement, selection feedback, and size tweens.
+
+## Audio Cues
+
+Theme and variant driven interaction cue events with app-owned Love2D tone playback, per-node overrides, and silent controls.
 
 ## Basic
 

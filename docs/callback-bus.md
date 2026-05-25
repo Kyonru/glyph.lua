@@ -41,6 +41,7 @@ ui.dispatch("event", "custom", payload)
 - `beforeRender`
 - `afterRender`
 - `layout`
+- `audio`
 - `focusChanged`
 - `hoverChanged`
 - `event`

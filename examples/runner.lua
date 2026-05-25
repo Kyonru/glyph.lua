@@ -19,8 +19,16 @@ function Runner.run(example)
 		call(example, "keypressed", key, "standalone")
 	end
 
+	function love.keyreleased(key)
+		call(example, "keyreleased", key, "standalone")
+	end
+
 	function love.gamepadpressed(joystick, button)
 		call(example, "gamepadpressed", joystick, button, "standalone")
+	end
+
+	function love.gamepadreleased(joystick, button)
+		call(example, "gamepadreleased", joystick, button, "standalone")
 	end
 
 	function love.load()

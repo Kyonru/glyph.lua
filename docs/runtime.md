@@ -78,6 +78,10 @@ end
 function love.keypressed(key)
   ui.keypressed(key)
 end
+
+function love.keyreleased(key)
+  ui.keyreleased(key)
+end
 ```
 
 `ui.install` and `ui.load` can install common callbacks automatically.
@@ -86,6 +90,12 @@ end
 > If a fixed viewport backend is active, Glyph converts mouse and touch screen
 > coordinates into virtual viewport coordinates before hover, focus, click, and
 > scroll routing. Pointer events outside the virtual viewport do not hit UI.
+
+Buttons use the same press lifecycle for pointer and keyboard activation:
+mouse/touch down and Return/Space down enter the pressed state, and release
+activates the button when focus is still on the same node. This keeps pressed
+styles and audio cues consistent across mouse, keyboard, and gamepad mappings
+that forward to `ui.keypressed` / `ui.keyreleased`.
 
 ## Runtime Callbacks
 
@@ -98,6 +108,7 @@ Supported names:
 - `beforeRender`
 - `afterRender`
 - `layout`
+- `audio`
 - `focusChanged`
 - `hoverChanged`
 - `event`
@@ -111,6 +122,38 @@ end)
 
 off()
 ```
+
+## Audio Cue Events
+
+Glyph emits `audio` callbacks when configured cues resolve for interaction
+events. It does not load or play sounds.
+
+```lua
+local sounds = {
+  hover = love.audio.newSource("hover.wav", "static"),
+}
+
+ui.on("audio", function(event)
+  local source = sounds[event.cue]
+  if source then
+    source:stop()
+    source:play()
+  end
+end)
+```
+
+The event includes `cue`, `kind`, `node`, `type`, `path`, `variant`,
+`styleType`, and a best-effort `label`. Supported cue kinds are `hover`,
+`press`, `activate`, and `focus`.
+
+## Future Accessibility And I18n
+
+Glyph does not implement accessibility or i18n behavior yet. The intended shape
+is layout-agnostic metadata and app-provided resolvers rather than fixed widgets:
+
+- semantic props such as `role`, `label`, `description`, and `valueText`
+- translation helpers such as `t(key, params)` and translated labels/placeholders
+- queryable runtime metadata for tools, overlays, and platform adapters
 
 ## Interaction Helpers
 

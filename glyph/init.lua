@@ -37,6 +37,8 @@ local runtime = Runtime.new()
 ---@field modal GlyphModalApi
 ---@field setFocus fun(node?: GlyphNode)
 ---@field navigate fun(direction: "up"|"down"|"left"|"right"): GlyphNode|nil
+---@field keypressed fun(key: string)
+---@field keyreleased fun(key: string)
 local ui = {
   CallbackBus = CallbackBus,
   animation = Animation,
@@ -212,7 +214,7 @@ end
 ---@param node? GlyphNode
 ---@return boolean
 function ui.isPressed(node)
-  return node ~= nil and (runtime.mouseDownNode == node or runtime.mouseDownPath == node.path)
+  return node ~= nil and (runtime.mouseDownNode == node or runtime.mouseDownPath == node.path or runtime.keyDownNode == node or runtime.keyDownPath == node.path)
 end
 
 ---@param node? GlyphNode
@@ -394,6 +396,11 @@ function ui.keypressed(key)
   return runtime:keypressed(key)
 end
 
+---@param key string
+function ui.keyreleased(key)
+  return runtime:keyreleased(key)
+end
+
 ---@param direction "up"|"down"|"left"|"right"
 ---@return GlyphNode|nil
 function ui.navigate(direction)
@@ -411,6 +418,9 @@ function clearPointerTarget(clearFocus)
   runtime:setHover(nil)
   runtime.mouseDownNode = nil
   runtime.mouseDownPath = nil
+  runtime.keyDownNode = nil
+  runtime.keyDownPath = nil
+  runtime.keyDownKey = nil
   if clearFocus then
     runtime:setFocus(nil)
   end
@@ -466,7 +476,7 @@ local autoCallbacks = {
     ui.keypressed(key, scancode, isrepeat)
   end,
   keyreleased = function(key, scancode)
-    ui.dispatch("event", "keyreleased", key, scancode)
+    ui.keyreleased(key, scancode)
   end,
   mousefocus = function(focused)
     ui.dispatch("event", "mousefocus", focused)

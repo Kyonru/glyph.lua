@@ -522,6 +522,11 @@ return {
 	gamepadpressed = function(_, button)
 		return navigateButton(button)
 	end,
+	gamepadreleased = function(_, button)
+		if button == "a" then
+			return ui.keyreleased("return")
+		end
+	end,
 	component = function()
 		return App()
 	end,

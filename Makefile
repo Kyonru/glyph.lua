@@ -1,6 +1,6 @@
-.PHONY: docs test animations basic dashboard hud-menu hud-primitives modal navigate performance scene settings styles themes viewport
+.PHONY: docs test animations audio-cues basic dashboard hud-menu hud-primitives modal navigate performance scene settings styles themes viewport
 
-EXAMPLES := animations basic dashboard hud-menu hud-primitives modal navigate performance scene settings styles themes viewport
+EXAMPLES := animations audio-cues basic dashboard hud-menu hud-primitives modal navigate performance scene settings styles themes viewport
 
 docs:
 	zensical serve

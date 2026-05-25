@@ -209,4 +209,61 @@ describe("style", function()
     assert.are.same(nextSurface, theme.components.button.background)
     assert.are.same(color(9), theme.components.button.variants.warning.background)
   end)
+
+  it("resolves audio cues from component, variant, and props", function()
+    local runtime = Runtime.new()
+    runtime.theme = {
+      version = 1,
+      base = {},
+      components = {
+        button = {
+          audio = {
+            hover = "button-hover",
+            press = "button-press",
+            activate = "button-activate",
+          },
+          variants = {
+            primary = {
+              audio = {
+                press = "primary-press",
+              },
+            },
+          },
+        },
+      },
+    }
+
+    local node = Components.button({
+      variant = "primary",
+      audio = {
+        activate = "node-activate",
+        hover = false,
+      },
+    })
+    node.path = "0"
+
+    assert.is_false(Style.resolveAudio(node, runtime, "hover"))
+    assert.are.equal("primary-press", Style.resolveAudio(node, runtime, "press"))
+    assert.are.equal("node-activate", Style.resolveAudio(node, runtime, "activate"))
+    assert.is_nil(Style.resolveAudio(node, runtime, "focus"))
+  end)
+
+  it("lets node props disable audio cues", function()
+    local runtime = Runtime.new()
+    runtime.theme = {
+      version = 1,
+      base = {},
+      components = {
+        button = {
+          audio = {
+            hover = "button-hover",
+          },
+        },
+      },
+    }
+    local node = Components.button({ audio = false })
+    node.path = "0"
+
+    assert.is_nil(Style.resolveAudio(node, runtime, "hover"))
+  end)
 end)

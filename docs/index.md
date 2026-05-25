@@ -38,8 +38,8 @@ function love.draw()     ui.render(App) end
 ```
 
 `ui.load` automatically installs `mousemoved`, `mousepressed`, `mousereleased`,
-`keypressed`, `textinput`, `wheelmoved`, and `resize` callbacks so you don't have
-to wire each one manually.
+`keypressed`, `keyreleased`, `textinput`, `wheelmoved`, and `resize` callbacks
+so you don't have to wire each one manually.
 
 ---
 

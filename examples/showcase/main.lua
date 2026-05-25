@@ -4,6 +4,7 @@ local ui = require("glyph")
 
 local examples = {
 	{ id = "animations", label = "Animations", module = "animations" },
+	{ id = "audio-cues", label = "Audio Cues", module = "audio-cues" },
 	{ id = "basic", label = "Basic", module = "basic" },
 	{ id = "dashboard", label = "Dashboard", module = "dashboard" },
 	{ id = "hud-menu", label = "HUD Menu", module = "hud-menu" },
@@ -163,8 +164,16 @@ function love.keypressed(key)
 	call(active, "keypressed", key, "showcase")
 end
 
+function love.keyreleased(key)
+	call(active, "keyreleased", key, "showcase")
+end
+
 function love.gamepadpressed(joystick, button)
 	call(active, "gamepadpressed", joystick, button, "showcase")
+end
+
+function love.gamepadreleased(joystick, button)
+	call(active, "gamepadreleased", joystick, button, "showcase")
 end
 
 function love.load()

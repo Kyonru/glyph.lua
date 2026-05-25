@@ -100,6 +100,47 @@ ui.button({
 })
 ```
 
+## Audio Cues
+
+Glyph can resolve UI audio cue names from theme components, variants, and node
+props. Glyph only emits cue events; your app owns Love2D sources and playback.
+
+```lua
+ui.setTheme({
+  components = {
+    button = {
+      audio = {
+        hover = "ui-hover",
+        press = "ui-press",
+        activate = "ui-activate",
+        focus = "ui-focus",
+      },
+      variants = {
+        danger = {
+          audio = { activate = "danger-confirm" },
+        },
+      },
+    },
+  },
+})
+```
+
+Per-node `audio` overrides the theme, and `audio = false` silences that node:
+
+```lua
+ui.button({
+  label = "Silent",
+  audio = false,
+})
+
+ui.button({
+  label = "No confirm sound",
+  audio = { activate = false },
+})
+```
+
+Listen with `ui.on("audio", handler)` and play app-owned sources there.
+
 ## Style Helpers
 
 - `ui.style(table)`

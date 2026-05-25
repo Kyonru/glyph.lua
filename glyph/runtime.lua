@@ -15,6 +15,7 @@ local runtimeCallbacks = {
   "afterRender",
   "layout",
   "navigate",
+  "audio",
   "focusChanged",
   "hoverChanged",
   "event",
@@ -149,6 +150,10 @@ local function contains(node, x, y, absX, absY)
   return x >= absX and y >= absY and x <= absX + (layout.width or 0) and y <= absY + (layout.height or 0)
 end
 
+local function isActivationKey(key)
+  return key == "return" or key == "kpenter" or key == "space"
+end
+
 function Runtime.new()
   local self = setmetatable({
     root = nil,
@@ -165,6 +170,9 @@ function Runtime.new()
     focusNode = nil,
     mouseDownNode = nil,
     mouseDownPath = nil,
+    keyDownNode = nil,
+    keyDownPath = nil,
+    keyDownKey = nil,
     scrollOffsets = {},
     inputCursors = {},
     focusPath = nil,
@@ -198,6 +206,62 @@ end
 
 function Runtime:dispatch(name, ...)
   return self.bus:dispatch(name, ...)
+end
+
+local function nodeLabel(node)
+  if not node then
+    return nil
+  end
+
+  local props = node.props or {}
+  if type(props.label) == "string" then
+    return props.label
+  end
+  if type(props.title) == "string" then
+    return props.title
+  end
+  if node.type == "text" and node.value ~= nil then
+    return tostring(node.value)
+  end
+  if node.type == "input" then
+    if props.value ~= nil and tostring(props.value) ~= "" then
+      return tostring(props.value)
+    end
+    if props.placeholder ~= nil then
+      return tostring(props.placeholder)
+    end
+  end
+  return nil
+end
+
+function Runtime:emitAudio(kind, node)
+  if not node or not node.props then
+    return nil
+  end
+
+  if (kind == "press" or kind == "activate") and node.props.disabled == true then
+    return nil
+  end
+
+  local cue = Style.resolveAudio(node, self, kind)
+  if cue == nil or cue == false then
+    return nil
+  end
+
+  local props = node.props or {}
+  local event = {
+    cue = cue,
+    kind = kind,
+    node = node,
+    type = node.type,
+    path = node.path,
+    variant = props.variant,
+    styleType = props.styleType,
+    label = nodeLabel(node),
+  }
+
+  self.bus:dispatch("audio", event)
+  return event
 end
 
 function Runtime:markDirty()
@@ -461,6 +525,7 @@ function Runtime:build(component)
   self.focusNode = findByPath(root, self.focusPath)
   self.hoverNode = findByPath(root, self.hoverPath)
   self.mouseDownNode = findByPath(root, self.mouseDownPath)
+  self.keyDownNode = findByPath(root, self.keyDownPath)
   self.needsRender = false
   self:runEffects()
   return root
@@ -768,6 +833,9 @@ function Runtime:setHover(node)
     self.hoverNode = node
     self.hoverPath = node and node.path or nil
     self.bus:dispatch("hoverChanged", node, previous)
+    if node then
+      self:emitAudio("hover", node)
+    end
   end
 end
 
@@ -776,7 +844,15 @@ function Runtime:setFocus(node)
     local previous = self.focusNode
     self.focusNode = node
     self.focusPath = node and node.path or nil
+    if self.keyDownPath and (not node or self.keyDownPath ~= node.path) then
+      self.keyDownNode = nil
+      self.keyDownPath = nil
+      self.keyDownKey = nil
+    end
     self.bus:dispatch("focusChanged", node, previous)
+    if node then
+      self:emitAudio("focus", node)
+    end
     self:markDirty()
   end
 end
@@ -814,6 +890,7 @@ function Runtime:mousepressed(x, y, button)
   self.mouseDownNode = node
   self.mouseDownPath = node and node.path or nil
   self:setHover(node)
+  self:emitAudio("press", node)
 
   if node and (node.type == "input" or node.type == "button" or node.props.focusable) then
     self:setFocus(node)
@@ -840,6 +917,7 @@ function Runtime:mousereleased(x, y, button)
   self.mouseDownPath = nil
 
   if node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
+    self:emitAudio("activate", node)
     node.props.onClick(node)
   end
 
@@ -913,12 +991,39 @@ function Runtime:keypressed(key)
       self.inputCursors[cursorKey] = math.min(#value, cursor + 1)
       self:markDirty()
     end
-  elseif node and node.type == "button" and (key == "return" or key == "space") and node.props and type(node.props.onClick) == "function" then
-    node.props.onClick(node)
-    self:markDirty()
+  elseif node and node.type == "button" and isActivationKey(key) and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
+    if self.keyDownPath ~= node.path or self.keyDownKey ~= key then
+      self.keyDownNode = node
+      self.keyDownPath = node.path
+      self.keyDownKey = key
+      self:emitAudio("press", node)
+      self:markDirty()
+    end
   end
 
   self.bus:dispatch("event", "keypressed", key, node)
+end
+
+function Runtime:keyreleased(key)
+  local node = self.focusNode
+  local down = self.keyDownNode
+  local downPath = self.keyDownPath
+  local downKey = self.keyDownKey
+
+  if isActivationKey(key) and downKey == key then
+    self.keyDownNode = nil
+    self.keyDownPath = nil
+    self.keyDownKey = nil
+
+    if node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
+      self:emitAudio("activate", node)
+      node.props.onClick(node)
+    end
+
+    self:markDirty()
+  end
+
+  self.bus:dispatch("event", "keyreleased", key, node)
 end
 
 local function color(love, value)
@@ -1437,7 +1542,7 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     animation = node._glyphAnimation,
     runtime = runtime,
     hovered = runtime.hoverNode == node or runtime.hoverPath == node.path,
-    pressed = runtime.mouseDownNode == node or runtime.mouseDownPath == node.path,
+    pressed = runtime.mouseDownNode == node or runtime.mouseDownPath == node.path or runtime.keyDownNode == node or runtime.keyDownPath == node.path,
     focused = runtime.focusNode == node or runtime.focusPath == node.path,
     active = props.active == true,
     time = love and love.timer and love.timer.getTime and love.timer.getTime() or runtime.styleClock,

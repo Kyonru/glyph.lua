@@ -102,11 +102,23 @@ local function componentTheme(theme, node)
   return components[props.styleType or node.type] or {}
 end
 
+local function mergeAudio(target, source)
+  if type(source) ~= "table" then
+    return target
+  end
+
+  for key, value in pairs(source) do
+    target[key] = copyValue(value)
+  end
+
+  return target
+end
+
 function Style.stateFor(node, runtime)
   local props = node.props or {}
   return {
     hover = runtime.hoverNode == node or runtime.hoverPath == node.path,
-    pressed = runtime.mouseDownNode == node or runtime.mouseDownPath == node.path,
+    pressed = runtime.mouseDownNode == node or runtime.mouseDownPath == node.path or runtime.keyDownNode == node or runtime.keyDownPath == node.path,
     focused = runtime.focusNode == node or runtime.focusPath == node.path,
     active = props.active == true,
     disabled = props.disabled == true,
@@ -161,6 +173,24 @@ function Style.resolve(node, runtime, state)
   }
 
   return resolved
+end
+
+function Style.resolveAudio(node, runtime, kind)
+  local props = node and node.props or {}
+  if props.audio == false then
+    return nil
+  end
+
+  local theme = runtime.theme or {}
+  local component = componentTheme(theme, node)
+  local variant = component.variants and props.variant and component.variants[props.variant] or nil
+  local resolved = {}
+
+  mergeAudio(resolved, component.audio)
+  mergeAudio(resolved, variant and variant.audio)
+  mergeAudio(resolved, props.audio)
+
+  return resolved[kind]
 end
 
 ---@param ... GlyphStyle

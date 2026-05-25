@@ -38,6 +38,10 @@ function love.gamepadpressed(joystick, button)
   if button == "dpright" then ui.navigate("right") end
   if button == "a"       then ui.keypressed("return") end
 end
+
+function love.gamepadreleased(joystick, button)
+  if button == "a" then ui.keyreleased("return") end
+end
 ```
 
 ## Focusable nodes

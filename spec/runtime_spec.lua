@@ -3,6 +3,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local Runtime = require("glyph.runtime")
 local Components = require("glyph.components")
 local Animation = require("glyph.animation")
+local Style = require("glyph.style")
 
 describe("runtime", function()
   before_each(function()
@@ -89,6 +90,177 @@ describe("runtime", function()
     runtime:mousereleased(1, 1, 1)
 
     assert.are.equal(1, clicks)
+  end)
+
+  it("emits audio cues for hover, press, and activate", function()
+    local runtime = Runtime.new()
+    local cues = {}
+    local clicks = 0
+    runtime.theme = {
+      version = 1,
+      base = {},
+      components = {
+        button = {
+          audio = {
+            hover = "ui-hover",
+            press = "ui-press",
+            activate = "ui-activate",
+          },
+        },
+      },
+    }
+    runtime:register("audio", function(event)
+      cues[#cues + 1] = event.kind .. ":" .. event.cue .. ":" .. tostring(event.label)
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Go",
+        onClick = function()
+          clicks = clicks + 1
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousemoved(1, 1)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+
+    assert.are.equal(1, clicks)
+    assert.are.same({
+      "hover:ui-hover:Go",
+      "press:ui-press:Go",
+      "activate:ui-activate:Go",
+    }, cues)
+  end)
+
+  it("emits audio cues for focus and keyboard press/release activation", function()
+    local runtime = Runtime.new()
+    local cues = {}
+    local clicks = 0
+    runtime.theme = {
+      version = 1,
+      base = {},
+      components = {
+        button = {
+          audio = {
+            focus = "ui-focus",
+            press = "ui-press",
+            activate = "ui-activate",
+          },
+        },
+      },
+    }
+    runtime:register("audio", function(event)
+      cues[#cues + 1] = event.kind .. ":" .. event.cue
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Go",
+        onClick = function()
+          clicks = clicks + 1
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:setFocus(runtime.root)
+    runtime:keypressed("return")
+    assert.are.equal(0, clicks)
+    runtime:keyreleased("return")
+
+    assert.are.equal(1, clicks)
+    assert.are.same({
+      "focus:ui-focus",
+      "press:ui-press",
+      "activate:ui-activate",
+    }, cues)
+  end)
+
+  it("uses the pressed state for keyboard activation until release", function()
+    local runtime = Runtime.new()
+    local clicks = 0
+
+    local function App()
+      return Components.button({
+        label = "Go",
+        onClick = function()
+          clicks = clicks + 1
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:setFocus(runtime.root)
+
+    runtime:keypressed("space")
+    assert.is_true(Style.stateFor(runtime.root, runtime).pressed)
+    assert.are.equal(0, clicks)
+
+    runtime:keyreleased("space")
+    assert.is_false(Style.stateFor(runtime.root, runtime).pressed)
+    assert.are.equal(1, clicks)
+  end)
+
+  it("does not emit press or activate audio for disabled buttons", function()
+    local runtime = Runtime.new()
+    local cues = {}
+    runtime.theme = {
+      version = 1,
+      base = {},
+      components = {
+        button = {
+          audio = {
+            press = "ui-press",
+            activate = "ui-activate",
+          },
+        },
+      },
+    }
+    runtime:register("audio", function(event)
+      cues[#cues + 1] = event.kind
+    end)
+
+    local function App()
+      return Components.button({
+        label = "Nope",
+        disabled = true,
+        onClick = function() end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+    runtime:keypressed("return")
+
+    assert.are.same({}, cues)
+  end)
+
+  it("does not emit audio when no cue resolves", function()
+    local runtime = Runtime.new()
+    local count = 0
+    runtime:register("audio", function()
+      count = count + 1
+    end)
+
+    local function App()
+      return Components.button({ label = "Quiet", onClick = function() end })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousemoved(1, 1)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+
+    assert.are.equal(0, count)
   end)
 
   it("keeps button taps valid across a rerender between press and release", function()
