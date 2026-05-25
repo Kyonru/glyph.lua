@@ -303,7 +303,7 @@ describe("layout", function()
     assert.are.equal(34, tree.layout.height)
   end)
 
-  it("wraps rich text by visible text instead of tag source width", function()
+  it("falls back to literal source measurement when sysl backend is missing", function()
     local theme = {
       fontSize = 10,
       lineHeight = 14,
@@ -319,8 +319,8 @@ describe("layout", function()
 
     Layout.compute(tree, { theme = theme })
 
-    assert.are.equal(2, #tree.richText.lines)
-    assert.are.equal("alpha", tree.richText.lines[1].segments[1].text)
-    assert.are.equal("beta", tree.richText.lines[2].segments[1].text)
+    assert.are.equal(42, tree.layout.width)
+    assert.are.equal(18, tree.layout.height)
+    assert.is_true(tree.richText.fallback)
   end)
 end)

@@ -58,7 +58,7 @@ Glyph should provide primitives and reusable systems:
 - Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus.
 - Input systems: pointer/touch, keyboard activation, spatial navigation, and opt-in digital gamepad mapping.
 - Style systems: themes, variants, state styles, transitions, shaders, custom draw context, and audio cue metadata.
-- Typography systems: theme font registry, text-style presets, text scaling, and opt-in lightweight rich text tags.
+- Typography systems: theme font registry, text-style presets, text scaling, and optional SYSL-backed rich text.
 - Feedback systems: triggerable visual-only animation, audio metadata, callback, and app-owned FX event sequences.
 - Scene systems: scene stack, overlays, modals, layer transitions, input blocking/pass-through.
 - Adapter systems: backend-agnostic i18n, accessibility semantics/events, optional Push/Shove fixed viewport support.
@@ -112,7 +112,7 @@ Poor core API examples:
 - Absolute children never determine parent size. Parent size must come from explicit dimensions, flex, percent size, or normal flow children.
 - Plain `box` is a visual/container primitive. If children need layout, set `display = "row"`, `display = "column"`, or use `ui.stack`.
 - Text with wrapping must draw with a numeric resolved width. Do not let percent-size strings leak into Love2D `printf`.
-- Typography measurement and drawing must share the same resolver so `textScale`, `textStyle`, font refs, and rich text tags stay layout-accurate.
+- Typography measurement and drawing must share the same resolver so `textScale`, `textStyle`, and font refs stay layout-accurate. SYSL-backed rich text should measure from textbox `get.width`, `get.height`, and `get.lines`.
 
 ## Runtime And Input Rules
 
@@ -144,8 +144,8 @@ Poor core API examples:
 - Shaders may be values or functions. Always restore Love2D graphics state after applying shader/blend/line/font/scissor/stencil changes.
 - `style.audio` / component `audio` tables are cue metadata only. Glyph emits events; apps load and play sounds.
 - `style.transition` is state-style interpolation; `enter`/`exit` animation props are visual-only node lifecycle animation; `ui.feedback` is triggerable game-feel sequencing.
-- Text styling should use `theme.typography`, `theme.fonts`, `theme.textScale`, and `textStyle` presets for repeated type systems. Use rich text tags only when inline formatting is needed.
-- Rich text tags are a lightweight inline formatter, not a dialogue engine. Keep typewriter effects, sound tags, image tags, and per-character animation in examples or future adapters.
+- Text styling should use `theme.typography`, `theme.fonts`, `theme.textScale`, and `textStyle` presets for repeated type systems.
+- Rich/game text should use the optional SYSL backend through `ui.richTextBackend`; do not grow a custom rich-text parser in core.
 - Shape, clip, stencil, and meter drawing must not alter layout or hit-testing geometry unless a later explicit API adds shape-aware hit tests.
 
 ## Animation Rules

@@ -26,7 +26,7 @@ Add to core:
 - Event routing and focus/hover/press behavior.
 - Generic style, theme, shader, and transition hooks.
 - Generic meters, shapes, clipping, stencil, and custom draw helpers.
-- Theme-driven typography, font refs, text scaling, and opt-in lightweight rich text tags.
+- Theme-driven typography, font refs, text scaling, and optional SYSL-backed rich text.
 - Scene/layer/modal mechanics.
 - Spatial navigation primitives and opt-in gamepad mapping.
 - Backend-agnostic i18n and accessibility adapter surfaces.
@@ -43,7 +43,7 @@ Keep out of core:
 - Native screen-reader, TTS, locale-file, plural-rule, or app-policy ownership.
 - Dashboard-specific cards or tables.
 - Feather-specific inspectors, logs, or debugger panels.
-- Full dialogue/textbox engines, typewriter timing, sound/image tags, or branded text effects.
+- Full app-owned dialogue/textbox policy, sound/image assets, or branded text effects.
 
 If a feature feels specific, implement it as an example using existing primitives. If that example reveals missing primitives, add the primitive instead.
 
@@ -124,13 +124,14 @@ Rules:
 
 ## Typography Work
 
-Typography lives in `glyph/typography.lua` and is shared by layout and runtime drawing.
+Typography lives in `glyph/typography.lua` and is shared by layout and runtime drawing. SYSL-backed rich text uses `glyph/rich_text_backend.lua`.
 
-- Keep `ui.text` plain by default; rich tags are opt-in through `ui.richText`, `format = "tags"`, or `rich = true`.
+- Keep `ui.text` plain by default; rich text is opt-in through `ui.richText` / `format = "sysl"`.
 - Resolve text through theme typography presets, registered fonts, and `theme.textScale` before measuring and drawing.
 - Font refs may be Love font objects, theme font names, or lazy font specs; do not load fonts repeatedly in component builds.
-- Unknown or malformed rich text tags should render literally.
-- Core rich text should stay lightweight: color, font, size, style, and line break tags only. Leave typewriter effects, sounds, icons, images, and per-character animation to examples or future adapters.
+- Do not add a custom rich text parser in core. Delegate rich/game text to app-provided SYSL and use textbox `get.width`, `get.height`, and `get.lines` for layout.
+- Keep SYSL optional and user-provided for apps; examples may use `dev/vendor`.
+- Disable SYSL function/scripting commands by default. Apps that intentionally enable them should own that risk in app code.
 
 ## Animation Work
 

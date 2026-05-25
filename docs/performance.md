@@ -20,8 +20,9 @@ Theme font specs are loaded lazily and cached by resolved size. Prefer named
 fonts and `textStyle` presets over creating Love2D fonts inside component
 functions.
 
-Rich text tag parsing is opt-in. Use plain `ui.text` for hot-path labels, and
-reserve `ui.richText` for copy that actually needs inline formatting.
+SYSL-backed rich text is opt-in. Use plain `ui.text` for hot-path labels, and
+reserve `ui.richText` for copy that actually needs rich formatting, images,
+effects, or dialogue-style behavior.
 
 ## Memo
 

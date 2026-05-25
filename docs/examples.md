@@ -93,7 +93,7 @@ A full-screen game-tool HUD showing four theme presets, live radius/border/densi
 
 ## Typography
 
-Responsive typography lab showing theme font registries, text presets, live text scale, localized rich text tags, wrapped formatted paragraphs, and normal components using typography tokens.
+Responsive typography lab showing theme font registries, text presets, live text scale, optional SYSL-backed rich text, localized formatted copy, and normal components using typography tokens.
 
 ## Viewport
 

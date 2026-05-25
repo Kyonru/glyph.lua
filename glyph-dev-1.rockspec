@@ -30,6 +30,7 @@ build = {
     ["glyph.modal"] = "glyph/modal.lua",
     ["glyph.navigate"] = "glyph/navigate.lua",
     ["glyph.responsive"] = "glyph/responsive.lua",
+    ["glyph.rich_text_backend"] = "glyph/rich_text_backend.lua",
     ["glyph.runtime"] = "glyph/runtime.lua",
     ["glyph.scene"] = "glyph/scene.lua",
     ["glyph.style"] = "glyph/style.lua",

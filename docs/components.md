@@ -28,21 +28,38 @@ ui.p("Hold the zone until extraction.")
 ui.caption("Autosaved 4 seconds ago")
 ```
 
-Formatted inline text is opt-in with `ui.richText` or `format = "tags"`:
+Rich/game text is opt-in with `ui.richText`, which uses the configured SYSL-Text
+backend when available:
 
 ```lua
-ui.richText("Status: [color=#7cffae]online[/color] [style=caption]stable[/style]", {
+ui.richText("Status: [color=#7cffae]online[/color] [font=mono]stable[/font]", {
   wrap = true,
   width = 320,
+  height = 64,
+  textVerticalAlign = "center",
 })
 ```
 
-Supported tags are `[color=#RRGGBB]`, `[color=r,g,b,a]`, `[font=name]`,
-`[size=18]`, `[style=h2]`, `[br]`, and closing tags such as `[/color]`.
-Unknown tags render literally.
-Mixed-size rich text defaults to baseline alignment. Use
-`richVerticalAlign = "top" | "center" | "bottom" | "baseline"` when a line
-should deliberately show formatted runs at different vertical levels.
+`textVerticalAlign = "top" | "center" | "bottom"` offsets plain or SYSL-backed
+text inside an explicit text node height. It is visual-only and does not change
+layout, hit testing, or focus geometry.
+
+Configure the backend with an app-provided SYSL module:
+
+```lua
+ui.richTextBackend.configure({
+  sysl = require("slog-text"),
+  defaults = { font = love.graphics.getFont() },
+  configure = function(Text)
+    Text.configure.font_table({ mono = monoFont })
+  end,
+})
+```
+
+Glyph disables SYSL function commands after configuration by default. Apps that
+intentionally want scripting tags should own that risk in app code.
+The typography example uses a development copy from `dev/vendor`; app code should
+provide or install its own SYSL module.
 
 For localized text, use `ui.textKey` after configuring `ui.i18n`:
 

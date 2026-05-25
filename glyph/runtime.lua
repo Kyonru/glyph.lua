@@ -4,6 +4,7 @@ local Animation = require(prefix .. ".animation")
 local CallbackBus = require(prefix .. ".callback_bus")
 local Feedback = require(prefix .. ".feedback")
 local Layout = require(prefix .. ".layout")
+local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Responsive = require(prefix .. ".responsive")
 local Scene = require(prefix .. ".scene")
 local Style = require(prefix .. ".style")
@@ -1146,6 +1147,27 @@ local function restoreFont(love, previous)
   end
 end
 
+---@param props table
+---@param node GlyphNode
+---@param contentHeight number
+---@return number
+local function textVerticalOffset(props, node, contentHeight)
+  local align = props.textVerticalAlign
+  if align == nil or align == "top" or align == "start" then
+    return 0
+  end
+
+  local layoutHeight = node and node.layout and node.layout.height or contentHeight
+  local extra = math.max(0, (layoutHeight or 0) - (contentHeight or 0))
+  if align == "center" or align == "middle" then
+    return extra / 2
+  elseif align == "bottom" or align == "end" then
+    return extra
+  end
+
+  return 0
+end
+
 ---@param runtime table
 ---@param node GlyphNode
 ---@param value any
@@ -1168,6 +1190,16 @@ local function drawPlainText(runtime, node, value, x, y, width, love, style, opa
   local previousFont = setFont(love, textStyle.font)
   color(love, withOpacity(textStyle.color or style.color or runtime.theme.textColor, opacity))
   local text = tostring(value or "")
+  local lineHeight = textStyle.lineHeight or runtime.theme.lineHeight or 18
+  local contentHeight = lineHeight
+
+  if node.wrappedText and node.wrappedText.height then
+    contentHeight = node.wrappedText.height
+  elseif props.wrap and node.wrappedText and node.wrappedText.lines then
+    contentHeight = #node.wrappedText.lines * lineHeight
+  end
+
+  y = y + textVerticalOffset(props, node, contentHeight)
 
   if props.wrap or node.wrappedText then
     local limit = (node.wrappedText and node.wrappedText.width) or props.wrapWidth or props.width or width
@@ -1178,7 +1210,6 @@ local function drawPlainText(runtime, node, value, x, y, width, love, style, opa
     if graphics.printf then
       graphics.printf(text, x, y, limit, align)
     else
-      local lineHeight = textStyle.lineHeight or runtime.theme.lineHeight
       local lines = node.wrappedText and node.wrappedText.lines or { text }
       for index, line in ipairs(lines) do
         graphics.print(line, x, y + (index - 1) * lineHeight)
@@ -1202,53 +1233,15 @@ end
 ---@return nil
 local function drawRichText(runtime, node, x, y, width, love, style, opacity)
   local props = node.props or {}
-  local graphics = love and love.graphics
-  if not graphics then
-    return
-  end
-
   local rich = node.richText
   if not rich then
-    rich = Typography.layoutRich(Typography.parse(node.value or "", runtime.theme, props), props, runtime.theme, props.wrap and width or nil, love, style, node.type)
+    rich = RichTextBackend.prepare(node, node.value or "", props.wrap and width or nil, props, runtime.theme.version)
   end
 
-  local previousFont = graphics.getFont and graphics.getFont() or nil
-  local cursorY = y
-  local align = props.textAlign or "left"
-  local verticalAlign = props.richVerticalAlign or "baseline"
-  for _, line in ipairs(rich.lines or {}) do
-    local offsetX = 0
-    if align == "center" then
-      offsetX = math.max(0, (width - (line.width or 0)) / 2)
-    elseif align == "right" then
-      offsetX = math.max(0, width - (line.width or 0))
-    end
-
-    local cursorX = x + offsetX
-    for _, segment in ipairs(line.segments or {}) do
-      local segmentProps = {}
-      for key, value in pairs(props) do
-        segmentProps[key] = value
-      end
-      for key, value in pairs(segment.style or {}) do
-        segmentProps[key] = value
-      end
-      local segmentStyle = Typography.resolveDrawable(runtime.theme, segmentProps, style, node.type, love)
-      setFont(love, segmentStyle.font)
-      color(love, withOpacity(segmentStyle.color or style.color or runtime.theme.textColor, opacity))
-      local segmentY = cursorY
-      if verticalAlign == "center" then
-        segmentY = cursorY + math.max(0, ((line.height or 0) - (segment.height or 0)) / 2)
-      elseif verticalAlign == "bottom" or verticalAlign == "baseline" then
-        segmentY = cursorY + math.max(0, (line.baseline or line.height or 0) - (segment.height or line.height or 0))
-      end
-      graphics.print(tostring(segment.text or ""), cursorX, segmentY)
-      cursorX = cursorX + (segment.width or 0)
-    end
-    cursorY = cursorY + (line.height or runtime.theme.lineHeight or 18)
+  local drawY = y + textVerticalOffset(props, node, rich and rich.height or 0)
+  if not RichTextBackend.draw(rich, x, drawY) then
+    drawPlainText(runtime, node, node.value or "", x, y, width, love, style, opacity, "text")
   end
-
-  restoreFont(love, previousFont)
 end
 
 ---@param a number

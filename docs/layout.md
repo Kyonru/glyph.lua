@@ -103,13 +103,18 @@ ui.text(longMessage, {
 
 Text measurement uses Love2D fonts at runtime and test-friendly measurement hooks outside Love2D.
 Typography props such as `textStyle`, `fontSize`, `lineHeight`, and theme-level
-`textScale` affect both measurement and drawing. Rich text tags are ignored for
-width calculation except for their visible text and inline font/size/style changes.
+`textScale` affect both measurement and drawing. SYSL-backed rich text uses
+the textbox `get.width`, `get.height`, and `get.lines` values for layout.
+Set `textVerticalAlign = "center"` or `"bottom"` when a text node has an
+explicit height and the text should sit inside that box instead of starting at
+the top.
 
 ```lua
-ui.richText("[style=h2]Alert[/style][br]Return to extraction.", {
+ui.richText("[font=heading]Alert[/font][newline]Return to extraction.", {
   wrap = true,
   width = 360,
+  height = 96,
+  textVerticalAlign = "center",
 })
 ```
 

@@ -39,7 +39,7 @@ Do not use plain `ui.box` as a stack. If children need layout, use `row`, `colum
 - Use explicit width/height for fixed-format widgets.
 - Use `ui.responsive`, `ui.viewport`, `ui.breakpoint`, `ui.columns`, and `ui.clamp` for resizable windows.
 - Use `wrap = true` for text that may overflow. If setting a text width, prefer numeric or resolved widths; avoid passing percent width strings into wrapped text draw paths.
-- Use theme typography presets (`textStyle`, `ui.h1`, `ui.h2`, `ui.p`, `ui.caption`) for repeated type hierarchy, and `ui.richText` only when inline tags are needed.
+- Use theme typography presets (`textStyle`, `ui.h1`, `ui.h2`, `ui.p`, `ui.caption`) for repeated type hierarchy, and `ui.richText` only when SYSL-backed rich/game text is needed.
 - Use stable dimensions or aspect ratios for fixed-format widgets like gauges, command buttons, grids, and HUD cards.
 
 Example:
@@ -114,7 +114,9 @@ ui.p("Hold the point until extraction.", { wrap = true, width = "100%" })
 ui.richText("Status: [color=#7cffae]online[/color]", { wrap = true, width = 320 })
 ```
 
-Keep rich text tags for inline formatting. Dialogue pacing, sound/image tags, and typewriter effects belong in app/example code unless the user specifically asks for a text engine.
+Configure `ui.richTextBackend` with an app-provided SYSL module before using
+rich text. Dialogue pacing, sound/image tags, and typewriter effects belong in
+app/example code unless the user specifically asks for a text engine.
 
 Interaction states should be visually obvious:
 

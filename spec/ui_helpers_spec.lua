@@ -50,7 +50,7 @@ describe("ui helpers", function()
     local paragraph = ui.p("Long copy")
 
     assert.are.equal("text", rich.type)
-    assert.are.equal("tags", rich.props.format)
+    assert.are.equal("sysl", rich.props.format)
     assert.are.equal("h1", title.props.textStyle)
     assert.are.equal("paragraph", paragraph.props.textStyle)
   end)
@@ -373,20 +373,44 @@ describe("ui helpers", function()
     runtime.theme.typography.h1.font = previousH1Font
   end)
 
-  it("draws rich text tags and unknown tags literally", function()
+  it("vertically aligns plain text inside an explicit text box height", function()
     local runtime = Runtime.new()
-    local printed = {}
-    local colors = {}
+    local printedY
 
     runtime:setLove({
       graphics = {
-        getFont = function()
-          return nil
-        end,
+        getFont = function() return nil end,
         setFont = function() end,
-        setColor = function(r, g, b, a)
-          colors[#colors + 1] = { r, g, b, a }
+        setColor = function() end,
+        print = function(_, _, y)
+          printedY = y
         end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.text("Centered", {
+        height = 40,
+        lineHeight = 10,
+        textVerticalAlign = "center",
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(15, printedY)
+  end)
+
+  it("falls back to literal plain text when sysl rich backend is missing", function()
+    ui.richTextBackend.clear()
+    local runtime = Runtime.new()
+    local printed = {}
+
+    runtime:setLove({
+      graphics = {
+        getFont = function() return nil end,
+        setFont = function() end,
+        setColor = function() end,
         print = function(text)
           printed[#printed + 1] = text
         end,
@@ -399,94 +423,170 @@ describe("ui helpers", function()
     runtime:layoutRoot(runtime.root)
     runtime:draw(runtime.root)
 
-    assert.are.same({ "A ", "B", " ", "[nope]C" }, printed)
-    assert.are.same({ 1, 0, 0, 1 }, colors[2])
+    assert.are.same({ "A [color=#ff0000]B[/color] [nope]C" }, printed)
   end)
 
-  it("baseline-aligns mixed-size rich text segments", function()
+  it("vertically aligns sysl rich text using textbox metrics", function()
     local runtime = Runtime.new()
-    local prints = {}
+    local drawY
+    local fakeSysl = {
+      configure = {
+        function_command_enable = function() end,
+      },
+      new = function()
+        local textbox = {
+          get = { width = 40, height = 12, lines = 1 },
+        }
+        function textbox:send() end
+        function textbox:draw(_, y)
+          drawY = y
+        end
+        return textbox
+      end,
+    }
 
+    ui.richTextBackend.configure({ sysl = fakeSysl })
     runtime:setLove({
       graphics = {
-        getFont = function()
-          return nil
-        end,
+        getFont = function() return nil end,
         setFont = function() end,
         setColor = function() end,
-        print = function(text, x, y)
-          prints[#prints + 1] = { text = text, x = x, y = y }
-        end,
+        print = function() end,
       },
     })
 
     runtime:build(function()
-      return ui.richText("Big [size=30]Tall[/size] small")
-    end)
-    runtime:layoutRoot(runtime.root)
-    runtime:draw(runtime.root)
-
-    assert.are.equal("Big ", prints[1].text)
-    assert.are.equal("Tall", prints[2].text)
-    assert.are.equal(" small", prints[3].text)
-    assert.is_true(prints[1].y > prints[2].y)
-    assert.are.equal(prints[1].y, prints[3].y)
-  end)
-
-  it("can top-align mixed-size rich text segments", function()
-    local runtime = Runtime.new()
-    local prints = {}
-
-    runtime:setLove({
-      graphics = {
-        getFont = function()
-          return nil
-        end,
-        setFont = function() end,
-        setColor = function() end,
-        print = function(text, x, y)
-          prints[#prints + 1] = { text = text, x = x, y = y }
-        end,
-      },
-    })
-
-    runtime:build(function()
-      return ui.richText("Big [size=30]Tall[/size] small", {
-        richVerticalAlign = "top",
+      return ui.richText("Rich", {
+        height = 40,
+        textVerticalAlign = "bottom",
       })
     end)
     runtime:layoutRoot(runtime.root)
     runtime:draw(runtime.root)
 
-    assert.are.equal(prints[1].y, prints[2].y)
-    assert.are.equal(prints[2].y, prints[3].y)
+    assert.are.equal(28, drawY)
+    ui.richTextBackend.clear()
   end)
 
-  it("does not hang on rich text segments with leading spaces", function()
-    local Typography = require("glyph.typography")
-    local segments = Typography.parse("Alpha [color=#ff0000] Beta[/color] Gamma", ui.theme, { format = "tags" })
-    local rich = Typography.layoutRich(segments, { format = "tags" }, ui.theme, 220)
+  it("uses configured sysl textbox metrics for rich text layout and draw", function()
+    local RichTextBackend = require("glyph.rich_text_backend")
+    local runtime = Runtime.new()
+    local calls = {}
+    local fakeSysl = {
+      configure = {
+        function_command_enable = function(value)
+          calls[#calls + 1] = { "function_command_enable", value }
+        end,
+      },
+      new = function(align, defaults)
+        calls[#calls + 1] = { "new", align, defaults.kind }
+        local textbox = {
+          get = { width = 123, height = 45, lines = 3 },
+        }
+        function textbox:send(text, width, showAll)
+          calls[#calls + 1] = { "send", text, width, showAll }
+        end
+        function textbox:draw(x, y)
+          calls[#calls + 1] = { "draw", x, y }
+        end
+        return textbox
+      end,
+    }
 
-    assert.is_true(#rich.lines >= 1)
-    assert.are.equal("Alpha ", rich.lines[1].segments[1].text)
-    assert.are.equal("Beta", rich.lines[1].segments[2].text)
+    ui.richTextBackend.configure({
+      sysl = fakeSysl,
+      defaults = { kind = "demo" },
+    })
+    runtime:setLove({
+      graphics = {
+        getFont = function() return nil end,
+        setFont = function() end,
+        setColor = function() end,
+        print = function() end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.richText("Hello", { width = 200, wrap = true, textAlign = "center" })
+    end)
+    runtime:layoutRoot(runtime.root)
+    assert.are.equal(123, runtime.root.layout.width)
+    assert.are.equal(45, runtime.root.layout.height)
+    assert.are.equal(3, runtime.root.richText.lines)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "function_command_enable", false }, calls[1])
+    assert.are.same({ "new", "center", "demo" }, calls[2])
+    assert.are.same({ "send", "Hello", 200, true }, calls[3])
+    assert.are.same({ "draw", 0, 0 }, calls[4])
+    RichTextBackend.clear()
   end)
 
-  it("preserves spaces and punctuation across rich tag boundaries", function()
-    local Typography = require("glyph.typography")
-    local source = "[font=mono]tags[/font] are [color=0.45,0.9,1,1]inline[/color], [size=19]measured[/size], and [style=caption]opt-in[/style]."
-    local segments = Typography.parse(source, ui.theme, { format = "tags" })
-    local rich = Typography.layoutRich(segments, { format = "tags" }, ui.theme, 600)
-    local text = {}
+  it("recreates sysl textboxes when rich text width changes", function()
+    local runtime = Runtime.new()
+    local sends = {}
+    local fakeSysl = {
+      configure = {
+        function_command_enable = function() end,
+      },
+      new = function()
+        local textbox = {
+          get = { width = 10, height = 10, lines = 1 },
+        }
+        function textbox:send(text, width)
+          sends[#sends + 1] = { text, width }
+        end
+        function textbox:draw() end
+        return textbox
+      end,
+    }
 
-    for _, segment in ipairs(rich.lines[1].segments) do
-      text[#text + 1] = segment.text
-    end
+    ui.richTextBackend.configure({ sysl = fakeSysl })
+    runtime:setLove({
+      graphics = {
+        getFont = function() return nil end,
+        setFont = function() end,
+        setColor = function() end,
+        print = function() end,
+      },
+    })
 
-    assert.are.equal("tags are inline, measured, and opt-in.", table.concat(text))
+    local width = 120
+    runtime:build(function()
+      return ui.richText("Hello", { width = width, wrap = true })
+    end)
+    runtime:layoutRoot(runtime.root)
+
+    width = 180
+    runtime:build(function()
+      return ui.richText("Hello", { width = width, wrap = true })
+    end)
+    runtime:layoutRoot(runtime.root)
+
+    assert.are.same({ "Hello", 120 }, sends[1])
+    assert.are.same({ "Hello", 180 }, sends[2])
+    ui.richTextBackend.clear()
   end)
 
-  it("resolves rich text keys before parsing tags", function()
+  it("resolves rich text keys before sending to sysl", function()
+    local sent
+    ui.richTextBackend.configure({
+      sysl = {
+        configure = {
+          function_command_enable = function() end,
+        },
+        new = function()
+          local textbox = {
+            get = { width = 20, height = 10, lines = 1 },
+          }
+          function textbox:send(text)
+            sent = text
+          end
+          function textbox:draw() end
+          return textbox
+        end,
+      },
+    })
     ui.i18n.configure({
       translate = function(key)
         if key == "ready" then
@@ -496,10 +596,16 @@ describe("ui helpers", function()
     })
 
     local node = ui.richTextKey("ready")
-    local segments = require("glyph.typography").parse(node.value, ui.theme, node.props)
+    local runtime = Runtime.new()
 
-    assert.are.equal("Ready", segments[1].text)
-    assert.are.same({ 0, 1, 0, 1 }, segments[1].style.color)
+    runtime:build(function()
+      return node
+    end)
+    runtime:layoutRoot(runtime.root)
+
+    assert.are.equal("[color=#00ff00]Ready[/color]", sent)
+    ui.richTextBackend.clear()
+    ui.i18n.configure({})
   end)
 
   it("translates keys with fallback and custom missing behavior", function()

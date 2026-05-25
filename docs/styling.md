@@ -66,10 +66,7 @@ Text nodes select presets with `textStyle`:
 
 ```lua
 ui.text("ALERT", { textStyle = "h1" })
-ui.richText("[style=caption]Optional tag text[/style]", {
-  format = "tags",
-  richVerticalAlign = "top",
-})
+ui.richText("[font=mono]Optional SYSL text[/font]")
 ```
 
 ## State Styles

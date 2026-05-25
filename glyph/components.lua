@@ -74,7 +74,7 @@ end
 ---@return GlyphNode
 function Components.richText(value, props)
   props = normalizeProps(props)
-  props.format = props.format or "tags"
+  props.format = props.format or "sysl"
   return Components.text(value, props)
 end
 
@@ -84,7 +84,7 @@ end
 function Components.richTextKey(key, props)
   props = normalizeProps(props)
   props.textKey = key
-  props.format = props.format or "tags"
+  props.format = props.format or "sysl"
   return Components.text(key, props)
 end
 

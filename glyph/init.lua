@@ -13,6 +13,7 @@ local Feedback = require(prefix .. ".feedback")
 local I18n = require(prefix .. ".i18n")
 local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
+local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Responsive = require(prefix .. ".responsive")
 local Runtime = require(prefix .. ".runtime")
 local Style = require(prefix .. ".style")
@@ -44,6 +45,7 @@ local runtime = Runtime.new()
 ---@field accessibility GlyphAccessibilityApi
 ---@field feedback GlyphFeedbackApi
 ---@field i18n GlyphI18nApi
+---@field richTextBackend GlyphRichTextBackendApi
 ---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
 ---@field viewportBackend GlyphViewportBackendApi
 ---@field transitions GlyphTransitionApi
@@ -61,6 +63,7 @@ local ui = {
   animation = Animation,
   feedback = nil,
   i18n = I18n,
+  richTextBackend = nil,
   Navigate = Navigate,
   Responsive = Responsive,
   Style = Style,
@@ -119,6 +122,20 @@ ui.feedback = {
   ---@return nil
   clear = function()
     Feedback.clear(runtime)
+  end,
+}
+
+ui.richTextBackend = {
+  ---@param opts? GlyphRichTextBackendConfig
+  ---@return nil
+  configure = function(opts)
+    RichTextBackend.configure(opts)
+    runtime:markDirty()
+  end,
+  ---@return nil
+  clear = function()
+    RichTextBackend.clear()
+    runtime:markDirty()
   end,
 }
 

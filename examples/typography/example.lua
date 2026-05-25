@@ -6,11 +6,11 @@ local callSign = "Vega"
 
 local translations = {
 	en = {
-		briefing = "[style=h2]Signal found[/style][br]Route [color=#7cffae]Vega[/color] through the relay and keep comms clean.",
+		briefing = "[font=heading]Signal found[/font][newline]Route [color=#7cffae]Vega[/color] through the relay and keep comms clean.",
 		status = "Locale: English",
 	},
 	es = {
-		briefing = "[style=h2]Senal encontrada[/style][br]Guia a [color=#7cffae]Vega[/color] por el rele y manten limpia la comunicacion.",
+		briefing = "[font=heading]Senal encontrada[/font][newline]Guia a [color=#7cffae]Vega[/color] por el rele y manten limpia la comunicacion.",
 		status = "Idioma: Espanol",
 	},
 }
@@ -24,6 +24,24 @@ local function setup()
 		fonts.body = graphics.newFont(14)
 		fonts.heading = graphics.newFont(24)
 		fonts.mono = graphics.newFont(13)
+	end
+
+	local ok, sysl = pcall(require, "sysl_text")
+	if ok then
+		ui.richTextBackend.configure({
+			sysl = sysl,
+			defaults = {
+				font = fonts.body,
+				color = { 0.9, 0.96, 1, 1 },
+				adjust_line_height = 2,
+				print_speed = 0.001,
+			},
+			configure = function(Text)
+				if Text.configure and Text.configure.font_table then
+					Text.configure.font_table(fonts)
+				end
+			end,
+		})
 	end
 
 	ui.i18n.configure({
@@ -136,15 +154,16 @@ end
 
 local function richSamples()
 	return ui.panel({ title = "Rich Tags", titleTextStyle = "h2", gap = 12, padding = 16, flex = 1 }, {
-		ui.richText("[style=h1]ALERT[/style] [color=#ffcf5a]incoming[/color]", {
+		ui.richText("[font=heading]ALERT[/font] [color=#ffcf5a]incoming[/color]", {
 			width = "100%",
+			height = 52,
 			wrap = true,
+			textVerticalAlign = "center",
 		}),
 		ui.richText(
-			"[font=mono]tags[/font] are [color=0.45,0.9,1,1]inline[/color], [size=19]measured[/size], and [style=caption]opt-in[/style].",
+			"[font=mono]tags[/font] are [color=#73e5ff]inline[/color], [font=heading]measured[/font], and [font=mono]opt-in[/font].",
 			{
 				textStyle = "paragraph",
-				richVerticalAlign = "top",
 				wrap = true,
 				width = "100%",
 			}

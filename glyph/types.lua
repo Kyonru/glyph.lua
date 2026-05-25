@@ -264,9 +264,9 @@ local GlyphPadding = {}
 ---@field fontSize? number
 ---@field lineHeight? number
 ---@field textStyle? string
----@field format? "plain"|"tags"
+---@field textVerticalAlign? "top"|"center"|"middle"|"bottom"|"start"|"end"
+---@field format? "plain"|"sysl"
 ---@field rich? boolean
----@field richVerticalAlign? "baseline"|"top"|"center"|"bottom"
 ---@field role? "button"|"text"|"input"|"panel"|"tab"|"meter"|"dialog"|"group"|"none"|string
 ---@field accessibilityLabel? string
 ---@field accessibilityLabelKey? string
@@ -308,9 +308,9 @@ local GlyphProps = {}
 ---@field textFallback? string
 ---@field textCacheKey? string|number
 ---@field textStyle? "text"|"h1"|"h2"|"paragraph"|"caption"|"code"|string
----@field format? "plain"|"tags"
+---@field textVerticalAlign? "top"|"center"|"middle"|"bottom"|"start"|"end"
+---@field format? "plain"|"sysl"
 ---@field rich? boolean
----@field richVerticalAlign? "baseline"|"top"|"center"|"bottom"
 local GlyphTextProps = {}
 
 ---@class GlyphButtonProps : GlyphProps
@@ -491,25 +491,24 @@ local GlyphI18nApi = {}
 ---@field color? GlyphColor
 local GlyphTypographyStyle = {}
 
----@class GlyphRichTextSegment
----@field text? string
----@field style? GlyphTypographyStyle
----@field width? number
----@field height? number
----@field br? boolean
-local GlyphRichTextSegment = {}
-
----@class GlyphRichTextLine
----@field segments GlyphRichTextSegment[]
----@field width number
----@field height number
-local GlyphRichTextLine = {}
-
 ---@class GlyphRichTextLayout
----@field lines GlyphRichTextLine[]
+---@field textbox? table
+---@field fallback? boolean
 ---@field width number
 ---@field height number
+---@field lines number|table
 local GlyphRichTextLayout = {}
+
+---@class GlyphRichTextBackendConfig
+---@field sysl? table
+---@field defaults? table
+---@field configure? fun(sysl: table)
+local GlyphRichTextBackendConfig = {}
+
+---@class GlyphRichTextBackendApi
+---@field configure fun(opts?: GlyphRichTextBackendConfig)
+---@field clear fun()
+local GlyphRichTextBackendApi = {}
 
 -- ---------------------------------------------------------------------------
 -- Node

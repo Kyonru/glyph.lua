@@ -1,4 +1,5 @@
 local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Typography = require(prefix .. ".typography")
 
 local Layout = {}
@@ -323,11 +324,10 @@ function Layout.measureNode(node, context)
       local widthLimit = props.wrapWidth or resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or node.layout.assignedWidth or (props.wrap and node.layout.availableWidth) or props.maxWidth
       if widthLimit then
         if Typography.isRich(props) then
-          local segments = Typography.parse(text, theme, props)
-          local rich = Typography.layoutRich(segments, props, theme, widthLimit, nil, nil, node.type)
+          local rich = RichTextBackend.prepare(node, text, widthLimit, props, theme.version)
           node.richText = rich
           node.wrappedText = {
-            lines = rich.lines,
+            lines = type(rich.lines) == "table" and rich.lines or { text },
             width = rich.width,
             height = rich.height,
           }
@@ -344,8 +344,7 @@ function Layout.measureNode(node, context)
     end
 
     if Typography.isRich(props) then
-      local segments = Typography.parse(text, theme, props)
-      local rich = Typography.layoutRich(segments, props, theme, nil, nil, nil, node.type)
+      local rich = RichTextBackend.prepare(node, text, nil, props, theme.version)
       node.richText = rich
       return rich.width, rich.height
     end
