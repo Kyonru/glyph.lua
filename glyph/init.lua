@@ -65,19 +65,29 @@ I18n.setInvalidationCallback(function()
 end)
 
 ui.accessibility = {
+  ---@param opts? GlyphAccessibilityConfig
+  ---@return nil
   configure = function(opts)
     Accessibility.configure(opts)
     runtime:markDirty()
   end,
+  ---@param node? GlyphNode
+  ---@return GlyphAccessibilityDescription|nil
   describe = function(node)
     return Accessibility.describe(node)
   end,
+  ---@param root? GlyphNode
+  ---@return GlyphAccessibilityDescription[]
   snapshot = function(root)
     return Accessibility.snapshot(root or runtime)
   end,
+  ---@return GlyphAccessibilityDescription|nil
   focused = function()
     return Accessibility.focused(runtime)
   end,
+  ---@param message string
+  ---@param opts? GlyphAccessibilityAnnounceOpts
+  ---@return GlyphAccessibilityEvent|nil
   announce = function(message, opts)
     return Accessibility.announce(runtime, message, opts)
   end,
@@ -396,6 +406,9 @@ local defaultGamepadButtons = {
   b = "escape",
 }
 
+---@param defaults table<string, any>
+---@param overrides? table<string, any>
+---@return table<string, any>
 local function mergeMapping(defaults, overrides)
   local result = {}
   for key, value in pairs(defaults) do
@@ -411,6 +424,8 @@ local function mergeMapping(defaults, overrides)
   return result
 end
 
+---@param opts? boolean|GlyphGamepadMapperOpts
+---@return table
 local function gamepadMapper(opts)
   if opts == false then
     return { navigation = {}, buttons = {} }
@@ -483,6 +498,7 @@ end
 ---@param joystick any
 ---@param button string
 ---@param opts? boolean|GlyphGamepadMapperOpts
+---@return any
 function ui.gamepadpressed(joystick, button, opts)
   runtime:dispatch("event", "gamepadpressed", joystick, button)
 
@@ -503,6 +519,7 @@ end
 ---@param joystick any
 ---@param button string
 ---@param opts? boolean|GlyphGamepadMapperOpts
+---@return any
 function ui.gamepadreleased(joystick, button, opts)
   runtime:dispatch("event", "gamepadreleased", joystick, button)
 
@@ -521,6 +538,11 @@ function ui.navigate(direction)
   return Navigate.move(runtime, direction)
 end
 
+---@param x number
+---@param y number
+---@return boolean
+---@return number|false
+---@return number|false
 function viewportPoint(x, y)
   if runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
     return runtime.viewportBackend:screenToViewport(x, y)
@@ -528,6 +550,8 @@ function viewportPoint(x, y)
   return true, x, y
 end
 
+---@param clearFocus boolean
+---@return nil
 function clearPointerTarget(clearFocus)
   runtime:setHover(nil)
   runtime.mouseDownNode = nil
@@ -540,28 +564,43 @@ function clearPointerTarget(clearFocus)
   end
 end
 
+---@type GlyphViewportBackendApi
 ui.viewportBackend = {
+  ---@return boolean
   isEnabled = function()
     return runtime.viewportBackend and runtime.viewportBackend:isEnabled() or false
   end,
+  ---@return "push"|"shove"|nil
   backend = function()
     return runtime.viewportBackend and runtime.viewportBackend:backend() or nil
   end,
+  ---@param x number
+  ---@param y number
+  ---@return boolean
+  ---@return number|false
+  ---@return number|false
   screenToViewport = function(x, y)
     return viewportPoint(x, y)
   end,
+  ---@param x number
+  ---@param y number
+  ---@return number
+  ---@return number
   viewportToScreen = function(x, y)
     if runtime.viewportBackend then
       return runtime.viewportBackend:viewportToScreen(x, y)
     end
     return x, y
   end,
+  ---@return boolean
   beginDraw = function()
     return runtime.viewportBackend and runtime.viewportBackend:beginDraw() or false
   end,
+  ---@return boolean
   endDraw = function()
     return runtime.viewportBackend and runtime.viewportBackend:endDraw() or false
   end,
+  ---@return table|nil
   raw = function()
     return runtime.viewportBackend and runtime.viewportBackend:raw() or nil
   end,
@@ -618,6 +657,10 @@ local autoCallbacks = {
   end,
 }
 
+---@param previous? function
+---@param nextCallback function
+---@param order? "before"|"after"
+---@return function
 local function chainCallback(previous, nextCallback, order)
   if order == "before" then
     return function(...)

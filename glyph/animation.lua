@@ -5,6 +5,7 @@ local Animation = {}
 
 local group = flux.group()
 
+---@type GlyphAnimationValues
 local DEFAULTS = {
   opacity = 1,
   x = 0,
@@ -15,6 +16,7 @@ local DEFAULTS = {
   rotation = 0,
 }
 
+---@type string[]
 local ANIM_FIELDS = {
   "opacity",
   "x",
@@ -25,6 +27,8 @@ local ANIM_FIELDS = {
   "rotation",
 }
 
+---@param source? GlyphAnimationValues
+---@return GlyphAnimationValues
 local function copyFields(source)
   local result = {}
   source = source or {}
@@ -36,6 +40,8 @@ local function copyFields(source)
   return result
 end
 
+---@param source? table
+---@return table
 local function copyNumericFields(source)
   local result = {}
   source = source or {}
@@ -47,6 +53,8 @@ local function copyNumericFields(source)
   return result
 end
 
+---@param values? GlyphAnimationValues
+---@return GlyphAnimationValues
 local function withDefaults(values)
   local result = {}
   values = values or {}
@@ -56,6 +64,9 @@ local function withDefaults(values)
   return result
 end
 
+---@param base? GlyphAnimationValues
+---@param overlay? GlyphAnimationValues
+---@return GlyphAnimationValues
 local function mergeFields(base, overlay)
   local result = copyFields(base)
   for key, value in pairs(copyFields(overlay)) do
@@ -64,6 +75,8 @@ local function mergeFields(base, overlay)
   return result
 end
 
+---@param phase? "enter"|"exit"|string
+---@return GlyphAnimationValues
 local function defaultFrom(phase)
   if phase == "exit" then
     return withDefaults()
@@ -71,6 +84,8 @@ local function defaultFrom(phase)
   return withDefaults({ opacity = 0 })
 end
 
+---@param phase? "enter"|"exit"|string
+---@return GlyphAnimationValues
 local function defaultTo(phase)
   if phase == "exit" then
     return withDefaults({ opacity = 0 })
@@ -78,6 +93,9 @@ local function defaultTo(phase)
   return withDefaults()
 end
 
+---@param spec? GlyphAnimationSpec|false
+---@param phase? "enter"|"exit"|string
+---@return GlyphAnimationSpec|nil
 function Animation.normalize(spec, phase)
   if spec == false then
     return nil
@@ -101,10 +119,17 @@ function Animation.normalize(spec, phase)
   return normalized
 end
 
+---@param values? GlyphAnimationValues
+---@return GlyphAnimationValues
 function Animation.subject(values)
   return withDefaults(values)
 end
 
+---@param subject table
+---@param duration? number
+---@param target table
+---@param opts? GlyphAnimationTweenOpts
+---@return table
 function Animation.to(subject, duration, target, opts)
   opts = opts or {}
   subject = subject or {}
@@ -137,6 +162,13 @@ function Animation.to(subject, duration, target, opts)
   return tween
 end
 
+---@param spec? GlyphAnimationSpec|false
+---@param phase? "enter"|"exit"|string
+---@param subject? GlyphAnimationValues
+---@param opts? { onComplete?: fun(subject: GlyphAnimationValues) }
+---@return GlyphAnimationValues|nil subject
+---@return table|nil tween
+---@return GlyphAnimationSpec|nil normalized
 function Animation.start(spec, phase, subject, opts)
   local normalized = Animation.normalize(spec, phase)
   if not normalized then
@@ -166,6 +198,10 @@ function Animation.start(spec, phase, subject, opts)
   return subject, tween, normalized
 end
 
+---@param spec? GlyphAnimationSpec|false
+---@param phase? "enter"|"exit"|string
+---@param progress? number
+---@return GlyphAnimationValues
 function Animation.sample(spec, phase, progress)
   local normalized = Animation.normalize(spec, phase)
   if not normalized then
@@ -185,18 +221,22 @@ function Animation.sample(spec, phase, progress)
   return result
 end
 
+---@param dt? number
+---@return boolean
 function Animation.update(dt)
   local hadActive = #group > 0
   group:update(dt or 0)
   return hadActive or #group > 0
 end
 
+---@return nil
 function Animation.clear()
   for index = #group, 1, -1 do
     group:remove(index)
   end
 end
 
+---@return number
 function Animation.active()
   return #group
 end

@@ -73,6 +73,38 @@ local GlyphShape = {}
 ---@field mode? "inside"|"outside"
 local GlyphStencil = {}
 
+---@class GlyphDrawContext
+---@field node GlyphNode
+---@field props GlyphProps
+---@field x number
+---@field y number
+---@field width number
+---@field height number
+---@field love table
+---@field graphics table|nil
+---@field style GlyphStyle
+---@field animation? GlyphAnimationValues
+---@field runtime table
+---@field hovered boolean
+---@field pressed boolean
+---@field focused boolean
+---@field active boolean
+---@field hot boolean
+---@field time number
+---@field pulse fun(self: GlyphDrawContext, speed?: number, phase?: number): number
+---@field color fun(self: GlyphDrawContext, value: GlyphColor, alpha?: number)
+---@field rect fun(self: GlyphDrawContext, mode: "fill"|"line"|string, x: number, y: number, width: number, height: number, radius?: number)
+---@field line fun(self: GlyphDrawContext, ...: any)
+---@field polygon fun(self: GlyphDrawContext, mode: "fill"|"line"|string, points: number[])
+---@field shape fun(self: GlyphDrawContext, mode: "fill"|"line"|string, shape?: GlyphShape|fun(ctx: GlyphDrawContext): any, bounds?: GlyphBounds)
+---@field clip fun(self: GlyphDrawContext, shape: boolean|GlyphShape|fun(ctx: GlyphDrawContext): any, fn: fun())
+---@field stencil fun(self: GlyphDrawContext, shapeOrFn: GlyphShape|fun(ctx: GlyphDrawContext): any, fn: fun(), opts?: GlyphStencil)
+---@field meter fun(self: GlyphDrawContext, bounds?: GlyphBounds, opts?: GlyphMeterProps)
+---@field text fun(self: GlyphDrawContext, value: any, x: number, y: number)
+---@field printf fun(self: GlyphDrawContext, value: any, x: number, y: number, limit: number, align?: string)
+---@field skewBox fun(self: GlyphDrawContext, opts?: table): number[]
+local GlyphDrawContext = {}
+
 ---@class GlyphAnimationValues
 ---@field opacity? number
 ---@field x? number
@@ -94,6 +126,14 @@ local GlyphAnimationValues = {}
 ---@field onComplete? fun(subject: GlyphAnimationValues)
 local GlyphAnimationSpec = {}
 
+---@class GlyphAnimationTweenOpts
+---@field ease? string
+---@field delay? number
+---@field onStart? fun(subject: table)
+---@field onUpdate? fun(subject: table)
+---@field onComplete? fun(subject: table)
+local GlyphAnimationTweenOpts = {}
+
 -- ---------------------------------------------------------------------------
 -- Props
 -- ---------------------------------------------------------------------------
@@ -107,7 +147,7 @@ local GlyphPadding = {}
 
 ---@class GlyphProps
 ---@field style? GlyphStyle
----@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table, style: GlyphStyle, ctx: table)
+---@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table, style: GlyphStyle, ctx: GlyphDrawContext)
 ---@field width? number|string
 ---@field height? number|string
 ---@field minWidth? number
@@ -267,6 +307,17 @@ local GlyphPanelProps = {}
 ---@field disabled? boolean
 ---@field focusable? boolean
 
+---@class GlyphAccessibilityAnnounceOpts
+---@field kind? "focus"|"activate"|"live"|"announce"|string
+---@field message? string
+---@field node? GlyphNode
+---@field path? string
+---@field role? string
+---@field label? string
+---@field description? string
+---@field valueText? string
+---@field live? "off"|"polite"|"assertive"|string
+
 ---@class GlyphAccessibilityEvent
 ---@field kind "focus"|"activate"|"live"|"announce"|string
 ---@field message? string
@@ -288,7 +339,7 @@ local GlyphPanelProps = {}
 ---@field describe fun(node?: GlyphNode): GlyphAccessibilityDescription|nil
 ---@field snapshot fun(root?: GlyphNode): GlyphAccessibilityDescription[]
 ---@field focused fun(): GlyphAccessibilityDescription|nil
----@field announce fun(message: string, opts?: table): GlyphAccessibilityEvent|nil
+---@field announce fun(message: string, opts?: GlyphAccessibilityAnnounceOpts): GlyphAccessibilityEvent|nil
 
 ---@class GlyphTab
 ---@field label? string
@@ -467,6 +518,19 @@ local GlyphAnimationApi = {}
 ---@field endDraw fun(): boolean
 ---@field raw fun(): table|nil
 local GlyphViewportBackendApi = {}
+
+---@class GlyphViewportBackend
+---@field enabled boolean
+---@field name? "push"|"shove"
+---@field instance? table
+---@field managed boolean
+---@field width? number
+---@field height? number
+---@field lastScreenWidth? number
+---@field lastScreenHeight? number
+---@field loveModule? table
+---@field pushedGraphicsState boolean
+local GlyphViewportBackend = {}
 
 -- ---------------------------------------------------------------------------
 -- Theme

@@ -14,6 +14,8 @@ local FIT_PUSH = {
   stretch = "stretched",
 }
 
+---@param windowOpts? GlyphWindowOpts|table
+---@return table
 local function windowFlags(windowOpts)
   windowOpts = windowOpts or {}
   return {
@@ -26,11 +28,18 @@ local function windowFlags(windowOpts)
   }
 end
 
+---@param windowOpts? GlyphWindowOpts|table
+---@param fallbackWidth number
+---@param fallbackHeight number
+---@return number
+---@return number
 local function windowSize(windowOpts, fallbackWidth, fallbackHeight)
   windowOpts = windowOpts or {}
   return windowOpts.width or fallbackWidth, windowOpts.height or fallbackHeight
 end
 
+---@param graphics? table
+---@return boolean
 local function pushGraphicsState(graphics)
   if not graphics or not graphics.push then
     return false
@@ -43,12 +52,16 @@ local function pushGraphicsState(graphics)
   return true
 end
 
+---@param graphics? table
+---@return nil
 local function popGraphicsState(graphics)
   if graphics and graphics.pop then
     graphics.pop()
   end
 end
 
+---@param name "push"|"shove"|string
+---@return table
 local function requireBackend(name)
   if name == "push" then
     local ok, backend = pcall(require, "push")
@@ -67,6 +80,7 @@ local function requireBackend(name)
   error("viewport backend 'shove' is not available; install Shove or pass viewport.instance (" .. tostring(backend) .. ")", 3)
 end
 
+---@return GlyphViewportBackend
 function ViewportBackend.new()
   return setmetatable({
     enabled = false,
@@ -82,6 +96,7 @@ function ViewportBackend.new()
   }, ViewportBackend)
 end
 
+---@return nil
 function ViewportBackend:disable()
   self.enabled = false
   self.name = nil
@@ -95,6 +110,8 @@ function ViewportBackend:disable()
   self.pushedGraphicsState = false
 end
 
+---@param opts? GlyphViewportBackendOpts
+---@return boolean
 function ViewportBackend:willHandleWindow(opts)
   opts = opts or {}
   local backend = opts.backend or "shove"
@@ -102,6 +119,10 @@ function ViewportBackend:willHandleWindow(opts)
   return managed and backend == "shove"
 end
 
+---@param opts? GlyphViewportBackendOpts
+---@param windowOpts? GlyphWindowOpts|table
+---@param loveModule? table
+---@return nil
 function ViewportBackend:configure(opts, windowOpts, loveModule)
   opts = opts or {}
   local backend = opts.backend or "shove"
@@ -160,18 +181,23 @@ function ViewportBackend:configure(opts, windowOpts, loveModule)
   end
 end
 
+---@return boolean
 function ViewportBackend:isEnabled()
   return self.enabled == true
 end
 
+---@return "push"|"shove"|nil
 function ViewportBackend:backend()
   return self.name
 end
 
+---@return boolean
 function ViewportBackend:isManaged()
   return self.enabled and self.managed ~= false
 end
 
+---@return number|nil
+---@return number|nil
 function ViewportBackend:dimensions()
   if not self.enabled then
     return nil, nil
@@ -199,6 +225,9 @@ function ViewportBackend:dimensions()
   return self.width, self.height
 end
 
+---@param width number
+---@param height number
+---@return nil
 function ViewportBackend:resize(width, height)
   if not self.enabled or not self.instance then
     return
@@ -211,6 +240,7 @@ function ViewportBackend:resize(width, height)
   end
 end
 
+---@return boolean
 function ViewportBackend:beginDraw()
   if not self.enabled or not self.instance then
     return false
@@ -229,6 +259,7 @@ function ViewportBackend:beginDraw()
   return false
 end
 
+---@return boolean
 function ViewportBackend:endDraw()
   if not self.enabled or not self.instance then
     return false
@@ -250,6 +281,11 @@ function ViewportBackend:endDraw()
   return false
 end
 
+---@param x number
+---@param y number
+---@return boolean
+---@return number|false
+---@return number|false
 function ViewportBackend:screenToViewport(x, y)
   if not self.enabled or not self.instance then
     return true, x, y
@@ -266,6 +302,10 @@ function ViewportBackend:screenToViewport(x, y)
   return true, x, y
 end
 
+---@param x number
+---@param y number
+---@return number
+---@return number
 function ViewportBackend:viewportToScreen(x, y)
   if not self.enabled or not self.instance then
     return x, y
@@ -280,6 +320,7 @@ function ViewportBackend:viewportToScreen(x, y)
   return x, y
 end
 
+---@return GlyphBounds|nil
 function ViewportBackend:getViewport()
   if not self.enabled then
     return nil
@@ -301,6 +342,7 @@ function ViewportBackend:getViewport()
   }
 end
 
+---@return table|nil
 function ViewportBackend:raw()
   return self.instance
 end

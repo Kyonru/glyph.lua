@@ -22,10 +22,14 @@ local VISUAL_ALIASES = {
   blendMode = "blendMode",
 }
 
+---@param value any
+---@return boolean
 local function isArray(value)
   return type(value) == "table" and value[1] ~= nil
 end
 
+---@param value any
+---@return any
 local function copyValue(value)
   if type(value) ~= "table" then
     return value
@@ -38,6 +42,9 @@ local function copyValue(value)
   return copy
 end
 
+---@param target table
+---@param source? table
+---@return table
 local function mergeInto(target, source)
   if type(source) ~= "table" then
     return target
@@ -56,6 +63,8 @@ local function mergeInto(target, source)
   return target
 end
 
+---@param props table
+---@return GlyphStyle
 local function normalizeLegacyProps(props)
   local style = {}
 
@@ -68,6 +77,8 @@ local function normalizeLegacyProps(props)
   return style
 end
 
+---@param state table
+---@return string
 local function stateKey(state)
   return table.concat({
     state.hover and "h" or "-",
@@ -78,12 +89,21 @@ local function stateKey(state)
   }, "")
 end
 
+---@param resolved table
+---@param source? table
+---@param name string
+---@param enabled boolean
+---@return nil
 local function applyState(resolved, source, name, enabled)
   if enabled and type(source) == "table" and type(source[name]) == "table" then
     mergeInto(resolved, source[name])
   end
 end
 
+---@param node GlyphNode
+---@param runtime table
+---@param state table
+---@return string
 local function cacheKey(node, runtime, state)
   local props = node.props or {}
   return table.concat({
@@ -96,12 +116,18 @@ local function cacheKey(node, runtime, state)
   }, "|")
 end
 
+---@param theme GlyphTheme|table
+---@param node GlyphNode
+---@return table
 local function componentTheme(theme, node)
   local components = theme.components or {}
   local props = node.props or {}
   return components[props.styleType or node.type] or {}
 end
 
+---@param target table
+---@param source? GlyphAudioCues|table|false
+---@return table
 local function mergeAudio(target, source)
   if type(source) ~= "table" then
     return target
@@ -114,6 +140,9 @@ local function mergeAudio(target, source)
   return target
 end
 
+---@param node GlyphNode
+---@param runtime table
+---@return table
 function Style.stateFor(node, runtime)
   local props = node.props or {}
   return {
@@ -125,6 +154,10 @@ function Style.stateFor(node, runtime)
   }
 end
 
+---@param node GlyphNode
+---@param runtime table
+---@param state? table
+---@return GlyphStyle
 function Style.resolve(node, runtime, state)
   state = state or Style.stateFor(node, runtime)
   runtime.styleCache = runtime.styleCache or {}
@@ -175,6 +208,10 @@ function Style.resolve(node, runtime, state)
   return resolved
 end
 
+---@param node GlyphNode|nil
+---@param runtime table
+---@param kind "hover"|"press"|"activate"|"focus"|string
+---@return string|false|nil
 function Style.resolveAudio(node, runtime, kind)
   local props = node and node.props or {}
   if props.audio == false then
@@ -219,10 +256,14 @@ function Style.variant(name, style)
   }
 end
 
+---@param value any
+---@return boolean
 function Style.isColor(value)
   return type(value) == "table" and type(value[1]) == "number" and type(value[2]) == "number" and type(value[3]) == "number"
 end
 
+---@param value any
+---@return any
 function Style.copyValue(value)
   return copyValue(value)
 end

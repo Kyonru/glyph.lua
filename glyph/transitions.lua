@@ -3,10 +3,19 @@ local Animation = require(prefix .. ".animation")
 
 local Transitions = {}
 
+---@param t number
+---@return number
 local function easeOutCubic(t)
   return 1 - ((1 - t) * (1 - t) * (1 - t))
 end
 
+---@param direction "top"|"bottom"|"left"|"right"|string
+---@param progress number
+---@param width number
+---@param height number
+---@param exiting boolean
+---@return number
+---@return number
 local function directionOffset(direction, progress, width, height, exiting)
   local t = exiting and progress or (1 - progress)
   if direction == "top" then
@@ -20,6 +29,7 @@ local function directionOffset(direction, progress, width, height, exiting)
   return 0, height * t
 end
 
+---@type table<string, fun(ctx: GlyphTransitionCtx): any>
 local builtins = {
   none = function(ctx)
     return ctx.drawLayer()
@@ -69,6 +79,9 @@ local builtins = {
   end,
 }
 
+---@param ctx GlyphTransitionCtx
+---@param spec? GlyphAnimationSpec|false
+---@return any
 local function drawAnimatedLayer(ctx, spec)
   local graphics = ctx.love and ctx.love.graphics
   if not graphics then
@@ -108,6 +121,8 @@ local function drawAnimatedLayer(ctx, spec)
   end
 end
 
+---@param spec? string|GlyphTransition|fun(ctx: GlyphTransitionCtx)
+---@return GlyphTransition
 local function normalize(spec)
   if spec == nil then
     return {
@@ -171,6 +186,8 @@ function Transitions.custom(spec)
 end
 
 for name, draw in pairs(builtins) do
+  ---@param opts? table
+  ---@return GlyphTransition
   Transitions[name] = function(opts)
     opts = opts or {}
     opts.name = name
@@ -179,6 +196,8 @@ for name, draw in pairs(builtins) do
   end
 end
 
+---@param opts? { enter?: GlyphAnimationSpec, exit?: GlyphAnimationSpec, duration?: number, exitDuration?: number }
+---@return GlyphTransition
 function Transitions.animate(opts)
   opts = opts or {}
   local transition = {

@@ -199,18 +199,29 @@ function Runtime.new()
   return self
 end
 
+---@param loveModule table
+---@return nil
 function Runtime:setLove(loveModule)
   self.love = loveModule
 end
 
+---@param name string
+---@param fn function
+---@param opts? table
+---@return fun(): boolean
 function Runtime:register(name, fn, opts)
   return self.bus:register(name, fn, opts)
 end
 
+---@param name string
+---@param ... any
+---@return any
 function Runtime:dispatch(name, ...)
   return self.bus:dispatch(name, ...)
 end
 
+---@param node GlyphNode|nil
+---@return string|nil
 local function nodeLabel(node)
   if not node then
     return nil
@@ -237,6 +248,9 @@ local function nodeLabel(node)
   return nil
 end
 
+---@param kind "hover"|"press"|"activate"|"focus"|string
+---@param node GlyphNode|nil
+---@return GlyphAudioEvent|nil
 function Runtime:emitAudio(kind, node)
   if not node or not node.props then
     return nil
@@ -1034,18 +1048,32 @@ function Runtime:keyreleased(key)
   self.bus:dispatch("event", "keyreleased", key, node)
 end
 
+---@param love? table
+---@param value? GlyphColor
+---@return nil
 local function color(love, value)
   if love and love.graphics and value then
     love.graphics.setColor(value[1] or 1, value[2] or 1, value[3] or 1, value[4] or 1)
   end
 end
 
+---@param love? table
+---@param mode "fill"|"line"|string
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@param radius? number
+---@return nil
 local function drawRect(love, mode, x, y, width, height, radius)
   if love and love.graphics then
     love.graphics.rectangle(mode, x, y, width, height, radius or 0, radius or 0)
   end
 end
 
+---@param value any
+---@param opacity? number
+---@return any
 local function withOpacity(value, opacity)
   if not Style.isColor(value) then
     return value
@@ -1059,10 +1087,18 @@ local function withOpacity(value, opacity)
   }
 end
 
+---@param a number
+---@param b number
+---@param t number
+---@return number
 local function lerp(a, b, t)
   return a + (b - a) * t
 end
 
+---@param a GlyphColor
+---@param b GlyphColor
+---@param t number
+---@return GlyphColor
 local function lerpColor(a, b, t)
   return {
     lerp(a[1] or 1, b[1] or 1, t),
@@ -1072,6 +1108,10 @@ local function lerpColor(a, b, t)
   }
 end
 
+---@param theme GlyphTheme|table
+---@param style table
+---@param props table
+---@return table
 local function mergeScrollbarStyle(theme, style, props)
   local result = {}
   local defaults = theme.components and theme.components.scrollBar or {}
@@ -1095,6 +1135,12 @@ local function mergeScrollbarStyle(theme, style, props)
   return result
 end
 
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@param opts? table
+---@return number[]
 local function polygonBox(x, y, width, height, opts)
   opts = opts or {}
   local skew = opts.skew or 0
@@ -1112,6 +1158,11 @@ local function polygonBox(x, y, width, height, opts)
   }
 end
 
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@return GlyphBounds
 local function boundsFor(x, y, width, height)
   return {
     x = x,
@@ -1121,6 +1172,10 @@ local function boundsFor(x, y, width, height)
   }
 end
 
+---@param points? number[]|table[]
+---@param bounds GlyphBounds
+---@param absolute? boolean
+---@return number[]
 local function normalizePoints(points, bounds, absolute)
   local result = {}
 
@@ -1147,6 +1202,9 @@ local function normalizePoints(points, bounds, absolute)
   return result
 end
 
+---@param bounds GlyphBounds
+---@param segments? number
+---@return number[]
 local function ellipsePoints(bounds, segments)
   local result = {}
   local count = segments or 32
@@ -1164,6 +1222,10 @@ local function ellipsePoints(bounds, segments)
   return result
 end
 
+---@param shape? boolean|GlyphShape|number[]|fun(ctx: GlyphDrawContext): any
+---@param bounds GlyphBounds
+---@param ctx? GlyphDrawContext
+---@return number[]
 local function shapePoints(shape, bounds, ctx)
   shape = shape or { kind = "rect" }
   if type(shape) == "function" then
@@ -1203,6 +1265,12 @@ local function shapePoints(shape, bounds, ctx)
   }
 end
 
+---@param graphics? table
+---@param mode "fill"|"line"|string
+---@param shape? boolean|GlyphShape|number[]|fun(ctx: GlyphDrawContext): any
+---@param bounds GlyphBounds
+---@param ctx? GlyphDrawContext
+---@return nil
 local function drawShape(graphics, mode, shape, bounds, ctx)
   if not graphics then
     return
@@ -1245,6 +1313,8 @@ local function drawShape(graphics, mode, shape, bounds, ctx)
   end
 end
 
+---@param graphics? table
+---@return number[]|nil
 local function currentScissor(graphics)
   if graphics and graphics.getScissor then
     local sx, sy, sw, sh = graphics.getScissor()
@@ -1255,6 +1325,9 @@ local function currentScissor(graphics)
   return nil
 end
 
+---@param graphics table
+---@param previous? number[]
+---@return nil
 local function restoreScissor(graphics, previous)
   if previous then
     graphics.setScissor(previous[1], previous[2], previous[3], previous[4])
@@ -1263,6 +1336,9 @@ local function restoreScissor(graphics, previous)
   end
 end
 
+---@param runtime? table
+---@param bounds GlyphBounds
+---@return GlyphBounds
 local function viewportScissorBounds(runtime, bounds)
   if runtime and runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
     local x1, y1 = runtime.viewportBackend:viewportToScreen(bounds.x, bounds.y)
@@ -1280,6 +1356,11 @@ local function viewportScissorBounds(runtime, bounds)
   return bounds
 end
 
+---@param graphics table
+---@param bounds GlyphBounds
+---@param previous? number[]
+---@param runtime? table
+---@return nil
 local function setScissorBounds(graphics, bounds, previous, runtime)
   bounds = viewportScissorBounds(runtime, bounds)
   if previous then
@@ -1293,6 +1374,9 @@ local function setScissorBounds(graphics, bounds, previous, runtime)
   end
 end
 
+---@param fn fun()
+---@param restore fun()
+---@return nil
 local function runWithRestore(fn, restore)
   local ok, result = pcall(fn)
   restore()
@@ -1301,6 +1385,12 @@ local function runWithRestore(fn, restore)
   end
 end
 
+---@param graphics? table
+---@param shape boolean|GlyphShape|fun(ctx: GlyphDrawContext): any
+---@param bounds GlyphBounds
+---@param ctx? GlyphDrawContext
+---@param fn fun()
+---@return nil
 local function withClip(graphics, shape, bounds, ctx, fn)
   if not graphics then
     fn()
@@ -1343,6 +1433,12 @@ local function withClip(graphics, shape, bounds, ctx, fn)
   end
 end
 
+---@param graphics? table
+---@param spec GlyphStencil|GlyphShape|fun(ctx: GlyphDrawContext): any
+---@param bounds GlyphBounds
+---@param ctx? GlyphDrawContext
+---@param fn fun()
+---@return nil
 local function withStencil(graphics, spec, bounds, ctx, fn)
   spec = spec or {}
   local shape = spec.shape or spec
@@ -1381,6 +1477,8 @@ local function withStencil(graphics, spec, bounds, ctx, fn)
   end)
 end
 
+---@param value number
+---@return number
 local function clamp01(value)
   if value < 0 then
     return 0
@@ -1390,6 +1488,9 @@ local function clamp01(value)
   return value
 end
 
+---@param props GlyphMeterProps|table
+---@return number ratio
+---@return number overfill
 local function meterRatio(props)
   local minValue = props.min or 0
   local maxValue = props.max or 1
@@ -1402,6 +1503,10 @@ local function meterRatio(props)
   return clamp01(raw), math.max(0, raw - 1)
 end
 
+---@param base? GlyphColor
+---@param override? GlyphStyle
+---@param fallback? GlyphStyle
+---@return GlyphStyle
 local function partStyle(base, override, fallback)
   local style = Style.compose(fallback or {}, override or {})
   if style.background == nil and style.color == nil and base then
@@ -1410,6 +1515,10 @@ local function partStyle(base, override, fallback)
   return style
 end
 
+---@param bounds GlyphBounds
+---@param ratio number
+---@param direction? "right"|"left"|"up"|"down"|string
+---@return GlyphBounds
 local function linearFillBounds(bounds, ratio, direction)
   ratio = clamp01(ratio)
   direction = direction or "right"
@@ -1427,8 +1536,15 @@ local function linearFillBounds(bounds, ratio, direction)
   return { x = bounds.x, y = bounds.y, width = bounds.width * ratio, height = bounds.height }
 end
 
+---@type fun(graphics: table, bounds: GlyphBounds, props: GlyphMeterProps|table, style: GlyphStyle, ctx: GlyphDrawContext)
 local drawMeter
 
+---@param graphics table
+---@param bounds GlyphBounds
+---@param shape? boolean|GlyphShape|fun(ctx: GlyphDrawContext): any
+---@param style GlyphStyle
+---@param ctx GlyphDrawContext
+---@return nil
 local function drawMeterPart(graphics, bounds, shape, style, ctx)
   if style.background or style.color then
     color(ctx.love, style.background or style.color)
@@ -1448,6 +1564,12 @@ local function drawMeterPart(graphics, bounds, shape, style, ctx)
   end
 end
 
+---@param graphics table
+---@param bounds GlyphBounds
+---@param props GlyphMeterProps|table
+---@param style GlyphStyle
+---@param ctx GlyphDrawContext
+---@return nil
 local function drawLinearMeter(graphics, bounds, props, style, ctx)
   local ratio, overfill = meterRatio(props)
   local shape = props.shape or style.shape or { kind = "rect", radius = style.radius or 0 }
@@ -1487,6 +1609,12 @@ local function drawLinearMeter(graphics, bounds, props, style, ctx)
   end
 end
 
+---@param graphics table
+---@param bounds GlyphBounds
+---@param props GlyphMeterProps|table
+---@param style GlyphStyle
+---@param ctx GlyphDrawContext
+---@return nil
 local function drawRadialMeter(graphics, bounds, props, style, ctx)
   local ratio = meterRatio(props)
   local track = partStyle(nil, props.trackStyle, { color = style.background or { 0, 0, 0, 0.3 } })
@@ -1534,6 +1662,15 @@ drawMeter = function(graphics, bounds, props, style, ctx)
   end
 end
 
+---@param runtime table
+---@param node GlyphNode
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@param love table
+---@param style GlyphStyle
+---@return GlyphDrawContext
 local function createDrawContext(runtime, node, x, y, width, height, love, style)
   local props = node.props or {}
   local graphics = love and love.graphics
@@ -1558,40 +1695,69 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
 
   ctx.hot = ctx.hovered or ctx.pressed or ctx.focused or ctx.active
 
+  ---@param speed? number
+  ---@param phase? number
+  ---@return number
   function ctx:pulse(speed, phase)
     return (math.sin(self.time * (speed or 1) + (phase or 0)) + 1) / 2
   end
 
+  ---@param value GlyphColor
+  ---@param alpha? number
+  ---@return nil
   function ctx:color(value, alpha)
     color(love, withOpacity(value, alpha))
   end
 
+  ---@param mode "fill"|"line"|string
+  ---@param rx number
+  ---@param ry number
+  ---@param rw number
+  ---@param rh number
+  ---@param radius? number
+  ---@return nil
   function ctx:rect(mode, rx, ry, rw, rh, radius)
     drawRect(love, mode, rx, ry, rw, rh, radius)
   end
 
+  ---@param ... any
+  ---@return nil
   function ctx:line(...)
     if graphics and graphics.line then
       graphics.line(...)
     end
   end
 
+  ---@param mode "fill"|"line"|string
+  ---@param points number[]
+  ---@return nil
   function ctx:polygon(mode, points)
     if graphics and graphics.polygon then
       graphics.polygon(mode, (table.unpack or unpack)(points))
     end
   end
 
+  ---@param mode "fill"|"line"|string
+  ---@param shape? boolean|GlyphShape|fun(ctx: GlyphDrawContext): any
+  ---@param bounds? GlyphBounds
+  ---@return nil
   function ctx:shape(mode, shape, bounds)
     drawShape(graphics, mode, shape or props.shape, bounds or self, self)
   end
 
+  ---@param shape? boolean|GlyphShape|fun(ctx: GlyphDrawContext): any
+  ---@param fn fun()
+  ---@return nil
   function ctx:clip(shape, fn)
     if type(fn) == "function" then
       withClip(graphics, shape or true, self, self, fn)
     end
   end
 
+  ---@param shapeOrFn GlyphShape|fun(ctx: GlyphDrawContext): any
+  ---@param fn fun()
+  ---@param opts? GlyphStencil
+  ---@return nil
   function ctx:stencil(shapeOrFn, fn, opts)
     if type(fn) == "function" then
       opts = opts or {}
@@ -1600,16 +1766,29 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     end
   end
 
+  ---@param bounds? GlyphBounds
+  ---@param opts? GlyphMeterProps
+  ---@return nil
   function ctx:meter(bounds, opts)
     drawMeter(graphics, bounds or self, opts or {}, style, self)
   end
 
+  ---@param value any
+  ---@param tx number
+  ---@param ty number
+  ---@return nil
   function ctx:text(value, tx, ty)
     if graphics and graphics.print then
       graphics.print(tostring(value), tx, ty)
     end
   end
 
+  ---@param value any
+  ---@param tx number
+  ---@param ty number
+  ---@param limit number
+  ---@param align? string
+  ---@return nil
   function ctx:printf(value, tx, ty, limit, align)
     if graphics and graphics.printf then
       graphics.printf(tostring(value), tx, ty, limit, align or "left")
@@ -1618,6 +1797,8 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     end
   end
 
+  ---@param opts? table
+  ---@return number[]
   function ctx:skewBox(opts)
     return polygonBox(self.x, self.y, self.width, self.height, opts)
   end

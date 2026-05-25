@@ -1,3 +1,8 @@
+---
+name: glyph-ui-building
+description: Use when building Glyph examples, game HUDs, panels, overlays, menus, accessible/localized UI, animated screens, themed demos, or Love2D UI workflows.
+---
+
 # Glyph UI Building Skill
 
 Use this skill when building screens, panels, HUDs, overlays, debug tools, examples, or app UI with Glyph.
@@ -12,6 +17,8 @@ Lua components -> virtual tree -> layout -> event routing -> Love2D draw calls
 
 Build with declarative components where useful, and use custom draw for game-specific visuals.
 
+Core owns primitives. Game-specific look belongs in examples/app code.
+
 ## Choosing Layout
 
 Use:
@@ -21,6 +28,7 @@ Use:
 - `ui.stack` for layered UI, animated backgrounds, badges, overlays, floating controls, HUD composition.
 - `ui.scrollView` for logs, tables, inspector rows, and long content.
 - `ui.panel` for framed tool sections.
+- `ui.meter` for generic progress, HP/MP, cooldowns, gauges, arcs, and radial values.
 
 Do not use plain `ui.box` as a stack. If children need layout, use `row`, `column`, `stack`, or set `display`.
 
@@ -30,7 +38,8 @@ Do not use plain `ui.box` as a stack. If children need layout, use `row`, `colum
 - Use `width = "100%"` or `height = "100%"` when the parent has known bounds.
 - Use explicit width/height for fixed-format widgets.
 - Use `ui.responsive`, `ui.viewport`, `ui.breakpoint`, `ui.columns`, and `ui.clamp` for resizable windows.
-- Use `wrap = true` with a width for text that may overflow.
+- Use `wrap = true` for text that may overflow. If setting a text width, prefer numeric or resolved widths; avoid passing percent width strings into wrapped text draw paths.
+- Use stable dimensions or aspect ratios for fixed-format widgets like gauges, command buttons, grids, and HUD cards.
 
 Example:
 
@@ -96,6 +105,16 @@ ui.button({
 
 Use theme variants for repeated visual language. Use inline style for one-off tuning.
 
+Interaction states should be visually obvious:
+
+- `hover` for pointer hover.
+- `pressed` for mouse/touch down and keyboard/gamepad confirm down.
+- `focused` for keyboard/d-pad/gamepad navigation.
+- `active` for selected/toggled state.
+- `disabled` for unavailable controls.
+
+When a control is both active and focused, focused/highlighted visuals should remain clearly visible.
+
 ## Custom Draw
 
 Use custom draw for game-specific visuals rather than adding one-off widgets to Glyph core.
@@ -113,7 +132,146 @@ ui.box({
 })
 ```
 
-Use `ctx` helpers for color, rectangles, lines, polygons, text, pulse, hot/hover/pressed/focused state, and skew boxes.
+Use `ctx` helpers for color, rectangles, lines, polygons, shapes, clips, stencils, meters, text, pulse, hot/hover/pressed/focused state, and skew boxes.
+
+For Persona-style or JRPG-style HUD shapes, prefer generic primitives:
+
+- `shape = { kind = "skew", skew = 12 }`
+- `clip = true` or `clip = shape`
+- `stencil = { shape = ..., mode = "inside" }`
+- `ctx:shape`, `ctx:clip`, `ctx:stencil`, and `ctx:meter`
+
+Decorative layers should use `interactive = false` and usually `accessibilityHidden = true`.
+
+## Meters And Gauges
+
+Use `ui.meter` for generic value displays:
+
+```lua
+ui.meter({
+  value = hp,
+  max = maxHp,
+  width = 180,
+  height = 14,
+  shape = { kind = "skew", skew = 10 },
+  fillStyle = { background = { 0.1, 0.9, 0.55, 1 } },
+})
+```
+
+For radial or arc gauges, add centered content as children:
+
+```lua
+ui.meter({
+  kind = "arc",
+  value = charge,
+  max = 100,
+  width = 72,
+  height = 72,
+  thickness = 8,
+}, {
+  ui.text("EX"),
+})
+```
+
+Keep “health bar” as an app/example pattern, not a core component.
+
+## Navigation And Submenus
+
+Wire arrows or d-pad to `ui.navigate` unless using opt-in gamepad install:
+
+```lua
+function love.keypressed(key)
+  if key == "up" then return ui.navigate("up") end
+  if key == "down" then return ui.navigate("down") end
+  if key == "left" then return ui.navigate("left") end
+  if key == "right" then return ui.navigate("right") end
+  return ui.keypressed(key)
+end
+```
+
+Submenus are ordinary containers with scope props:
+
+- `navScope = true` on the submenu root.
+- `navTrap = true` while open.
+- `onNavigateExit` to close/return focus to the opener.
+
+Do not build an opinionated `ui.menu` unless the user explicitly asks for app code.
+
+## Animation
+
+Use node `enter`/`exit` for show/hide and `ui.transitions.animate` for scenes or modals. Animations are visual-only, so layout and hit testing should remain stable.
+
+```lua
+ui.panel({
+  key = "inventory",
+  enter = { from = { opacity = 0, y = 16 }, to = { opacity = 1, y = 0 } },
+  exit = { to = { opacity = 0, y = -12 } },
+}, children)
+```
+
+When animating size in examples, include real content and let layout handle spacing with rows/columns/gaps rather than manual overlap calculations.
+
+## I18n
+
+Use `ui.i18n.configure` with an app-owned translator. Glyph does not own locale files or pluralization policy.
+
+Use keyed props:
+
+- `textKey`
+- `labelKey`
+- `placeholderKey`
+- `titleKey`
+- semantic accessibility keys like `accessibilityLabelKey`
+
+For params, provide `cacheKey` when the translation is stable:
+
+```lua
+ui.textKey("messages", {
+  textParams = { count = count },
+  textCacheKey = "messages:" .. count,
+})
+```
+
+Use `ui.i18n.version()` in `ui.memo` deps for translated static subtrees.
+
+## Accessibility
+
+Love2D has no native screen-reader widgets. Glyph provides semantics and events; apps own TTS, logs, platform bridges, or Love.js live regions.
+
+Add useful semantic props:
+
+```lua
+ui.button({
+  labelKey = "actions.launch",
+  accessibilityLabelKey = "a11y.launch",
+  accessibilityDescriptionKey = "a11y.launch_help",
+})
+```
+
+Use:
+
+- `role`
+- `accessibilityLabel`
+- `accessibilityDescription`
+- `accessibilityValueText`
+- `accessibilityHidden`
+- `accessibilityLive`
+
+Listen with `ui.on("accessibility", fn)` for focus, activate, live, and manual announcements. Use `ui.accessibility.snapshot()` when building debug/adaptor panels.
+
+## Audio Cues
+
+Glyph emits cue events; apps play sounds.
+
+Set global cues in theme component defaults or variants, override per node, or disable with `audio = false`:
+
+```lua
+ui.on("audio", function(event)
+  sounds[event.cue]:play()
+end)
+```
+
+Keep cue values as stable app-owned string IDs.
 
 ## Scenes, Overlays, And Modals
 
@@ -166,10 +324,19 @@ local wipe = ui.transitions.custom({
 
 Keep shape-specific transitions in examples or app code unless the primitive is broadly useful.
 
+Use `ui.transitions.animate({ enter = ..., exit = ... })` when a scene/modal transition should share animation specs with nodes.
+
+## Fixed Virtual Viewports
+
+If an app uses Push or Shove, configure Glyph through `window.viewport` or attach an existing backend instance. Keep the UI in virtual coordinates and compare with `ui.viewport()`.
+
+Do not expose Push/Shove-specific assumptions in examples unless the example is specifically about viewport backends.
+
 ## Performance Patterns
 
 - Use `ui.memo(component, deps)` for stable repeated subtrees.
 - Use `ui.static(node)` for labels, icons, and fixed repeated rows.
+- Use i18n cache keys and `ui.i18n.version()` to keep translated subtrees cheap.
 - In long lists, mount only visible rows when possible.
 - Keep custom draw cheap and avoid allocating large tables every frame in hot paths.
 - Use scene layers and stack only where layering is needed.
@@ -181,3 +348,9 @@ Keep shape-specific transitions in examples or app code unless the primitive is 
 - Do not let decorative layers capture clicks.
 - Do not build huge invisible lists when a scroll window can mount a visible slice.
 - Do not use shader/stencil/canvas state without restoring it.
+- Do not put interactive behavior on decorative backgrounds.
+- Do not hide important text only inside custom draw; expose semantics when needed.
+
+## Skill Maintenance
+
+When a new example introduces a reusable UI pattern, accessibility/i18n/audio/navigation convention, or design rule that future examples should follow, update this skill. If the pattern is about core internals rather than app/example UI, update `glyph-development` instead.

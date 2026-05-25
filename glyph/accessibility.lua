@@ -3,14 +3,17 @@ local I18n = require(prefix .. ".i18n")
 
 local Accessibility = {}
 
+---@type GlyphAccessibilityConfig
 local defaultConfig = {
   enabled = true,
   announceOnFocus = true,
   announceOnActivate = true,
 }
 
+---@type GlyphAccessibilityConfig
 local config = {}
 
+---@return nil
 local function resetConfig()
   config = {}
   for key, value in pairs(defaultConfig) do
@@ -20,6 +23,8 @@ end
 
 resetConfig()
 
+---@param node GlyphNode|nil
+---@return GlyphNode[]
 local function orderedChildren(node)
   local source = node and node.children or {}
   if #source <= 1 then
@@ -49,6 +54,8 @@ local function orderedChildren(node)
   return result
 end
 
+---@param node GlyphNode|nil
+---@return string|nil
 local function defaultRole(node)
   if not node then
     return nil
@@ -72,6 +79,10 @@ local function defaultRole(node)
   return nil
 end
 
+---@param props table
+---@param prefixName string
+---@param fallback? string
+---@return string|nil
 local function resolveKey(props, prefixName, fallback)
   local key = props[prefixName .. "Key"]
   if key == nil then
@@ -84,6 +95,8 @@ local function resolveKey(props, prefixName, fallback)
   })
 end
 
+---@param node GlyphNode|nil
+---@return string|nil
 local function textValue(node)
   if not node then
     return nil
@@ -110,6 +123,8 @@ local function textValue(node)
   return nil
 end
 
+---@param node GlyphNode|nil
+---@return string|nil
 local function defaultLabel(node)
   local props = node and node.props or {}
   if node and node.type == "input" then
@@ -118,6 +133,8 @@ local function defaultLabel(node)
   return textValue(node)
 end
 
+---@param node GlyphNode|nil
+---@return string|nil
 local function defaultValueText(node)
   if not node then
     return nil
@@ -142,6 +159,8 @@ local function defaultValueText(node)
   return nil
 end
 
+---@param opts? GlyphAccessibilityConfig
+---@return nil
 function Accessibility.configure(opts)
   resetConfig()
   opts = opts or {}
@@ -150,10 +169,13 @@ function Accessibility.configure(opts)
   end
 end
 
+---@return boolean
 function Accessibility.isEnabled()
   return config.enabled ~= false
 end
 
+---@param node? GlyphNode
+---@return GlyphAccessibilityDescription|nil
 function Accessibility.describe(node)
   if not node or not node.props then
     return nil
@@ -197,6 +219,9 @@ function Accessibility.describe(node)
   }
 end
 
+---@param result GlyphAccessibilityDescription[]
+---@param node GlyphNode|nil
+---@return nil
 local function appendSnapshot(result, node)
   if node and node.props and node.props.accessibilityHidden == true then
     return
@@ -212,6 +237,8 @@ local function appendSnapshot(result, node)
   end
 end
 
+---@param target? GlyphNode|table
+---@return GlyphAccessibilityDescription[]
 function Accessibility.snapshot(target)
   local result = {}
   if not target then
@@ -236,6 +263,10 @@ function Accessibility.snapshot(target)
   return result
 end
 
+---@param kind string
+---@param description GlyphAccessibilityDescription|nil
+---@param fallback? string
+---@return string|nil
 local function messageFor(kind, description, fallback)
   if fallback then
     return fallback
@@ -265,6 +296,10 @@ local function messageFor(kind, description, fallback)
   return table.concat(parts, ", ")
 end
 
+---@param runtime table
+---@param message? string
+---@param opts? GlyphAccessibilityAnnounceOpts
+---@return GlyphAccessibilityEvent|nil
 function Accessibility.announce(runtime, message, opts)
   if not Accessibility.isEnabled() or not runtime then
     return nil
@@ -296,6 +331,11 @@ function Accessibility.announce(runtime, message, opts)
   return event
 end
 
+---@param runtime table
+---@param kind "focus"|"activate"|"live"|"announce"|string
+---@param node? GlyphNode
+---@param opts? GlyphAccessibilityAnnounceOpts
+---@return GlyphAccessibilityEvent|nil
 function Accessibility.emit(runtime, kind, node, opts)
   if not Accessibility.isEnabled() then
     return nil
@@ -313,6 +353,8 @@ function Accessibility.emit(runtime, kind, node, opts)
   return Accessibility.announce(runtime, opts.message, opts)
 end
 
+---@param runtime table
+---@return GlyphAccessibilityDescription|nil
 function Accessibility.focused(runtime)
   if not runtime then
     return nil
@@ -320,6 +362,9 @@ function Accessibility.focused(runtime)
   return Accessibility.describe(runtime.focusNode)
 end
 
+---@param runtime table
+---@param root? GlyphNode
+---@return nil
 function Accessibility.scanLive(runtime, root)
   if not Accessibility.isEnabled() or not runtime or not root then
     return
@@ -327,6 +372,8 @@ function Accessibility.scanLive(runtime, root)
 
   runtime.accessibilityLiveValues = runtime.accessibilityLiveValues or {}
 
+  ---@param node GlyphNode|nil
+  ---@return nil
   local function visit(node)
     if node and node.props and node.props.accessibilityHidden == true then
       return

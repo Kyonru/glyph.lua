@@ -1,6 +1,11 @@
+---
+name: glyph-development
+description: Use when changing glyph.lua internals, public APIs, runtime behavior, layout, styling, animation, navigation, i18n, accessibility, viewport backends, tests, or docs.
+---
+
 # Glyph Development Skill
 
-Use this skill when changing Glyph internals: components, layout, runtime, style resolution, scenes/modals, transitions, callback bus, or performance behavior.
+Use this skill when changing Glyph internals: components, layout, runtime, style resolution, scenes/modals, transitions, animation, navigation, i18n, accessibility, viewport backends, callback bus, or performance behavior.
 
 ## First Pass
 
@@ -8,7 +13,8 @@ Use this skill when changing Glyph internals: components, layout, runtime, style
 2. Check nearby specs for expected behavior.
 3. Identify whether the change is a core primitive, an example-only pattern, or game-specific sugar.
 4. Keep the public API small and composable.
-5. Update `docs/` for any public API, behavior, subsystem, or example pattern change.
+5. Add or update LuaLS annotations for public API and touched internal helpers.
+6. Update `docs/` for any public API, behavior, subsystem, or example pattern change.
 
 Core belongs in `glyph/` only when it is reusable across many games and tools. Game-specific widgets and visual motifs belong in `examples/`.
 
@@ -19,14 +25,20 @@ Add to core:
 - Layout primitives and constraints.
 - Event routing and focus/hover/press behavior.
 - Generic style, theme, shader, and transition hooks.
+- Generic meters, shapes, clipping, stencil, and custom draw helpers.
 - Scene/layer/modal mechanics.
-- Generic custom-draw helpers.
+- Spatial navigation primitives and opt-in gamepad mapping.
+- Backend-agnostic i18n and accessibility adapter surfaces.
+- Backend-agnostic fixed viewport adapter hooks.
+- Visual-only animation primitives.
 
 Keep out of core:
 
 - Persona-style menu widgets.
-- Health/mana meters.
+- Health/mana-specific widgets; use generic `ui.meter`.
 - Blob-specific transitions.
+- Push/Shove-specific public APIs such as `ui.push` or `ui.shove`.
+- Native screen-reader, TTS, locale-file, plural-rule, or app-policy ownership.
 - Dashboard-specific cards or tables.
 - Feather-specific inspectors, logs, or debugger panels.
 
@@ -44,6 +56,7 @@ Follow these rules:
 - Absolute children never affect parent size.
 - Percent sizes resolve against available/content bounds, not strings carried into arithmetic.
 - Text wrapping must use measurement hooks and should not assume Love2D exists in tests.
+- Wrapped text drawing must use a numeric resolved width; avoid passing percent strings to `love.graphics.printf`.
 
 When layout changes, add focused tests in `spec/layout_spec.lua`.
 
@@ -58,10 +71,25 @@ The runtime in `glyph/runtime.lua` owns:
 - Hit testing.
 - Focus, hover, press, input, scroll state.
 - Scene layer rendering.
+- Audio cue and accessibility event emission.
+- Viewport coordinate conversion for pointer/touch input.
 
 Draw order and hit order must match. If `zIndex` or stack order changes drawing, hit testing must follow the same order in reverse.
 
 For input changes, add runtime tests that press and release controls, not just geometry assertions.
+
+Keyboard, mouse, touch, and mapped gamepad activation should share the same press/release lifecycle so pressed styles, audio cues, and accessibility activation remain consistent.
+
+## Navigation And Input
+
+Spatial navigation lives in `glyph/navigate.lua`.
+
+- Keep `ui.navigate(direction)` and `navGroup` backward compatible.
+- Use beam-aware movement and edge distance for uneven game-style layouts.
+- `navGroup` is soft: stay inside when a directional candidate exists, escape when it does not.
+- `navScope` is layout-agnostic. Use `navTrap` and `onNavigateExit` for submenus/flyouts without creating menu widgets.
+- Gamepad mapping is opt-in through `install.gamepad` or manual `ui.gamepadpressed/released`.
+- Touch callbacks remain automatic through install/load.
 
 ## Scene And Modal Work
 
@@ -87,6 +115,39 @@ Rules:
 - Keep state style tables explicit: `hover`, `pressed`, `focused`, `active`, `disabled`.
 - Custom draw receives `style` and `ctx`.
 - Any shader, blend, line width, font, scissor, stencil, canvas, or transform mutation must be restored.
+- `style.audio` and component `audio` tables are cue metadata; core emits events only.
+- Shape/clip/stencil/meter drawing is visual-only. Hit testing remains rectangular unless an explicit shape-hit API is added later.
+
+## Animation Work
+
+Animation lives in `glyph/animation.lua` and uses vendored Flux.
+
+- Node `enter`/`exit` and `ui.transitions.animate` share animation specs.
+- Animations are visual-only and must not affect layout, hit testing, focus, navigation geometry, or semantic snapshots.
+- Apply transforms with graphics push/pop and restore state.
+- Exit ghosts should render only until exit completes; avoid duplicate descendant exits for an exiting parent.
+
+## Adapter Work
+
+I18n lives in `glyph/i18n.lua`.
+
+- Do not own translation tables, locale files, plural rules, number/date formatting, or fallback policy.
+- Cache no-param translations automatically.
+- Cache param translations only with explicit `cacheKey`; mutable params without a key must resolve fresh.
+- Locale changes must invalidate cache, bump version, and mark runtime dirty.
+
+Accessibility lives in `glyph/accessibility.lua`.
+
+- Do not pretend Love2D has native OS widgets. Expose semantic metadata, snapshots, focus/activate/live events, and let apps adapt them.
+- Hidden or `role = "none"` nodes should not appear in snapshots or announcements.
+- Semantic key props resolve through `ui.i18n`.
+- Live regions announce changes after initial build, not on first mount.
+
+Viewport support lives in `glyph/viewport_backend.lua`.
+
+- Keep Push/Shove optional and user-provided. Development examples may use `dev/vendor`.
+- Public API is `ui.viewportBackend`; backend-specific escape hatch is `raw()`.
+- Managed mode may configure backend/window; attached mode must not mutate app-owned setup.
 
 ## Performance Work
 
@@ -97,6 +158,15 @@ Glyph is for debug panels and game UI, so avoid needless rebuilds and layout chu
 - Avoid selector systems, cascading ancestry scans, string parsing, or global style queries.
 - Prefer stable layer roots and stable subtree identity where possible.
 - Examples should show bounded rendering for large lists.
+
+## Types And Docs
+
+- Shared public types live in `glyph/types.lua`.
+- Add `---@param`, `---@return`, and `---@class` annotations when adding/changing public APIs or substantial internal helpers.
+- New docs pages need `lucide/*` frontmatter and `zensical.toml` nav entries.
+- Use GitHub callouts (`> [!NOTE]`) rather than `!!! note`.
+- When introducing a new subsystem, public workflow, reusable example pattern, or recurring implementation rule, update `AGENTS.md` and the relevant `skills/*/SKILL.md`.
+- Create a new local skill only when the workflow is distinct enough that future agents should load it separately; otherwise update `glyph-development` or `glyph-ui-building`.
 
 ## Verification
 
@@ -115,3 +185,5 @@ luac -p glyph.lua glyph/*.lua examples/*/main.lua spec/*_spec.lua
 When a Love2D visual behavior changes, update or add an example that makes the behavior obvious.
 
 Documentation is required for public-library work. Update the matching `docs/*.md` page before finishing.
+
+If the local Lua toolchain is unavailable, still run `git diff --check` and clearly report blocked `busted`/`luac` commands.
