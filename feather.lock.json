@@ -1,0 +1,30 @@
+{
+  "lockfileVersion": 1,
+  "generatedAt": "2026-05-25T17:19:35.399Z",
+  "packages": {
+    "feel": {
+      "version": "main",
+      "trust": "verified",
+      "source": {
+        "repo": "kyonru/feel.lua",
+        "tag": "main",
+        "resolvedRef": "20880801a05817f4e85a3788b3c85220b970c958",
+        "commitSha": "20880801a05817f4e85a3788b3c85220b970c958"
+      },
+      "files": [
+        {
+          "name": "feel/init.lua",
+          "target": "glyph/vendor/feel/init.lua",
+          "sha256": "3510de61dfb4e9b559caafaeb29a2005ffd4f37f9426aa976e101e453a03a4b4"
+        },
+        {
+          "name": "feel/vendor/flux.lua",
+          "target": "glyph/vendor/feel/vendor/flux.lua",
+          "sha256": "11542ab78001f99d94d0b9ca3f99072494e1e4f4ce395db203bf4f7e6f7889d5"
+        }
+      ],
+      "installDir": "glyph/vendor",
+      "installedAt": "2026-05-25T17:19:35.397Z"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 ---
-icon: lucide/universal-access
+icon: lucide/accessibility
 ---
 
 # Accessibility

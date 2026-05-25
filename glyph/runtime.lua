@@ -615,6 +615,7 @@ function Runtime:update(dt)
   if Animation.update(dt or 0) then
     self:markDirty()
   end
+  Feedback.update(self, dt or 0)
   for index = #self.exitAnimations, 1, -1 do
     if self.exitAnimations[index].done then
       table.remove(self.exitAnimations, index)

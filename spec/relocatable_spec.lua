@@ -14,7 +14,8 @@ describe("relocatable package imports", function()
     clearNested()
 
     local function nestedSearcher(name)
-      if name ~= nestedPrefix and name:sub(1, #nestedPrefix + 1) ~= nestedPrefix .. "." then
+      local isGlyph = name == nestedPrefix or name:sub(1, #nestedPrefix + 1) == nestedPrefix .. "."
+      if not isGlyph then
         return nil
       end
 
@@ -34,6 +35,7 @@ describe("relocatable package imports", function()
     assert.is_true(ok)
     assert.are.equal("function", type(ui.text))
     assert.are.equal("table", type(package.loaded[nestedPrefix .. ".components"]))
+    assert.are.equal("table", type(package.loaded[nestedPrefix .. ".vendor.feel"]))
 
     clearNested()
   end)

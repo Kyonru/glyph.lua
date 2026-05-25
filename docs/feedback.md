@@ -6,7 +6,7 @@ icon: lucide/sparkles
 
 Glyph feedback sequences are small triggerable stacks for game-feel polish. They can animate a node, emit audio cue metadata, dispatch app-owned FX events, or run a callback.
 
-The API is named `ui.feedback`; “juice” is example language, not a widget namespace.
+The API is named `ui.feedback`; “juice” is example language, not a widget namespace. Internally, Glyph delegates this behavior to the standalone `feel.lua` package, which can also be required directly with `local feel = require("feel")`.
 
 ## Define A Sequence
 
@@ -88,6 +88,30 @@ ui.feedback.play({
 ```
 
 Use `ui.feedback.clear()` in tests or app teardown when registered sequences should be reset.
+
+## Standalone Feel
+
+`feel.lua` is framework-agnostic. It owns sequence registration, target values, Flux-backed tween playback, and emitted metadata; it does not know about Glyph nodes or Love2D.
+
+```lua
+local feel = require("feel")
+
+feel.define("button.pop", {
+  { kind = "animate", to = { scale = 1.08 }, duration = 0.08 },
+  { kind = "emit", event = "particles", payload = { name = "spark" } },
+  { kind = "audio", cue = "ui-pop" },
+})
+
+local target = feel.target({ label = "Launch" })
+feel.play("button.pop", target, {
+  trigger = "activate",
+  emit = function(event) end,
+  audio = function(event) end,
+  markDirty = function() end,
+})
+
+feel.update(dt)
+```
 
 ## Core Boundary
 
