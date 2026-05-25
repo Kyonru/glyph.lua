@@ -323,4 +323,65 @@ describe("layout", function()
     assert.are.equal(18, tree.layout.height)
     assert.is_true(tree.richText.fallback)
   end)
+
+  it("measures images from source natural size", function()
+    local source = {
+      getWidth = function() return 96 end,
+      getHeight = function() return 48 end,
+    }
+    local tree = ui.image({ source = source })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(96, tree.layout.width)
+    assert.are.equal(48, tree.layout.height)
+  end)
+
+  it("measures images from quad viewport size", function()
+    local source = {
+      getWidth = function() return 96 end,
+      getHeight = function() return 48 end,
+    }
+    local quad = {
+      getViewport = function() return 8, 12, 24, 16 end,
+    }
+    local tree = ui.image({ source = source, quad = quad })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(24, tree.layout.width)
+    assert.are.equal(16, tree.layout.height)
+  end)
+
+  it("lets explicit image sizes override natural size", function()
+    local source = {
+      getWidth = function() return 96 end,
+      getHeight = function() return 48 end,
+    }
+    local tree = ui.column({ width = 300 }, {
+      ui.image({
+        source = source,
+        width = "50%",
+        height = 32,
+      }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(150, tree.children[1].layout.width)
+    assert.are.equal(32, tree.children[1].layout.height)
+  end)
+
+  it("measures missing image sources as explicit size or zero", function()
+    local explicit = ui.image({ width = 80, height = 40 })
+    local empty = ui.image()
+
+    Layout.compute(explicit, context)
+    Layout.compute(empty, context)
+
+    assert.are.equal(80, explicit.layout.width)
+    assert.are.equal(40, explicit.layout.height)
+    assert.are.equal(0, empty.layout.width)
+    assert.are.equal(0, empty.layout.height)
+  end)
 end)

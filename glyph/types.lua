@@ -313,6 +313,16 @@ local GlyphProps = {}
 ---@field rich? boolean
 local GlyphTextProps = {}
 
+---@class GlyphImageProps : GlyphProps
+---@field source? any Love2D Image/Canvas-like drawable with getWidth/getHeight
+---@field quad? any Love2D Quad-like object with getViewport
+---@field fit? "contain"|"cover"|"stretch"|"none"
+---@field align? "start"|"center"|"end"
+---@field valign? "start"|"center"|"end"
+---@field tint? GlyphColor
+---@field opacity? number
+local GlyphImageProps = {}
+
 ---@class GlyphButtonProps : GlyphProps
 ---@field label? string
 ---@field labelKey? string

@@ -75,6 +75,24 @@ ui.box({
 })
 ```
 
+For ordinary images, prefer `ui.image` over custom draw. It handles fit,
+alignment, tint, opacity, clipping, and quads:
+
+```lua
+ui.image({
+  source = portrait,
+  width = 96,
+  height = 96,
+  fit = "cover",
+  clip = { kind = "circle" },
+  interactive = false,
+})
+```
+
+Use custom draw when the image itself needs custom shader setup, multi-pass
+composition, procedural effects, or app-specific atlas behavior beyond a single
+optional quad.
+
 ## Shapes And Stencils
 
 Glyph shape descriptors are plain tables:

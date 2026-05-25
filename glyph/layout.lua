@@ -64,6 +64,31 @@ local function numericSize(value)
   return nil
 end
 
+local function imageNaturalSize(props)
+  props = props or {}
+
+  local source = props.source
+  if not source or type(source.getWidth) ~= "function" or type(source.getHeight) ~= "function" then
+    return 0, 0
+  end
+
+  local quad = props.quad
+  if quad and type(quad.getViewport) == "function" then
+    local ok, _, _, width, height = pcall(quad.getViewport, quad)
+    if ok and type(width) == "number" and type(height) == "number" then
+      return width, height
+    end
+  end
+
+  local okWidth, width = pcall(source.getWidth, source)
+  local okHeight, height = pcall(source.getHeight, source)
+  if okWidth and okHeight and type(width) == "number" and type(height) == "number" then
+    return width, height
+  end
+
+  return 0, 0
+end
+
 local function isAbsolute(node)
   return node and node.props and node.props.position == "absolute"
 end
@@ -371,6 +396,12 @@ function Layout.measureNode(node, context)
     local defaultHeight = kind == "linear" and 16 or 72
     return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or defaultWidth,
       resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or defaultHeight
+  end
+
+  if node.type == "image" then
+    local naturalWidth, naturalHeight = imageNaturalSize(props)
+    return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or naturalWidth,
+      resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or naturalHeight
   end
 
   return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or 0, resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or 0

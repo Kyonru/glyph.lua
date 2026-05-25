@@ -83,6 +83,45 @@ ui.box({
 })
 ```
 
+## Image
+
+`ui.image(props)` draws a Love2D image/canvas-like object that your app has
+already loaded. Glyph owns layout, fit, tint, opacity, clipping, and stencil
+integration; asset loading stays in your game.
+
+```lua
+local portrait = love.graphics.newImage("assets/portrait.png")
+
+ui.image({
+  source = portrait,
+  width = 120,
+  height = 80,
+  fit = "cover", -- "contain" | "cover" | "stretch" | "none"
+  align = "center",
+  valign = "center",
+  tint = { 1, 1, 1, 1 },
+  opacity = 1,
+  clip = { kind = "circle" },
+  interactive = false,
+})
+```
+
+Use `quad` for atlas cells:
+
+```lua
+ui.image({
+  source = atlas,
+  quad = itemQuad,
+  width = 32,
+  height = 32,
+  fit = "contain",
+})
+```
+
+If no explicit size is provided, image nodes measure from the quad viewport or
+from `source:getWidth()` / `source:getHeight()`. Missing sources draw nothing
+and measure as explicit size or `0x0`.
+
 ## Row And Column
 
 Use `ui.row` and `ui.column` for normal flex-style flow.

@@ -25,7 +25,7 @@ Add to core:
 - Layout primitives and constraints.
 - Event routing and focus/hover/press behavior.
 - Generic style, theme, shader, and transition hooks.
-- Generic meters, shapes, clipping, stencil, and custom draw helpers.
+- Generic image, meter, shape, clipping, stencil, and custom draw helpers.
 - Theme-driven typography, font refs, text scaling, and optional SYSL-backed rich text.
 - Scene/layer/modal mechanics.
 - Spatial navigation primitives and opt-in gamepad mapping.
@@ -44,6 +44,7 @@ Keep out of core:
 - Dashboard-specific cards or tables.
 - Feather-specific inspectors, logs, or debugger panels.
 - Full app-owned dialogue/textbox policy, sound/image assets, or branded text effects.
+- Filesystem image loading, sprite animation, atlas management, or asset lifetime ownership.
 
 If a feature feels specific, implement it as an example using existing primitives. If that example reveals missing primitives, add the primitive instead.
 

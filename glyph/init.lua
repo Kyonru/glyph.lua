@@ -31,6 +31,7 @@ local runtime = Runtime.new()
 ---@field h2 fun(value: string, props?: GlyphTextProps): GlyphNode
 ---@field p fun(value: string, props?: GlyphTextProps): GlyphNode
 ---@field caption fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field image fun(props?: GlyphImageProps): GlyphNode
 ---@field box fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field row fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field column fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode

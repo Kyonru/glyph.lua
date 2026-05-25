@@ -52,7 +52,7 @@ make docs
 
 Glyph should provide primitives and reusable systems:
 
-- Core components: `text`, `box`, `stack`, `row`, `column`, `button`, `input`, `scrollView`, `tabs`, `panel`.
+- Core components: `text`, `image`, `box`, `stack`, `row`, `column`, `button`, `input`, `scrollView`, `tabs`, `panel`.
 - Generic visual primitives: `meter`, shape descriptors, clipping/stencil masks, and draw context helpers.
 - Layout primitives: flex row/column, stack/absolute layout, percent sizing, padding/gap, grow/flex, text wrapping.
 - Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus.
@@ -70,6 +70,7 @@ Keep game-specific widgets out of core. Examples may include things like HUD but
 Good core API examples:
 
 - `ui.stack`
+- `ui.image`
 - `ui.transitions.custom`
 - `ui.scene.push`
 - `ctx:polygon`
@@ -175,7 +176,7 @@ Examples should demonstrate real workflows, not marketing pages:
 - `examples/performance`: large data, memo/static, bounded work.
 - `examples/styles`: themes, variants, transitions, shader styling.
 - `examples/dashboard`: dense debugger/admin UI.
-- `examples/hud-primitives`: meters, shapes, clipping, stencil, dynamic HUD panels.
+- `examples/hud-primitives`: meters, images, shapes, clipping, stencil, dynamic HUD panels.
 - `examples/i18n`: backend-agnostic translation, cache keys, memoization.
 - `examples/juice`: feedback sequences, blob buttons, app-owned particles/shake, and audio metadata.
 - `examples/hud-menu`: custom draw and animated game UI.

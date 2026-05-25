@@ -53,7 +53,7 @@ Custom-drawn game UI with animated command buttons. This example demonstrates wh
 
 ## HUD Primitives
 
-Native meters, filled sweep gauges with centered overlays, d-pad/card navigation, shape descriptors, visual clipping, stencil masks, and dynamic backgrounds for game HUDs without adding game-specific core widgets.
+Native meters, filled sweep gauges with centered overlays, d-pad/card navigation, `ui.image` portraits, shape descriptors, visual clipping, stencil masks, and dynamic backgrounds for game HUDs without adding game-specific core widgets.
 
 ## I18n
 

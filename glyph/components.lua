@@ -124,6 +124,12 @@ function Components.caption(value, props)
   return Components.text(value, props)
 end
 
+---@param props? GlyphImageProps
+---@return GlyphNode
+function Components.image(props)
+  return createNode("image", props, nil)
+end
+
 ---@param props? GlyphProps
 ---@param children? GlyphNode[]|GlyphNode
 ---@return GlyphNode

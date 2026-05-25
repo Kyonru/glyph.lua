@@ -208,6 +208,7 @@ function Runtime.new()
     styleCache = {},
     previousStyles = {},
     animatedStyles = {},
+    imagePlans = {},
     animationStates = {},
     animationMounted = {},
     animationMountedByRoot = {},
@@ -1244,6 +1245,152 @@ local function drawRichText(runtime, node, x, y, width, love, style, opacity)
   end
 end
 
+local function imageNaturalSize(props)
+  props = props or {}
+
+  local source = props.source
+  if not source or type(source.getWidth) ~= "function" or type(source.getHeight) ~= "function" then
+    return 0, 0
+  end
+
+  local quad = props.quad
+  if quad and type(quad.getViewport) == "function" then
+    local ok, _, _, width, height = pcall(quad.getViewport, quad)
+    if ok and type(width) == "number" and type(height) == "number" then
+      return width, height
+    end
+  end
+
+  local okWidth, width = pcall(source.getWidth, source)
+  local okHeight, height = pcall(source.getHeight, source)
+  if okWidth and okHeight and type(width) == "number" and type(height) == "number" then
+    return width, height
+  end
+
+  return 0, 0
+end
+
+local function axisOffset(align, remaining)
+  if align == "start" or align == "left" or align == "top" then
+    return 0
+  elseif align == "end" or align == "right" or align == "bottom" then
+    return remaining
+  end
+
+  return remaining / 2
+end
+
+local function imagePlanKey(props, width, height, naturalWidth, naturalHeight)
+  return table.concat({
+    tostring(props.source),
+    tostring(props.quad),
+    tostring(width),
+    tostring(height),
+    tostring(naturalWidth),
+    tostring(naturalHeight),
+    tostring(props.fit or "contain"),
+    tostring(props.align or "center"),
+    tostring(props.valign or "center"),
+  }, "|")
+end
+
+---@param runtime table
+---@param node GlyphNode
+---@param width number
+---@param height number
+---@return table|nil
+local function imageDrawPlan(runtime, node, width, height)
+  local props = node.props or {}
+  local source = props.source
+  if not source or type(source.getWidth) ~= "function" or type(source.getHeight) ~= "function" then
+    return nil
+  end
+
+  local naturalWidth, naturalHeight = imageNaturalSize(props)
+  if naturalWidth <= 0 or naturalHeight <= 0 or width <= 0 or height <= 0 then
+    return nil
+  end
+
+  local key = imagePlanKey(props, width, height, naturalWidth, naturalHeight)
+  local cacheId = node.path or tostring(node)
+  local cached = runtime.imagePlans and runtime.imagePlans[cacheId]
+  if cached and cached.key == key then
+    return cached.plan
+  end
+
+  local fit = props.fit or "contain"
+  local drawWidth = naturalWidth
+  local drawHeight = naturalHeight
+  local scaleX = 1
+  local scaleY = 1
+
+  if fit == "stretch" then
+    drawWidth = width
+    drawHeight = height
+    scaleX = width / naturalWidth
+    scaleY = height / naturalHeight
+  elseif fit == "cover" then
+    local scale = math.max(width / naturalWidth, height / naturalHeight)
+    drawWidth = naturalWidth * scale
+    drawHeight = naturalHeight * scale
+    scaleX = scale
+    scaleY = scale
+  elseif fit == "none" then
+    drawWidth = naturalWidth
+    drawHeight = naturalHeight
+  else
+    local scale = math.min(width / naturalWidth, height / naturalHeight)
+    drawWidth = naturalWidth * scale
+    drawHeight = naturalHeight * scale
+    scaleX = scale
+    scaleY = scale
+  end
+
+  local plan = {
+    source = source,
+    quad = props.quad,
+    offsetX = axisOffset(props.align or "center", width - drawWidth),
+    offsetY = axisOffset(props.valign or "center", height - drawHeight),
+    scaleX = scaleX,
+    scaleY = scaleY,
+  }
+
+  runtime.imagePlans = runtime.imagePlans or {}
+  runtime.imagePlans[cacheId] = { key = key, plan = plan }
+  return plan
+end
+
+local function drawImage(runtime, node, x, y, width, height, love, style, opacity)
+  local graphics = love and love.graphics
+  if not graphics or type(graphics.draw) ~= "function" then
+    return
+  end
+
+  local plan = imageDrawPlan(runtime, node, width, height)
+  if not plan then
+    return
+  end
+
+  local props = node.props or {}
+  local tint = props.tint or style.color or { 1, 1, 1, 1 }
+  local imageOpacity = (props.opacity ~= nil and props.opacity or 1) * (opacity or 1)
+  local previousColor
+  if graphics.getColor then
+    previousColor = { graphics.getColor() }
+  end
+
+  color(love, withOpacity(tint, imageOpacity))
+  if plan.quad then
+    graphics.draw(plan.source, plan.quad, x + plan.offsetX, y + plan.offsetY, 0, plan.scaleX, plan.scaleY)
+  else
+    graphics.draw(plan.source, x + plan.offsetX, y + plan.offsetY, 0, plan.scaleX, plan.scaleY)
+  end
+
+  if previousColor and graphics.setColor then
+    graphics.setColor(previousColor[1], previousColor[2], previousColor[3], previousColor[4])
+  end
+end
+
 ---@param a number
 ---@param b number
 ---@param t number
@@ -2169,6 +2316,28 @@ function Runtime:drawNode(node, x, y)
       drawRichText(self, node, absX, absY, width, love, style, opacity)
     else
       drawPlainText(self, node, node.value or "", absX, absY, width, love, style, opacity, "text")
+    end
+  elseif node.type == "image" then
+    local function renderImage()
+      drawImage(self, node, absX, absY, width, height, love, style, opacity)
+    end
+    if props.clip or props.stencil then
+      ctx = ctx or createDrawContext(self, node, absX, absY, width, height, love, style)
+      local imageBounds = boundsFor(absX, absY, width, height)
+      local function drawStenciledImage()
+        if props.stencil then
+          withStencil(love.graphics, props.stencil, imageBounds, ctx, renderImage)
+        else
+          renderImage()
+        end
+      end
+      if props.clip then
+        withClip(love.graphics, props.clip, imageBounds, ctx, drawStenciledImage)
+      else
+        drawStenciledImage()
+      end
+    else
+      renderImage()
     end
   elseif node.type == "button" then
     local nodeShape = props.shape or style.shape

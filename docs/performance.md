@@ -42,6 +42,21 @@ Use `ui.static(node)` for stable labels, icons, or repeated rows that do not nee
 local label = ui.static(ui.text("Ready"))
 ```
 
+## Images
+
+Load Love2D image assets once in app setup, then pass the image object to
+`ui.image`. Glyph caches the derived fit/alignment plan for each image node, but
+it does not own filesystem loading or asset lifetime.
+
+```lua
+local icon = love.graphics.newImage("assets/icon.png")
+local iconNode = ui.static(ui.image({ source = icon, width = 32, height = 32 }))
+```
+
+For repeated inventory cells or portraits, combine reused image objects with
+`ui.memo` or `ui.static`. Use custom draw only when a single image draw is not
+enough for the effect.
+
 ## I18n
 
 Glyph caches translations that are safe to reuse. Plain keys are cached until

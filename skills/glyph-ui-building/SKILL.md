@@ -118,6 +118,20 @@ Configure `ui.richTextBackend` with an app-provided SYSL module before using
 rich text. Dialogue pacing, sound/image tags, and typewriter effects belong in
 app/example code unless the user specifically asks for a text engine.
 
+Use `ui.image` for ordinary Love2D images, quads, portraits, icons, and image
+cards. Load image assets in app setup, then pass the image object to Glyph:
+
+```lua
+ui.image({
+  source = portrait,
+  width = 96,
+  height = 96,
+  fit = "cover",
+  clip = { kind = "circle" },
+  interactive = false,
+})
+```
+
 Interaction states should be visually obvious:
 
 - `hover` for pointer hover.
@@ -130,7 +144,7 @@ When a control is both active and focused, focused/highlighted visuals should re
 
 ## Custom Draw
 
-Use custom draw for game-specific visuals rather than adding one-off widgets to Glyph core.
+Use custom draw for game-specific visuals rather than adding one-off widgets to Glyph core. Prefer `ui.image` before custom draw when the job is a single image or atlas quad with fit, tint, clip, or stencil.
 
 ```lua
 ui.box({
@@ -375,6 +389,7 @@ Do not expose Push/Shove-specific assumptions in examples unless the example is 
 
 - Use `ui.memo(component, deps)` for stable repeated subtrees.
 - Use `ui.static(node)` for labels, icons, and fixed repeated rows.
+- Reuse loaded image objects and wrap repeated `ui.image` cells in `ui.memo` or `ui.static`.
 - Use i18n cache keys and `ui.i18n.version()` to keep translated subtrees cheap.
 - In long lists, mount only visible rows when possible.
 - Keep custom draw cheap and avoid allocating large tables every frame in hot paths.

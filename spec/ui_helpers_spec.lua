@@ -55,6 +55,190 @@ describe("ui helpers", function()
     assert.are.equal("paragraph", paragraph.props.textStyle)
   end)
 
+  it("creates image nodes", function()
+    local source = {
+      getWidth = function() return 64 end,
+      getHeight = function() return 32 end,
+    }
+    local quad = {
+      getViewport = function() return 0, 0, 16, 16 end,
+    }
+    local image = ui.image({
+      source = source,
+      quad = quad,
+      width = 120,
+      height = 80,
+      fit = "cover",
+      align = "end",
+      valign = "start",
+      tint = { 1, 0.5, 0.25, 1 },
+    })
+
+    assert.are.equal("image", image.type)
+    assert.are.equal(source, image.props.source)
+    assert.are.equal(quad, image.props.quad)
+    assert.are.equal("cover", image.props.fit)
+    assert.are.equal("end", image.props.align)
+    assert.are.equal("start", image.props.valign)
+  end)
+
+  it("draws images with contain fit and restores color", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    local currentColor = { 0.2, 0.3, 0.4, 0.5 }
+    local source = {
+      getWidth = function() return 100 end,
+      getHeight = function() return 50 end,
+    }
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getColor = function()
+          return currentColor[1], currentColor[2], currentColor[3], currentColor[4]
+        end,
+        setColor = function(r, g, b, a)
+          currentColor = { r, g, b, a }
+          calls[#calls + 1] = { "color", r, g, b, a }
+        end,
+        draw = function(image, x, y, rotation, sx, sy)
+          calls[#calls + 1] = { "draw", image, x, y, rotation, sx, sy }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.image({
+        source = source,
+        width = 200,
+        height = 200,
+        tint = { 1, 0.5, 0.25, 0.8 },
+        opacity = 0.5,
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "color", 1, 0.5, 0.25, 0.4 }, calls[1])
+    assert.are.same({ "draw", source, 0, 50, 0, 2, 2 }, calls[2])
+    assert.are.same({ "color", 0.2, 0.3, 0.4, 0.5 }, calls[3])
+  end)
+
+  it("draws image quads with cover fit and alignment offsets", function()
+    local runtime = Runtime.new()
+    local drawCall
+    local source = {
+      getWidth = function() return 100 end,
+      getHeight = function() return 100 end,
+    }
+    local quad = {
+      getViewport = function() return 10, 20, 50, 25 end,
+    }
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getColor = function() return 1, 1, 1, 1 end,
+        setColor = function() end,
+        draw = function(image, imageQuad, x, y, rotation, sx, sy)
+          drawCall = { image, imageQuad, x, y, rotation, sx, sy }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.image({
+        source = source,
+        quad = quad,
+        width = 100,
+        height = 100,
+        fit = "cover",
+        align = "end",
+        valign = "center",
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ source, quad, -100, 0, 0, 4, 4 }, drawCall)
+  end)
+
+  it("draws images with stretch and none fit", function()
+    local runtime = Runtime.new()
+    local draws = {}
+    local source = {
+      getWidth = function() return 40 end,
+      getHeight = function() return 20 end,
+    }
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getColor = function() return 1, 1, 1, 1 end,
+        setColor = function() end,
+        draw = function(image, x, y, rotation, sx, sy)
+          draws[#draws + 1] = { image, x, y, rotation, sx, sy }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.column({ gap = 0 }, {
+        ui.image({ source = source, width = 80, height = 80, fit = "stretch" }),
+        ui.image({ source = source, width = 80, height = 80, fit = "none", align = "end", valign = "end" }),
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ source, 0, 0, 0, 2, 4 }, draws[1])
+    assert.are.same({ source, 40, 140, 0, 1, 1 }, draws[2])
+  end)
+
+  it("clips image drawing without changing rectangular hit bounds", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    local source = {
+      getWidth = function() return 40 end,
+      getHeight = function() return 40 end,
+    }
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getColor = function() return 1, 1, 1, 1 end,
+        setColor = function() end,
+        getScissor = function() return nil end,
+        setScissor = function(x, y, width, height)
+          calls[#calls + 1] = { "scissor", x, y, width, height }
+        end,
+        draw = function()
+          calls[#calls + 1] = { "draw" }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.image({
+        source = source,
+        width = 40,
+        height = 40,
+        clip = true,
+        interactive = true,
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "scissor", 0, 0, 40, 40 }, calls[1])
+    assert.are.same({ "draw" }, calls[2])
+    assert.are.equal(runtime.root, runtime:hitTest(38, 38))
+  end)
+
   it("does not draw linear meter fill when value is zero", function()
     local runtime = Runtime.new()
     local fills = {}

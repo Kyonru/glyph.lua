@@ -2,6 +2,7 @@ local ui = require("glyph")
 
 local selected = "Vanguard"
 local unregisterNavigate = nil
+local portraitImage = nil
 
 local panelStyle = ui.style({
 	background = { 0.035, 0.045, 0.07, 0.94 },
@@ -131,6 +132,58 @@ local function drawTelemetry(_, x, y, width, height, _, _, ctx)
 	end
 end
 
+local function makePortraitImage()
+	local loveModule = _G.love
+	if not loveModule or not loveModule.graphics or not loveModule.image then
+		return nil
+	end
+
+	local imageData = loveModule.image.newImageData(48, 48)
+	for y = 0, 47 do
+		for x = 0, 47 do
+			local dx = x - 24
+			local dy = y - 24
+			local distance = math.sqrt(dx * dx + dy * dy) / 34
+			local scan = (x + y) % 9 == 0 and 0.18 or 0
+			local r = 0.04 + math.max(0, 1 - distance) * 0.12 + scan
+			local g = 0.12 + math.max(0, 1 - distance) * 0.74
+			local b = 0.18 + math.max(0, 1 - distance) * 0.78
+			imageData:setPixel(x, y, r, g, b, 1)
+		end
+	end
+
+	return loveModule.graphics.newImage(imageData)
+end
+
+local function portraitImageNode()
+	if portraitImage then
+		return ui.image({
+			source = portraitImage,
+			position = "absolute",
+			inset = 0,
+			fit = "cover",
+			tint = { 0.86, 1, 1, 1 },
+			interactive = false,
+			accessibilityHidden = true,
+		})
+	end
+
+	return ui.box({
+		position = "absolute",
+		inset = 0,
+		interactive = false,
+		draw = function(_, x, y, width, height, _, _, ctx)
+			ctx:color({ 0.04, 0.08, 0.14, 1 })
+			ctx:rect("fill", x, y, width, height)
+			ctx:color({ 0.1, 0.84, 1, 0.8 })
+			ctx:rect("fill", x + 20, y + 16, 56, 70, 14)
+			ctx:color({ 1, 1, 1, 0.9 })
+			ctx:rect("fill", x + 34, y + 32, 12, 8)
+			ctx:rect("fill", x + 54, y + 32, 12, 8)
+		end,
+	})
+end
+
 local function unitCard(unit)
 	local active = selected == unit.name
 
@@ -218,20 +271,7 @@ local function portraitPanel()
 			height = 96,
 			stencil = { shape = { kind = "circle" }, mode = "inside" },
 		}, {
-			ui.box({
-				position = "absolute",
-				inset = 0,
-				interactive = false,
-				draw = function(_, x, y, width, height, _, _, ctx)
-					ctx:color({ 0.04, 0.08, 0.14, 1 })
-					ctx:rect("fill", x, y, width, height)
-					ctx:color({ 0.1, 0.84, 1, 0.8 })
-					ctx:rect("fill", x + 20, y + 16, 56, 70, 14)
-					ctx:color({ 1, 1, 1, 0.9 })
-					ctx:rect("fill", x + 34, y + 32, 12, 8)
-					ctx:rect("fill", x + 54, y + 32, 12, 8)
-				end,
-			}),
+			portraitImageNode(),
 		}),
 		ui.text("CLIPPED STATUS FRAME", {
 			position = "absolute",
@@ -334,6 +374,8 @@ local function App()
 end
 
 local function setup()
+	portraitImage = portraitImage or makePortraitImage()
+
 	if unregisterNavigate then
 		unregisterNavigate()
 	end
