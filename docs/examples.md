@@ -50,7 +50,7 @@ Native meters, filled sweep gauges with centered overlays, d-pad/card navigation
 
 ## I18n
 
-Backend-agnostic localization adapter demo with locale switching, keyed text/labels/placeholders/tabs, fallback text, cached parameter translations, and `ui.i18n.version()` in memo deps.
+Responsive game-console localization demo with locale switching, keyed command/status UI, meters, tabs, fallback text, cached parameter translations, and `ui.i18n.version()` in memo deps.
 
 ## Navigate
 
