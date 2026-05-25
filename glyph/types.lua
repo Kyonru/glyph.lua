@@ -420,14 +420,29 @@ local GlyphWindowOpts = {}
 ---@field renderMode? "direct"|"layer"
 local GlyphViewportBackendOpts = {}
 
+---@class GlyphGamepadMapperOpts
+---@field navigation? table<string, "up"|"down"|"left"|"right"|false>
+---@field buttons? table<string, string|false>
+local GlyphGamepadMapperOpts = {}
+
+---@class GlyphInstallOpts
+---@field app? fun(): GlyphNode
+---@field callbacks? table
+---@field order? "before"|"after"
+---@field gamepad? boolean|GlyphGamepadMapperOpts
+---@field gamepadpressed? boolean
+---@field gamepadreleased? boolean
+local GlyphInstallOpts = {}
+
 ---@class GlyphLoadOpts
 ---@field love? table
 ---@field theme? GlyphTheme
 ---@field window? GlyphWindowOpts
 ---@field app? fun(): GlyphNode
----@field install? table
+---@field install? GlyphInstallOpts
 ---@field callbacks? table
 ---@field order? "before"|"after"
+---@field gamepad? boolean|GlyphGamepadMapperOpts
 local GlyphLoadOpts = {}
 
 -- ---------------------------------------------------------------------------

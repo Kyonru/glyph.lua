@@ -353,20 +353,6 @@ local function teardown()
 	end
 end
 
-local function navigateButton(button)
-	if button == "dpup" then
-		return ui.navigate("up")
-	elseif button == "dpdown" then
-		return ui.navigate("down")
-	elseif button == "dpleft" then
-		return ui.navigate("left")
-	elseif button == "dpright" then
-		return ui.navigate("right")
-	elseif button == "a" then
-		return ui.keypressed("return")
-	end
-end
-
 return {
 	id = "hud-primitives",
 	label = "HUD Primitives",
@@ -379,6 +365,9 @@ return {
 		resizable = true,
 		breakpoints = { md = 760 },
 	},
+	install = {
+		gamepad = true,
+	},
 	keypressed = function(key)
 		if key == "up" then
 			return ui.navigate("up")
@@ -390,14 +379,6 @@ return {
 			return ui.navigate("right")
 		end
 		return ui.keypressed(key)
-	end,
-	gamepadpressed = function(_, button)
-		return navigateButton(button)
-	end,
-	gamepadreleased = function(_, button)
-		if button == "a" then
-			return ui.keyreleased("return")
-		end
 	end,
 	component = function()
 		return App()

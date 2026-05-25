@@ -69,6 +69,160 @@ describe("install", function()
     off()
   end)
 
+  it("does not install gamepad callbacks by default", function()
+    local previousPressed = function() end
+    local fakeLove = {
+      gamepadpressed = previousPressed,
+    }
+
+    local unregister = ui.install(fakeLove)
+
+    assert.are.equal(previousPressed, fakeLove.gamepadpressed)
+
+    unregister()
+    assert.are.equal(previousPressed, fakeLove.gamepadpressed)
+  end)
+
+  it("installs opt-in gamepad callbacks and chains previous callbacks", function()
+    local calls = {}
+    local previousNavigate = ui.navigate
+    local fakeLove = {
+      gamepadpressed = function(_, button)
+        calls[#calls + 1] = "previous:" .. button
+      end,
+    }
+    ui.navigate = function(direction)
+      calls[#calls + 1] = "navigate:" .. direction
+    end
+
+    local unregister = ui.install(fakeLove, { gamepad = true })
+
+    fakeLove.gamepadpressed("joystick", "dpdown")
+
+    assert.are.same({
+      "previous:dpdown",
+      "navigate:down",
+    }, calls)
+
+    unregister()
+    ui.navigate = previousNavigate
+  end)
+
+  it("maps default gamepad buttons to navigation and key press lifecycle", function()
+    local calls = {}
+    local events = {}
+    local previousNavigate = ui.navigate
+    local previousKeypressed = ui.keypressed
+    local previousKeyreleased = ui.keyreleased
+    local off = ui.on("event", function(name, _, button)
+      if name == "gamepadpressed" or name == "gamepadreleased" then
+        events[#events + 1] = name .. ":" .. button
+      end
+    end)
+
+    ui.navigate = function(direction)
+      calls[#calls + 1] = "navigate:" .. direction
+    end
+    ui.keypressed = function(key)
+      calls[#calls + 1] = "keypressed:" .. key
+    end
+    ui.keyreleased = function(key)
+      calls[#calls + 1] = "keyreleased:" .. key
+    end
+
+    ui.gamepadpressed("joystick", "dpup")
+    ui.gamepadpressed("joystick", "a")
+    ui.gamepadreleased("joystick", "a")
+    ui.gamepadpressed("joystick", "b")
+    ui.gamepadreleased("joystick", "b")
+
+    assert.are.same({
+      "navigate:up",
+      "keypressed:return",
+      "keyreleased:return",
+      "keypressed:escape",
+      "keyreleased:escape",
+    }, calls)
+    assert.are.same({
+      "gamepadpressed:dpup",
+      "gamepadpressed:a",
+      "gamepadreleased:a",
+      "gamepadpressed:b",
+      "gamepadreleased:b",
+    }, events)
+
+    off()
+    ui.navigate = previousNavigate
+    ui.keypressed = previousKeypressed
+    ui.keyreleased = previousKeyreleased
+  end)
+
+  it("supports custom gamepad mappings and false disables defaults", function()
+    local calls = {}
+    local previousNavigate = ui.navigate
+    local previousKeypressed = ui.keypressed
+    local previousKeyreleased = ui.keyreleased
+    local mapping = {
+      navigation = {
+        dpup = false,
+        x = "left",
+      },
+      buttons = {
+        a = "space",
+        b = false,
+      },
+    }
+
+    ui.navigate = function(direction)
+      calls[#calls + 1] = "navigate:" .. direction
+    end
+    ui.keypressed = function(key)
+      calls[#calls + 1] = "keypressed:" .. key
+    end
+    ui.keyreleased = function(key)
+      calls[#calls + 1] = "keyreleased:" .. key
+    end
+
+    ui.gamepadpressed("joystick", "dpup", mapping)
+    ui.gamepadpressed("joystick", "x", mapping)
+    ui.gamepadpressed("joystick", "a", mapping)
+    ui.gamepadreleased("joystick", "a", mapping)
+    ui.gamepadpressed("joystick", "b", mapping)
+    ui.gamepadreleased("joystick", "b", mapping)
+
+    assert.are.same({
+      "navigate:left",
+      "keypressed:space",
+      "keyreleased:space",
+    }, calls)
+
+    ui.navigate = previousNavigate
+    ui.keypressed = previousKeypressed
+    ui.keyreleased = previousKeyreleased
+  end)
+
+  it("does not activate disabled focused buttons through gamepad helpers", function()
+    local clicks = 0
+
+    ui.runtime:build(function()
+      return ui.button({
+        label = "Disabled",
+        disabled = true,
+        onClick = function()
+          clicks = clicks + 1
+        end,
+      })
+    end)
+    ui.runtime:layoutRoot(ui.runtime.root)
+    ui.setFocus(ui.runtime.root)
+
+    ui.gamepadpressed("joystick", "a")
+    ui.gamepadreleased("joystick", "a")
+
+    assert.are.equal(0, clicks)
+    ui.setFocus(nil)
+  end)
+
   it("loads window configuration and installs callbacks with a default app", function()
     local fakeLove = {}
     fakeLove.window = {

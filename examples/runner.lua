@@ -34,6 +34,7 @@ function Runner.run(example)
 	function love.load()
 		ui.load({
 			window = example.window,
+			install = example.install,
 		})
 		call(example, "setup", "standalone")
 	end

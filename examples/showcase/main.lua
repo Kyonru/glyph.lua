@@ -169,11 +169,25 @@ function love.keyreleased(key)
 end
 
 function love.gamepadpressed(joystick, button)
-	call(active, "gamepadpressed", joystick, button, "showcase")
+	local fn = active and active.gamepadpressed
+	if type(fn) == "function" then
+		return fn(joystick, button, "showcase")
+	end
+	local gamepad = active and active.install and active.install.gamepad
+	if gamepad then
+		return ui.gamepadpressed(joystick, button, gamepad)
+	end
 end
 
 function love.gamepadreleased(joystick, button)
-	call(active, "gamepadreleased", joystick, button, "showcase")
+	local fn = active and active.gamepadreleased
+	if type(fn) == "function" then
+		return fn(joystick, button, "showcase")
+	end
+	local gamepad = active and active.install and active.install.gamepad
+	if gamepad then
+		return ui.gamepadreleased(joystick, button, gamepad)
+	end
 end
 
 function love.load()

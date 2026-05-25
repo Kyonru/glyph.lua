@@ -41,6 +41,18 @@ function love.draw()     ui.render(App) end
 `keypressed`, `keyreleased`, `textinput`, `wheelmoved`, and `resize` callbacks
 so you don't have to wire each one manually.
 
+Touch input is mapped through the same pointer path automatically. Gamepad
+navigation is opt-in:
+
+```lua
+ui.load({
+  app = App,
+  install = {
+    gamepad = true,
+  },
+})
+```
+
 ---
 
 ## Example — sign-in screen

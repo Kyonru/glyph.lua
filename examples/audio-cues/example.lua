@@ -183,6 +183,9 @@ return {
     resizable = true,
     title = "glyph - audio cues",
   },
+  install = {
+    gamepad = true,
+  },
   component = function()
     return App()
   end,
@@ -205,23 +208,5 @@ return {
       return ui.keyreleased("return")
     end
     return ui.keyreleased(key)
-  end,
-  gamepadpressed = function(_, button)
-    if button == "dpup" then
-      return ui.navigate("up")
-    elseif button == "dpdown" then
-      return ui.navigate("down")
-    elseif button == "dpleft" then
-      return ui.navigate("left")
-    elseif button == "dpright" then
-      return ui.navigate("right")
-    elseif button == "a" then
-      return ui.keypressed("return")
-    end
-  end,
-  gamepadreleased = function(_, button)
-    if button == "a" then
-      return ui.keyreleased("return")
-    end
   end,
 }

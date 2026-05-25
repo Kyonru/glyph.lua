@@ -28,19 +28,58 @@ function love.keypressed(key)
 end
 ```
 
-For gamepad input, wire the d-pad buttons the same way:
+Gamepad input is opt-in. The default digital mapper wires d-pad movement and
+confirm/cancel buttons:
+
+```lua
+function love.load()
+  ui.load({
+    app = App,
+    install = {
+      gamepad = true,
+    },
+  })
+end
+```
+
+The default mapper uses:
+
+- `dpup`, `dpdown`, `dpleft`, `dpright` for navigation
+- `a` as Return/confirm
+- `b` as Escape/cancel
+
+Customize or disable individual buttons by passing a mapping table:
+
+```lua
+ui.load({
+  app = App,
+  install = {
+    gamepad = {
+      navigation = {
+        dpup = "up",
+        dpdown = "down",
+        dpleft = "left",
+        dpright = "right",
+      },
+      buttons = {
+        a = "return",
+        b = false,
+        y = "space",
+      },
+    },
+  },
+})
+```
+
+If your app owns Love's gamepad callbacks, call Glyph's mapper manually:
 
 ```lua
 function love.gamepadpressed(joystick, button)
-  if button == "dpup"    then ui.navigate("up")    end
-  if button == "dpdown"  then ui.navigate("down")  end
-  if button == "dpleft"  then ui.navigate("left")  end
-  if button == "dpright" then ui.navigate("right") end
-  if button == "a"       then ui.keypressed("return") end
+  ui.gamepadpressed(joystick, button)
 end
 
 function love.gamepadreleased(joystick, button)
-  if button == "a" then ui.keyreleased("return") end
+  ui.gamepadreleased(joystick, button)
 end
 ```
 

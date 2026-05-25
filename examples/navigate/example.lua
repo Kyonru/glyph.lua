@@ -487,27 +487,14 @@ local function App()
 	})
 end
 
-local function navigateButton(button)
-	if button == "dpup" then
-		return ui.navigate("up")
-	elseif button == "dpdown" then
-		return ui.navigate("down")
-	elseif button == "dpleft" then
-		return ui.navigate("left")
-	elseif button == "dpright" then
-		return ui.navigate("right")
-	elseif button == "a" then
-		return ui.keypressed("return")
-	elseif button == "b" then
-		return ui.keypressed("escape")
-	end
-end
-
 return {
 	id = "navigate",
 	label = "Navigation",
 	setup = setup,
 	window = { width = 860, height = 560, title = "Navigation - glyph.lua", resizable = true },
+	install = {
+		gamepad = true,
+	},
 	keypressed = function(key)
 		if key == "up" then
 			ui.navigate("up")
@@ -517,14 +504,6 @@ return {
 			ui.navigate("left")
 		elseif key == "right" then
 			ui.navigate("right")
-		end
-	end,
-	gamepadpressed = function(_, button)
-		return navigateButton(button)
-	end,
-	gamepadreleased = function(_, button)
-		if button == "a" then
-			return ui.keyreleased("return")
 		end
 	end,
 	component = function()

@@ -82,9 +82,18 @@ end
 function love.keyreleased(key)
   ui.keyreleased(key)
 end
+
+function love.gamepadpressed(joystick, button)
+  ui.gamepadpressed(joystick, button)
+end
+
+function love.gamepadreleased(joystick, button)
+  ui.gamepadreleased(joystick, button)
+end
 ```
 
 `ui.install` and `ui.load` can install common callbacks automatically.
+Gamepad callbacks are installed only when `install.gamepad` is enabled.
 
 > [!NOTE]
 > If a fixed viewport backend is active, Glyph converts mouse and touch screen
@@ -96,6 +105,18 @@ mouse/touch down and Return/Space down enter the pressed state, and release
 activates the button when focus is still on the same node. This keeps pressed
 styles and audio cues consistent across mouse, keyboard, and gamepad mappings
 that forward to `ui.keypressed` / `ui.keyreleased`.
+
+Touch callbacks are wired automatically by `ui.install` / `ui.load`. Gamepad
+mapping is opt-in:
+
+```lua
+ui.load({
+  app = App,
+  install = {
+    gamepad = true,
+  },
+})
+```
 
 ## Runtime Callbacks
 

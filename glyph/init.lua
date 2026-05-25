@@ -39,6 +39,8 @@ local runtime = Runtime.new()
 ---@field navigate fun(direction: "up"|"down"|"left"|"right"): GlyphNode|nil
 ---@field keypressed fun(key: string)
 ---@field keyreleased fun(key: string)
+---@field gamepadpressed fun(joystick: any, button: string, opts?: boolean|GlyphGamepadMapperOpts): any
+---@field gamepadreleased fun(joystick: any, button: string, opts?: boolean|GlyphGamepadMapperOpts): any
 local ui = {
   CallbackBus = CallbackBus,
   animation = Animation,
@@ -343,6 +345,44 @@ end
 local viewportPoint
 local clearPointerTarget
 
+local defaultGamepadNavigation = {
+  dpup = "up",
+  dpdown = "down",
+  dpleft = "left",
+  dpright = "right",
+}
+
+local defaultGamepadButtons = {
+  a = "return",
+  b = "escape",
+}
+
+local function mergeMapping(defaults, overrides)
+  local result = {}
+  for key, value in pairs(defaults) do
+    result[key] = value
+  end
+
+  if type(overrides) == "table" then
+    for key, value in pairs(overrides) do
+      result[key] = value
+    end
+  end
+
+  return result
+end
+
+local function gamepadMapper(opts)
+  if opts == false then
+    return { navigation = {}, buttons = {} }
+  end
+  opts = type(opts) == "table" and opts or {}
+  return {
+    navigation = mergeMapping(defaultGamepadNavigation, opts.navigation),
+    buttons = mergeMapping(defaultGamepadButtons, opts.buttons),
+  }
+end
+
 ---@param x number
 ---@param y number
 ---@param dx number
@@ -399,6 +439,41 @@ end
 ---@param key string
 function ui.keyreleased(key)
   return runtime:keyreleased(key)
+end
+
+---@param joystick any
+---@param button string
+---@param opts? boolean|GlyphGamepadMapperOpts
+function ui.gamepadpressed(joystick, button, opts)
+  runtime:dispatch("event", "gamepadpressed", joystick, button)
+
+  local mapper = gamepadMapper(opts)
+  local direction = mapper.navigation[button]
+  if direction then
+    return ui.navigate(direction)
+  end
+
+  local key = mapper.buttons[button]
+  if key then
+    return ui.keypressed(key)
+  end
+
+  return nil
+end
+
+---@param joystick any
+---@param button string
+---@param opts? boolean|GlyphGamepadMapperOpts
+function ui.gamepadreleased(joystick, button, opts)
+  runtime:dispatch("event", "gamepadreleased", joystick, button)
+
+  local mapper = gamepadMapper(opts)
+  local key = mapper.buttons[button]
+  if key then
+    return ui.keyreleased(key)
+  end
+
+  return nil
 end
 
 ---@param direction "up"|"down"|"left"|"right"
@@ -527,7 +602,7 @@ local function chainCallback(previous, nextCallback, order)
 end
 
 ---@param loveModule? table
----@param opts? GlyphLoadOpts
+---@param opts? GlyphInstallOpts
 ---@return fun() uninstall
 function ui.install(loveModule, opts)
   opts = opts or {}
@@ -543,13 +618,35 @@ function ui.install(loveModule, opts)
   local callbacks = opts.callbacks or autoCallbacks
   local previousCallbacks = {}
   local installedNames = {}
+  local installedByName = {}
+
+  local function installCallback(name, callback)
+    if installedByName[name] then
+      return
+    end
+    installedByName[name] = true
+    previousCallbacks[name] = loveModule[name]
+    installedNames[#installedNames + 1] = name
+    loveModule[name] = chainCallback(loveModule[name], callback, order)
+  end
 
   for name, callback in pairs(callbacks) do
     local enabled = opts[name]
     if enabled ~= false then
-      previousCallbacks[name] = loveModule[name]
-      installedNames[#installedNames + 1] = name
-      loveModule[name] = chainCallback(loveModule[name], callback, order)
+      installCallback(name, callback)
+    end
+  end
+
+  if opts.gamepad then
+    if opts.gamepadpressed ~= false then
+      installCallback("gamepadpressed", function(joystick, button)
+        ui.gamepadpressed(joystick, button, opts.gamepad)
+      end)
+    end
+    if opts.gamepadreleased ~= false then
+      installCallback("gamepadreleased", function(joystick, button)
+        ui.gamepadreleased(joystick, button, opts.gamepad)
+      end)
     end
   end
 
