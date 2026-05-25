@@ -77,12 +77,17 @@ local GlyphPadding = {}
 ---@field left? number|string
 ---@field inset? number|GlyphPadding
 ---@field zIndex? number
+---@field focusable? boolean
 ---@field active? boolean
 ---@field disabled? boolean
 ---@field interactive? boolean
 ---@field variant? string
 ---@field styleType? string
 ---@field callbacks? table
+---@field navGroup? string|number
+---@field navScope? boolean
+---@field navTrap? boolean
+---@field onNavigateExit? fun(direction: GlyphNavDirection, origin: GlyphNode, scope: GlyphNode, candidates: GlyphNavCandidate[]): GlyphNode|false|nil
 local GlyphProps = {}
 
 ---@class GlyphTextProps : GlyphProps
@@ -116,6 +121,11 @@ local GlyphTabsProps = {}
 ---@field title? string
 ---@field titleColor? GlyphColor
 local GlyphPanelProps = {}
+
+---@class GlyphNavigateEvent
+---@field direction "up"|"down"|"left"|"right"
+---@field candidate GlyphNode|nil
+---@field candidates table[]
 
 ---@class GlyphTab
 ---@field label? string
@@ -186,6 +196,9 @@ local GlyphBounds = {}
 ---@field offsetX number
 ---@field offsetY number
 ---@field bounds GlyphBounds
+---@field navScope? boolean
+---@field navTrap? boolean
+---@field onNavigateExit? fun(direction: GlyphNavDirection, origin: GlyphNode, scope: GlyphNode|GlyphLayer, candidates: GlyphNavCandidate[]): GlyphNode|false|nil
 local GlyphLayer = {}
 
 ---@class GlyphTransitionCtx
@@ -227,6 +240,9 @@ local GlyphTransition = {}
 ---@field onClose? fun(layer: GlyphLayer)
 ---@field onUpdate? fun(layer: GlyphLayer, dt: number)
 ---@field onEvent? fun(layer: GlyphLayer, name: string, ...)
+---@field navScope? boolean
+---@field navTrap? boolean
+---@field onNavigateExit? fun(direction: GlyphNavDirection, origin: GlyphNode, scope: GlyphNode|GlyphLayer, candidates: GlyphNavCandidate[]): GlyphNode|false|nil
 local GlyphLayerOpts = {}
 
 -- ---------------------------------------------------------------------------
@@ -305,5 +321,26 @@ local GlyphSceneApi = {}
 ---@field isOpen fun(id: string|number): boolean
 ---@field transitions table
 local GlyphModalApi = {}
+
+-- ---------------------------------------------------------------------------
+-- Navigation
+-- ---------------------------------------------------------------------------
+
+---@alias GlyphNavDirection "up"|"down"|"left"|"right"
+
+---@class GlyphNavCandidate
+---@field node GlyphNode
+---@field x number
+---@field y number
+---@field w number
+---@field h number
+---@field width number
+---@field height number
+---@field cx number center x
+---@field cy number center y
+---@field group any navGroup value inherited from the nearest ancestor with navGroup set
+---@field scope GlyphNode|GlyphLayer|nil nearest ancestor or layer with navScope = true
+---@field scopeNode GlyphNode|GlyphLayer|nil alias for scope
+local GlyphNavCandidate = {}
 
 return {}

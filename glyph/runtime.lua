@@ -12,6 +12,7 @@ local runtimeCallbacks = {
   "beforeRender",
   "afterRender",
   "layout",
+  "navigate",
   "focusChanged",
   "hoverChanged",
   "event",

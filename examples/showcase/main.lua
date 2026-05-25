@@ -159,6 +159,10 @@ function love.keypressed(key)
 	call(active, "keypressed", key, "showcase")
 end
 
+function love.gamepadpressed(joystick, button)
+	call(active, "gamepadpressed", joystick, button, "showcase")
+end
+
 function love.load()
 	ui.load({
 		window = {

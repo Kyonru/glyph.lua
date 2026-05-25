@@ -62,6 +62,7 @@ nav = [
     { "Transitions" = "transitions.md" },
   ] },
   { "Guides" = [
+    { "Navigation" = "navigation.md" },
     { "Performance" = "performance.md" },
     { "Examples" = "examples.md" },
   ] },

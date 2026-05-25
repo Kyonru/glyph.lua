@@ -167,15 +167,39 @@ function Components.panel(props, children)
     panelChildren[#panelChildren + 1] = child
   end
 
-  return Components.column({
+  return createNode("panel", {
+    display = "column",
     gap = props.gap or 8,
     padding = props.padding or 10,
     width = props.width,
     height = props.height,
     grow = props.grow,
+    flex = props.flex,
+    shrink = props.shrink,
+    minWidth = props.minWidth,
+    minHeight = props.minHeight,
+    maxWidth = props.maxWidth,
+    maxHeight = props.maxHeight,
+    position = props.position,
+    x = props.x,
+    y = props.y,
+    top = props.top,
+    right = props.right,
+    bottom = props.bottom,
+    left = props.left,
+    inset = props.inset,
+    zIndex = props.zIndex,
+    align = props.align,
+    navGroup = props.navGroup,
+    navScope = props.navScope,
+    navTrap = props.navTrap,
+    onNavigateExit = props.onNavigateExit,
     backgroundColor = props.backgroundColor,
     borderColor = props.borderColor,
     radius = props.radius,
+    style = props.style,
+    variant = props.variant,
+    styleType = props.styleType,
   }, panelChildren)
 end
 

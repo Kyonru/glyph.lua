@@ -11,6 +11,7 @@ love examples/basic
 love examples/dashboard
 love examples/hud-menu
 love examples/modal
+love examples/navigate
 love examples/scene
 love examples/showcase
 love examples/styles
@@ -28,6 +29,12 @@ A dense shadcn-inspired dashboard translated into Glyph primitives. Useful for p
 ## HUD Menu
 
 Custom-drawn game UI with animated command buttons. This example demonstrates what belongs in app/example code rather than Glyph core.
+
+## Navigate
+
+Arrow key and d-pad spatial navigation across a denser game-tool layout. Demonstrates
+`ui.navigate`, beam-aware movement, `navGroup` scoping, trapped `navScope` submenus, focus
+visibility, gamepad d-pad forwarding, and shader-backed JRPG command submenus.
 
 ## Modal
 

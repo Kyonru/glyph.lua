@@ -111,4 +111,26 @@ function CallbackBus:dispatch(name, ...)
   end
 end
 
+function CallbackBus:dispatchUntil(name, predicate, ...)
+  self:assertSupported(name)
+
+  local registrations = self.registrations[name]
+  local snapshot = {}
+
+  for index = 1, #registrations do
+    snapshot[index] = registrations[index]
+  end
+
+  for _, entry in ipairs(snapshot) do
+    if entry.active then
+      local result = entry.fn(...)
+      if predicate(result) then
+        return result
+      end
+    end
+  end
+
+  return nil
+end
+
 return CallbackBus

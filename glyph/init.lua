@@ -8,6 +8,7 @@ end
 local Components = require(prefix .. ".components")
 local CallbackBus = require(prefix .. ".callback_bus")
 local Modal = require(prefix .. ".modal")
+local Navigate = require(prefix .. ".navigate")
 local Responsive = require(prefix .. ".responsive")
 local Runtime = require(prefix .. ".runtime")
 local Style = require(prefix .. ".style")
@@ -29,8 +30,11 @@ local runtime = Runtime.new()
 ---@field static fun(node: GlyphNode): GlyphNode
 ---@field scene GlyphSceneApi
 ---@field modal GlyphModalApi
+---@field setFocus fun(node?: GlyphNode)
+---@field navigate fun(direction: "up"|"down"|"left"|"right"): GlyphNode|nil
 local ui = {
   CallbackBus = CallbackBus,
+  Navigate = Navigate,
   Responsive = Responsive,
   Style = Style,
   transitions = Transitions,
@@ -211,6 +215,11 @@ function ui.isHot(node)
   return ui.isHovered(node) or ui.isPressed(node) or ui.isFocused(node) or ui.isActive(node)
 end
 
+---@param node? GlyphNode
+function ui.setFocus(node)
+  return runtime:setFocus(node)
+end
+
 ---@param a number
 ---@param b number
 ---@param t number
@@ -347,6 +356,12 @@ end
 ---@param key string
 function ui.keypressed(key)
   return runtime:keypressed(key)
+end
+
+---@param direction "up"|"down"|"left"|"right"
+---@return GlyphNode|nil
+function ui.navigate(direction)
+  return Navigate.move(runtime, direction)
 end
 
 local autoCallbacks = {

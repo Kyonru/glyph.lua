@@ -19,6 +19,10 @@ function Runner.run(example)
 		call(example, "keypressed", key, "standalone")
 	end
 
+	function love.gamepadpressed(joystick, button)
+		call(example, "gamepadpressed", joystick, button, "standalone")
+	end
+
 	function love.load()
 		ui.load({
 			window = example.window,

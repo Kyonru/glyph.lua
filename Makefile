@@ -1,6 +1,6 @@
-.PHONY: docs test basic dashboard hud-menu modal performance scene settings styles
+.PHONY: docs test basic dashboard hud-menu modal navigate performance scene settings styles
 
-EXAMPLES := basic dashboard hud-menu modal performance scene settings styles
+EXAMPLES := basic dashboard hud-menu modal navigate performance scene settings styles
 
 docs:
 	zensical serve

@@ -24,6 +24,7 @@ build = {
     ["glyph.components"] = "glyph/components.lua",
     ["glyph.layout"] = "glyph/layout.lua",
     ["glyph.modal"] = "glyph/modal.lua",
+    ["glyph.navigate"] = "glyph/navigate.lua",
     ["glyph.responsive"] = "glyph/responsive.lua",
     ["glyph.runtime"] = "glyph/runtime.lua",
     ["glyph.scene"] = "glyph/scene.lua",
