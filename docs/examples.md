@@ -15,6 +15,7 @@ love examples/dashboard
 love examples/hud-menu
 love examples/hud-primitives
 love examples/i18n
+love examples/inventory
 love examples/juice
 love examples/modal
 love examples/navigate
@@ -69,6 +70,10 @@ Native meters, filled sweep gauges with centered overlays, d-pad/card navigation
 ## I18n
 
 Responsive game-console localization demo with locale switching, keyed command/status UI, meters, tabs, fallback text, cached parameter translations, and `ui.i18n.version()` in memo deps.
+
+## Inventory
+
+Medieval/MMO inventory demo using the `potions.png` spritesheet, app-owned drag/drop state, scrollable uniform slots, paged uniform slots, and a variable-size case grid with rejected invalid placements.
 
 ## Juice
 

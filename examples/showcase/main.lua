@@ -11,6 +11,7 @@ local examples = {
 	{ id = "hud-menu", label = "HUD Menu", module = "hud-menu" },
 	{ id = "hud-primitives", label = "HUD Primitives", module = "hud-primitives" },
 	{ id = "i18n", label = "I18n", module = "i18n" },
+	{ id = "inventory", label = "Inventory", module = "inventory" },
 	{ id = "juice", label = "Juice", module = "juice" },
 	{ id = "modal", label = "Modal", module = "modal" },
 	{ id = "performance", label = "Performance", module = "performance" },
