@@ -288,7 +288,7 @@ features = [
 # - https://zensical.org/docs/setup/logo-and-icons
 # - https://github.com/zensical/ui/tree/master/dist/.icons
 # ----------------------------------------------------------------------------
-#[project.theme.icon]
+[project.theme.icon]
 logo = "lucide/pencil-ruler"
 
 # ----------------------------------------------------------------------------
