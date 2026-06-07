@@ -164,6 +164,70 @@ If no explicit size is provided, image nodes measure from the quad viewport or
 from `source:getWidth()` / `source:getHeight()`. Missing sources draw nothing
 and measure as explicit size or `0x0`.
 
+## Vector Path
+
+`ui.path(props)` draws a Glyph-native vector path. It accepts either normalized
+Lua commands or SVG path `d` data for common path commands. This is SVG path data
+only, not a full SVG document renderer.
+
+```lua
+ui.path({
+  d = "M10 70 C40 10 90 110 130 35 Q160 10 180 70",
+  width = 220,
+  height = 120,
+  fit = "contain",
+  stroke = { 0.1, 0.9, 0.75, 1 },
+  strokeWidth = 4,
+  progress = charge, -- 0..1 stroke reveal
+})
+```
+
+Lua path commands use normalized command arrays:
+
+```lua
+local badge = {
+  { "M", 8, 40 },
+  { "L", 52, 8 },
+  { "L", 96, 40 },
+  { "L", 76, 92 },
+  { "L", 28, 92 },
+  { "Z" },
+}
+
+ui.path({
+  path = badge,
+  width = 120,
+  height = 120,
+  mode = "both",
+  fill = { 0.2, 0.5, 1, 0.18 },
+  stroke = { 0.55, 0.8, 1, 1 },
+  strokeWidth = 3,
+})
+```
+
+Supported SVG commands are `M/m`, `L/l`, `H/h`, `V/v`, `C/c`, `Q/q`, and
+`Z/z`. Arcs, gradients, CSS styling, masks, transforms, holes, and winding rules
+are out of scope for v1.
+
+Paths can morph between compatible command sequences, or resample both outlines
+when the shapes differ:
+
+```lua
+ui.path({
+  d = "M10 10 L90 10 L90 90 L10 90 Z",
+  morphTo = "M50 4 L96 50 L50 96 L4 50 Z",
+  morph = pulse,
+  morphMode = "resample",
+  mode = "both",
+  fill = { 1, 0.7, 0.18, 0.2 },
+  stroke = { 1, 0.7, 0.18, 1 },
+})
+```
+
+`ui.path.parse(d)`, `ui.path.bounds(path)`, `ui.path.flatten(path, opts)`, and
+`ui.path.length(path, opts)` expose the same parser and geometry helpers for app
+code.
+
 ## Row And Column
 
 Use `ui.row` and `ui.column` for normal flex-style flow.

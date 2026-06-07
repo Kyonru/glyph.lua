@@ -130,6 +130,12 @@ function Components.image(props)
   return createNode("image", props, nil)
 end
 
+---@param props? GlyphPathProps
+---@return GlyphNode
+function Components.path(props)
+  return createNode("path", props, nil)
+end
+
 ---@param props? GlyphProps
 ---@param children? GlyphNode[]|GlyphNode
 ---@return GlyphNode

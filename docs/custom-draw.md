@@ -5,7 +5,7 @@ icon: lucide/pen-tool
 # Custom Draw And Helpers
 
 <!-- glyph:feature-gif custom-draw -->
-![Animated GIF showing Glyph custom draw helpers, shapes, clipping, and stencil-like masks.](assets/feature-gifs/custom-draw.gif)
+![Animated GIF showing Glyph custom draw helpers, vector path reveal, morphing, clipping, and masks.](assets/feature-gifs/custom-draw.gif)
 <!-- /glyph:feature-gif custom-draw -->
 
 Glyph supports custom drawing on any node through `props.draw`.
@@ -56,6 +56,7 @@ Useful methods:
 - `ctx:stencil(shapeOrFn, fn, opts?)`
 - `ctx:meter(bounds, opts)`
 - `ctx:nineSlice(image, bounds, opts)`
+- `ctx:path(mode, path, bounds, opts)`
 - `ctx:text(value, x, y)`
 - `ctx:printf(value, x, y, limit, align)`
 - `ctx:pulse(speed, phase)`
@@ -196,6 +197,35 @@ Blob, stencil, shader, particle, and splat-style visuals are usually app or
 example code. Keep the core primitive generic, then layer the visual identity in
 custom draw and feedback sequences.
 
+## Vector Paths
+
+Use `ctx:path(mode, path, bounds, opts)` for custom vector accents, animated
+strokes, icons, route lines, HUD traces, and game-specific frame details.
+
+```lua
+draw = function(_, x, y, width, height, love, style, ctx)
+  ctx:path("line", "M0 80 C60 8 120 152 180 40", {
+    x = x + 18,
+    y = y + 18,
+    width = width - 36,
+    height = height - 36,
+  }, {
+    stroke = { 0.1, 0.9, 0.75, 1 },
+    strokeWidth = 4,
+    progress = ctx:pulse(0.8), -- 0..1 stroke reveal
+  })
+end
+```
+
+`ctx:path` accepts the same options as `ui.path`: `stroke`, `strokeWidth`,
+`fill`, `opacity`, `progress`, `morphTo`, `morph`, `morphMode`, `samples`, `fit`,
+`align`, and `valign`. Fill drawing targets simple closed single-contour paths.
+
+> [!NOTE]
+> Glyph supports SVG path `d` data, not full SVG files. Arcs, gradients,
+> document transforms, CSS, masks, holes, and winding rules are out of scope for
+> v1.
+
 ## Nine-Slice Frames
 
 Use `ctx:nineSlice` when a Love2D image should scale like a game UI frame,
@@ -239,6 +269,10 @@ app-specific custom draw.
 - `ui.pulse(speed, phase)`
 - `ui.polygonBox(x, y, width, height, opts)`
 - `ui.meter(props)`
+- `ui.path.parse(d)`
+- `ui.path.bounds(path)`
+- `ui.path.flatten(path, opts)`
+- `ui.path.length(path, opts)`
 - `ui.customButton(props)`
 
 ## Core Boundary

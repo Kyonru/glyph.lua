@@ -19,6 +19,7 @@ love examples/inventory
 love examples/juice
 love examples/modal
 love examples/navigate
+love examples/path-feedback
 love examples/scene
 love examples/showcase
 love examples/styles
@@ -85,6 +86,12 @@ Arrow key and d-pad spatial navigation across a denser game-tool layout. Demonst
 `ui.navigate`, beam-aware movement, `navGroup` scoping, trapped `navScope` submenus, focus
 visibility, gamepad d-pad forwarding, and shader-backed JRPG command submenus.
 
+## Path Feedback
+
+Feel-driven vector path demo with app-owned target values animating `ui.path`
+stroke reveal, resampled morphing, pulse rings, scan beams, particles, and
+node-level command feedback.
+
 ## Modal
 
 Scene-backed modals, moving background, shader transitions, stencil/blob transition implemented outside core, isolated modal hook state, and backdrop dismissal.
@@ -136,7 +143,7 @@ Large dataset workflow with a visible window of mounted rows, static row reuse, 
 | [I18n](i18n.md) | ![Animated GIF showing Glyph localized text, labels, placeholders, and cache-aware values.](assets/feature-gifs/i18n.gif) |
 | [Accessibility](accessibility.md) | ![Animated GIF showing Glyph semantic labels, focus events, live announcements, and snapshots.](assets/feature-gifs/accessibility.gif) |
 | [Responsive Helpers](responsive.md) | ![Animated GIF showing Glyph responsive breakpoints, columns, and virtual viewport mapping.](assets/feature-gifs/responsive.gif) |
-| [Custom Draw And Helpers](custom-draw.md) | ![Animated GIF showing Glyph custom draw helpers, shapes, clipping, and stencil-like masks.](assets/feature-gifs/custom-draw.gif) |
+| [Custom Draw And Helpers](custom-draw.md) | ![Animated GIF showing Glyph custom draw helpers, vector path reveal, morphing, clipping, and masks.](assets/feature-gifs/custom-draw.gif) |
 | [Animations](animations.md) | ![Animated GIF showing Glyph enter, exit, meter, and movement animations.](assets/feature-gifs/animations.gif) |
 | [Feedback](feedback.md) | ![Animated GIF showing Glyph feedback sequences, visual animation, audio metadata, and emitted events.](assets/feature-gifs/feedback.gif) |
 | [Scenes And Modals](scenes-and-modals.md) | ![Animated GIF showing Glyph scene layers, overlays, modal blocking, and backdrop behavior.](assets/feature-gifs/scenes-modals.gif) |

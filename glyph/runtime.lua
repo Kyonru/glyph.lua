@@ -4,6 +4,7 @@ local Animation = require(prefix .. ".animation")
 local CallbackBus = require(prefix .. ".callback_bus")
 local Feedback = require(prefix .. ".feedback")
 local Layout = require(prefix .. ".layout")
+local Path = require(prefix .. ".path")
 local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Responsive = require(prefix .. ".responsive")
 local Scene = require(prefix .. ".scene")
@@ -1803,6 +1804,85 @@ local function drawImage(runtime, node, x, y, width, height, love, style, opacit
   end
 end
 
+local function pathDrawMode(props, mode)
+  if mode and mode ~= "auto" then
+    return mode
+  end
+  if props.fill ~= nil then
+    if props.stroke ~= nil and props.stroke ~= false then
+      return "both"
+    end
+    return "fill"
+  end
+  return "line"
+end
+
+local function drawPath(runtime, love, pathSource, bounds, opts, style, opacity, mode, includeOptsOpacity)
+  local graphics = love and love.graphics
+  if not graphics or pathSource == nil then
+    return
+  end
+
+  opts = opts or {}
+  style = style or {}
+  mode = pathDrawMode(opts, mode)
+
+  local points = Path.points(pathSource, bounds, opts)
+  if #points < 2 then
+    return
+  end
+
+  local previousColor = nil
+  local previousLineWidth = nil
+  if graphics.getColor then
+    previousColor = { graphics.getColor() }
+  end
+  if graphics.getLineWidth then
+    previousLineWidth = graphics.getLineWidth()
+  end
+
+  local pathOpacity = opacity or 1
+  if includeOptsOpacity and opts.opacity ~= nil then
+    pathOpacity = pathOpacity * opts.opacity
+  end
+
+  local fill = opts.fill
+  if fill == nil and (mode == "fill" or mode == "both") then
+    fill = style.background
+  end
+
+  if (mode == "fill" or mode == "both") and fill ~= nil and graphics.polygon and #points >= 6 then
+    color(love, withOpacity(fill, pathOpacity))
+    graphics.polygon("fill", (table.unpack or unpack)(points))
+  end
+
+  local stroke = opts.stroke
+  if stroke == nil then
+    stroke = style.color or runtime.theme.textColor
+  end
+
+  if (mode == "line" or mode == "both") and stroke ~= false and graphics.line then
+    local strokePoints = points
+    if opts.progress ~= nil then
+      strokePoints = Path.reveal(points, opts.progress)
+    end
+    if #strokePoints >= 4 then
+      if graphics.setLineWidth then
+        graphics.setLineWidth(opts.strokeWidth or style.lineWidth or 1)
+      end
+      color(love, withOpacity(stroke, pathOpacity))
+      graphics.line((table.unpack or unpack)(strokePoints))
+    end
+  end
+
+  if previousLineWidth and graphics.setLineWidth then
+    graphics.setLineWidth(previousLineWidth)
+  end
+  if previousColor and graphics.setColor then
+    graphics.setColor(previousColor[1], previousColor[2], previousColor[3], previousColor[4])
+  end
+end
+
 ---@param a number
 ---@param b number
 ---@param t number
@@ -2806,6 +2886,15 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     drawNineSlice(runtime, love, image, bounds or self, opts)
   end
 
+  ---@param mode "line"|"fill"|"both"|string
+  ---@param path any
+  ---@param bounds? GlyphBounds
+  ---@param opts? GlyphPathDrawOpts
+  ---@return nil
+  function ctx:path(mode, path, bounds, opts)
+    drawPath(runtime, love, path, bounds or self, opts or {}, style, style.opacity or 1, mode, true)
+  end
+
   ---@param value any
   ---@param tx number
   ---@param ty number
@@ -3015,6 +3104,8 @@ function Runtime:drawNode(node, x, y, stackContext)
     else
       renderImage()
     end
+  elseif node.type == "path" then
+    drawPath(self, love, props.path or props.d, boundsFor(absX, absY, width, height), props, style, opacity, props.mode, false)
   elseif node.type == "button" then
     local nodeShape = props.shape or style.shape
     local shapeCtx = nodeShape and (ctx or createDrawContext(self, node, absX, absY, width, height, love, style)) or nil

@@ -14,6 +14,7 @@ local examples = {
 	{ id = "inventory", label = "Inventory", module = "inventory" },
 	{ id = "juice", label = "Juice", module = "juice" },
 	{ id = "modal", label = "Modal", module = "modal" },
+	{ id = "path-feedback", label = "Path Feedback", module = "path-feedback" },
 	{ id = "performance", label = "Performance", module = "performance" },
 	{ id = "scene", label = "Scene", module = "scene" },
 	{ id = "settings", label = "Settings", module = "settings" },

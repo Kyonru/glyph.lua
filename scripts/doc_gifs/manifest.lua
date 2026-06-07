@@ -1021,12 +1021,16 @@ local targets = {
     id = "custom-draw",
     title = "Custom Draw And Helpers",
     docs = { "docs/custom-draw.md" },
-    alt = "Animated GIF showing Glyph custom draw helpers, shapes, clipping, and stencil-like masks.",
+    alt = "Animated GIF showing Glyph custom draw helpers, vector path reveal, morphing, clipping, and masks.",
     update = function(ctx)
       ctx.phase = wave(ctx, 3)
+      ctx.pathProgress = math.min(1, ((ctx.time or 0) % 2.4) / 1.7)
+      ctx.pathMorph = wave(ctx, 2.6, -0.8)
     end,
     component = function(ctx)
       local arcValue = 40 + (ctx.phase or 0) * 55
+      local pathProgress = ctx.pathProgress or 0
+      local pathMorph = ctx.pathMorph or 0
       return stage(ctx, "Custom Draw", "Game-specific visuals stay in app draw functions.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("draw context", { flex = 1, height = 292 }, {
           ui.box({
@@ -1070,24 +1074,29 @@ local targets = {
               drawCtx:color(cloneColor(palette.text, 0.78))
               drawCtx:polygon("line", hullPoints)
 
-              local points = {}
-              for i = 0, 20 do
-                local px = x + 38 + i * ((width - 76) / 20)
-                local py = y + 154 + math.sin(i * 0.72 + (ctx.time or 0) * 4.6) * 23
-                points[#points + 1] = px
-                points[#points + 1] = py
-              end
-              drawCtx:color(cloneColor(palette.gold, 0.46))
-              drawCtx:line((table.unpack or unpack)(points))
+              local traceBounds = { x = x + 36, y = y + 134, width = width - 72, height = 60 }
+              local trace = "M0 44 C38 0 86 76 132 32 C174 4 210 54 252 18"
+              drawCtx:path("line", trace, traceBounds, {
+                stroke = cloneColor(palette.gold, 0.16),
+                strokeWidth = 6,
+                fit = "stretch",
+                samples = 42,
+              })
+              drawCtx:path("line", trace, traceBounds, {
+                stroke = palette.gold,
+                strokeWidth = 4,
+                progress = pathProgress,
+                fit = "stretch",
+                samples = 42,
+              })
+              local revealX = traceBounds.x + traceBounds.width * pathProgress
               drawCtx:color(palette.gold)
-              for i = 1, #points, 4 do
-                drawCtx:shape("fill", { kind = "circle", segments = 12 }, {
-                  x = points[i] - 4,
-                  y = points[i + 1] - 4,
-                  width = 8,
-                  height = 8,
-                })
-              end
+              drawCtx:shape("fill", { kind = "circle", segments = 16 }, {
+                x = revealX - 5,
+                y = traceBounds.y + 28 + math.sin((ctx.time or 0) * 5.2) * 16 - 5,
+                width = 10,
+                height = 10,
+              })
             end,
           }),
         }),
@@ -1126,17 +1135,26 @@ local targets = {
               drawCtx:color(palette.violet)
               drawCtx:polygon("line", blob)
 
-              drawCtx:color(cloneColor(palette.teal, 0.22))
-              drawCtx:shape("fill", { kind = "rect", radius = 7 }, { x = x + 184, y = y + 132, width = 94, height = 36 })
-              drawCtx:color(palette.teal)
-              drawCtx:shape("line", { kind = "rect", radius = 7 }, { x = x + 184, y = y + 132, width = 94, height = 36 })
+              local morphBounds = { x = x + 24, y = y + 136, width = width - 48, height = 48 }
+              drawCtx:color({ 1, 1, 1, 0.045 })
+              drawCtx:rect("fill", morphBounds.x, morphBounds.y, morphBounds.width, morphBounds.height, 6)
+              drawCtx:path("both", "M12 26 L44 6 L214 6 L246 26 L214 46 L44 46 Z", morphBounds, {
+                morphTo = "M126 4 L246 18 L202 48 L126 38 L50 48 L6 18 Z",
+                morph = pathMorph,
+                morphMode = "resample",
+                fill = cloneColor(palette.teal, 0.18),
+                stroke = palette.teal,
+                strokeWidth = 3,
+                fit = "stretch",
+                samples = 48,
+              })
               drawCtx:color(palette.text)
-              drawCtx:printf("mask", x + 184, y + 143, 94, "center")
+              drawCtx:printf("morph", morphBounds.x, morphBounds.y + 15, morphBounds.width, "center")
             end,
           }),
           ui.row({ width = "100%", gap = 8 }, {
-            metric("clip", "active", palette.teal),
-            metric("arc", tostring(math.floor(arcValue + 0.5)) .. "%", palette.coral),
+            metric("path", tostring(math.floor(pathProgress * 100 + 0.5)) .. "%", palette.gold),
+            metric("morph", tostring(math.floor(pathMorph * 100 + 0.5)) .. "%", palette.teal),
           }),
         }),
       }))

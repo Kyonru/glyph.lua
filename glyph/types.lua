@@ -108,6 +108,26 @@ local GlyphShape = {}
 ---@field mode? "inside"|"outside"
 local GlyphStencil = {}
 
+---@alias GlyphPathCommand any[]
+---@alias GlyphPathInput string|GlyphPathCommand[]
+
+---@class GlyphPathDrawOpts
+---@field path? GlyphPathInput
+---@field d? string
+---@field fit? "contain"|"stretch"|"none"
+---@field align? "start"|"center"|"end"
+---@field valign? "start"|"center"|"end"
+---@field stroke? GlyphColor|false
+---@field strokeWidth? number
+---@field fill? GlyphColor
+---@field opacity? number
+---@field progress? number
+---@field morphTo? GlyphPathInput
+---@field morph? number
+---@field morphMode? "compatible"|"resample"
+---@field samples? number
+local GlyphPathDrawOpts = {}
+
 ---@class GlyphDrawContext
 ---@field node GlyphNode
 ---@field props GlyphProps
@@ -136,6 +156,7 @@ local GlyphStencil = {}
 ---@field stencil fun(self: GlyphDrawContext, shapeOrFn: GlyphShape|fun(ctx: GlyphDrawContext): any, fn: fun(), opts?: GlyphStencil)
 ---@field meter fun(self: GlyphDrawContext, bounds?: GlyphBounds, opts?: GlyphMeterProps)
 ---@field nineSlice fun(self: GlyphDrawContext, image: any, bounds: GlyphBounds, opts?: GlyphNineSliceOpts)
+---@field path fun(self: GlyphDrawContext, mode: "line"|"fill"|"both"|string, path: GlyphPathInput, bounds?: GlyphBounds, opts?: GlyphPathDrawOpts)
 ---@field text fun(self: GlyphDrawContext, value: any, x: number, y: number)
 ---@field printf fun(self: GlyphDrawContext, value: any, x: number, y: number, limit: number, align?: string)
 ---@field skewBox fun(self: GlyphDrawContext, opts?: table): number[]
@@ -421,6 +442,24 @@ local GlyphTextProps = {}
 ---@field opacity? number
 local GlyphImageProps = {}
 
+---@class GlyphPathProps : GlyphProps
+---@field path? GlyphPathInput
+---@field d? string
+---@field mode? "line"|"fill"|"both"
+---@field fit? "contain"|"stretch"|"none"
+---@field align? "start"|"center"|"end"
+---@field valign? "start"|"center"|"end"
+---@field stroke? GlyphColor|false
+---@field strokeWidth? number
+---@field fill? GlyphColor
+---@field opacity? number
+---@field progress? number
+---@field morphTo? GlyphPathInput
+---@field morph? number
+---@field morphMode? "compatible"|"resample"
+---@field samples? number
+local GlyphPathProps = {}
+
 ---@class GlyphSpriteSheetProps
 ---@field frameWidth number
 ---@field frameHeight number
@@ -528,6 +567,14 @@ local GlyphGridCell = {}
 ---@field __call fun(self: GlyphGridApi, props?: GlyphGridProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field pointToCell fun(bounds: GlyphBounds, props: GlyphGridPointProps|GlyphGridProps, x: number, y: number): GlyphGridCell|nil
 local GlyphGridApi = {}
+
+---@class GlyphPathApi
+---@field __call fun(self: GlyphPathApi, props?: GlyphPathProps): GlyphNode
+---@field parse fun(d: string): GlyphPathCommand[]
+---@field bounds fun(path: GlyphPathInput): GlyphBounds
+---@field flatten fun(path: GlyphPathInput, opts?: GlyphPathDrawOpts): number[]
+---@field length fun(path: GlyphPathInput, opts?: GlyphPathDrawOpts): number
+local GlyphPathApi = {}
 
 ---@class GlyphPortalProps : GlyphProps
 local GlyphPortalProps = {}

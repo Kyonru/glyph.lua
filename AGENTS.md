@@ -52,8 +52,8 @@ make docs
 
 Glyph should provide primitives and reusable systems:
 
-- Core components: `text`, `image`, `box`, `stack`, `row`, `column`, `grid`, `portal`, `button`, `input`, `scrollView`, `tabs`, `panel`.
-- Generic visual primitives: `meter`, shape descriptors, clipping/stencil masks, nine-slice drawing, and draw context helpers.
+- Core components: `text`, `image`, `path`, `box`, `stack`, `row`, `column`, `grid`, `portal`, `button`, `input`, `scrollView`, `tabs`, `panel`.
+- Generic visual primitives: `meter`, vector path drawing, shape descriptors, clipping/stencil masks, nine-slice drawing, and draw context helpers.
 - Layout primitives: flex row/column, uniform grid layout, stack/absolute layout, percent sizing, padding/gap, grow/flex, text wrapping.
 - Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus.
 - Input systems: pointer/touch, keyboard activation, spatial navigation, and opt-in digital gamepad mapping.
@@ -73,9 +73,11 @@ Good core API examples:
 - `ui.grid`
 - `ui.portal`
 - `ui.image`
+- `ui.path`
 - `ui.transitions.custom`
 - `ui.scene.push`
 - `ctx:polygon`
+- `ctx:path`
 - `ui.meter`
 - `ctx:nineSlice`
 - `ui.feedback.define`
@@ -155,13 +157,15 @@ Poor core API examples:
 - `style.transition` is state-style interpolation; `enter`/`exit` animation props are visual-only node lifecycle animation; `ui.feedback` is triggerable game-feel sequencing.
 - Text styling should use `theme.typography`, `theme.fonts`, `theme.textScale`, and `textStyle` presets for repeated type systems.
 - Rich/game text should use the optional SYSL backend through `ui.richTextBackend`; do not grow a custom rich-text parser in core.
-- Shape, clip, stencil, meter, and nine-slice drawing must not alter layout or hit-testing geometry unless a later explicit API adds shape-aware hit tests.
+- Shape, clip, stencil, meter, path, and nine-slice drawing must not alter layout or hit-testing geometry unless a later explicit API adds shape-aware hit tests.
+- SVG support in core means SVG path `d` data only. Do not grow a full SVG document renderer, CSS styling, gradients, masks, or winding-rule engine without a focused public API pass.
 
 ## Animation Rules
 
 - Animations are powered by vendored `rxi/flux` through `glyph/animation.lua`.
 - Node `enter`/`exit` and `ui.transitions.animate` use the same animation spec shape.
 - Animations are visual-only: they must not change layout, hit testing, focus/navigation geometry, or semantic snapshots.
+- Path `progress` stroke reveal and `morph` drawing are visual-only for the same reason.
 - Apply transforms with graphics push/pop and transform around the node center. Opacity multiplies resolved style opacity.
 - Exiting nodes may be retained as visual ghosts until exit completes. Avoid duplicate exit animations for descendants of an exiting parent.
 
@@ -190,6 +194,7 @@ Examples should demonstrate real workflows, not marketing pages:
 - `examples/hud-menu`: custom draw and animated game UI.
 - `examples/modal`: scene-backed modals, custom shader/stencil transitions, moving background.
 - `examples/navigate`: spatial navigation, nav scopes, submenu patterns.
+- `examples/path-feedback`: app-owned Feel targets driving vector path reveal, morphing, pulse rings, and particles.
 - `examples/scene`: scene replacement, overlays, pause modal, paused/unpaused motion.
 - `examples/themes`: complex theme presets and token tweaks.
 - `examples/viewport`: optional fixed virtual viewport adapters.

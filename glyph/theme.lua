@@ -84,6 +84,7 @@ theme.components = {
     color = theme.textColor,
   },
   box = {},
+  path = {},
   row = {},
   column = {},
   grid = {},

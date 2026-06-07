@@ -1,5 +1,6 @@
 local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
 local GridMath = require(prefix .. ".grid_math")
+local Path = require(prefix .. ".path")
 local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Typography = require(prefix .. ".typography")
 
@@ -409,6 +410,20 @@ function Layout.measureNode(node, context)
 
   if node.type == "image" then
     local naturalWidth, naturalHeight = imageNaturalSize(props)
+    return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or naturalWidth,
+      resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or naturalHeight
+  end
+
+  if node.type == "path" then
+    local source = props.path or props.d
+    local naturalWidth, naturalHeight = 0, 0
+    if source ~= nil then
+      local ok, bounds = pcall(Path.bounds, source)
+      if ok and bounds then
+        naturalWidth = bounds.width or 0
+        naturalHeight = bounds.height or 0
+      end
+    end
     return resolveSize(props.width, node.layout.availableWidth) or numericSize(props.width) or naturalWidth,
       resolveSize(props.height, node.layout.availableHeight) or numericSize(props.height) or naturalHeight
   end

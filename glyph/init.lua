@@ -14,6 +14,7 @@ local GridMath = require(prefix .. ".grid_math")
 local I18n = require(prefix .. ".i18n")
 local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
+local Path = require(prefix .. ".path")
 local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Responsive = require(prefix .. ".responsive")
 local Runtime = require(prefix .. ".runtime")
@@ -35,6 +36,7 @@ local runtime = Runtime.new()
 ---@field p fun(value: string, props?: GlyphTextProps): GlyphNode
 ---@field caption fun(value: string, props?: GlyphTextProps): GlyphNode
 ---@field image fun(props?: GlyphImageProps): GlyphNode
+---@field path GlyphPathApi
 ---@field box fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field row fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field column fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
@@ -199,6 +201,17 @@ ui.grid = setmetatable({
 }, {
   __call = function(_, props, children)
     return Components.grid(props, children)
+  end,
+})
+
+ui.path = setmetatable({
+  parse = Path.parse,
+  bounds = Path.bounds,
+  flatten = Path.flatten,
+  length = Path.length,
+}, {
+  __call = function(_, props)
+    return Components.path(props)
   end,
 })
 

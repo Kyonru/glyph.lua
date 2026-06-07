@@ -25,7 +25,7 @@ Add to core:
 - Layout primitives and constraints, including row/column, uniform grid, stack, portal overlays, and absolute positioning.
 - Event routing and focus/hover/press behavior.
 - Generic style, theme, shader, and transition hooks.
-- Generic image, sprite sheet quad helpers, meter, shape, clipping, stencil, nine-slice drawing, and custom draw helpers.
+- Generic image, sprite sheet quad helpers, meter, vector path drawing, shape, clipping, stencil, nine-slice drawing, and custom draw helpers.
 - Theme-driven typography, font refs, text scaling, and optional SYSL-backed rich text.
 - Scene/layer/modal mechanics.
 - Spatial navigation primitives and opt-in gamepad mapping.
@@ -45,6 +45,7 @@ Keep out of core:
 - Feather-specific inspectors, logs, or debugger panels.
 - Full app-owned dialogue/textbox policy, sound/image assets, or branded text effects.
 - Filesystem image loading, sprite-specific widgets, atlas management policy, or asset lifetime ownership. Core may expose uniform-grid sprite sheet quad helpers, with animation modules supplied by apps.
+- Full SVG document rendering, CSS styling, gradients, masks, transform stacks, holes, winding-rule policy, or icon packs. Core path support should stay focused on SVG `d` data and Lua path commands.
 
 If a feature feels specific, implement it as an example using existing primitives. If that example reveals missing primitives, add the primitive instead.
 
@@ -126,7 +127,8 @@ Rules:
 - Custom draw receives `style` and `ctx`.
 - Any shader, blend, line width, font, scissor, stencil, canvas, or transform mutation must be restored.
 - `style.audio` and component `audio` tables are cue metadata; core emits events only.
-- Shape/clip/stencil/meter/nine-slice drawing is visual-only. Hit testing remains rectangular unless an explicit shape-hit API is added later.
+- Shape/clip/stencil/meter/path/nine-slice drawing is visual-only. Hit testing remains rectangular unless an explicit shape-hit API is added later.
+- Path `progress` stroke reveal and `morph` drawing should not alter layout, hit testing, focus, navigation geometry, or accessibility snapshots.
 
 ## Typography Work
 
@@ -155,6 +157,7 @@ Feedback lives in `glyph/feedback.lua`.
 - Public API is `ui.feedback`, not `ui.juice`.
 - Feedback steps should stay generic: `animate`, `audio`, `emit`, `callback`, and Feel composition steps such as `wait`, `parallel`, `repeat`, `random`, and `play`.
 - Feedback animation composes with node animation and remains visual-only.
+- App-owned Feel targets are appropriate for non-node numeric state such as vector path `progress`, `morph`, glow, scan, or shake values.
 - Trigger hooks should follow the shared lifecycle: hover enter, focus enter, press down, release up, activate before successful button click.
 - Disabled controls should not emit press/release/activate feedback.
 - `emit` steps dispatch app-owned `"feedback"` events for particles, shake, haptics, splats, or custom shader systems.
