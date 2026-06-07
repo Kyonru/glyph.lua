@@ -375,6 +375,8 @@ local GlyphMeterProps = {}
 ---@field onChange? fun(index: number, tab: table)
 ---@field activeColor? GlyphColor
 ---@field tabHeight? number
+---@field tabWidth? number
+---@field tabPadding? number|GlyphPadding
 ---@field tabVariant? string
 ---@field tabStyle? GlyphStyle
 local GlyphTabsProps = {}
@@ -457,6 +459,9 @@ local GlyphPanelProps = {}
 ---@field labelParams? table
 ---@field labelFallback? string
 ---@field labelCacheKey? string|number
+---@field width? number|string
+---@field height? number|string
+---@field padding? number|GlyphPadding
 ---@field role? "tab"|"button"|"none"|string
 ---@field accessibilityLabel? string
 ---@field accessibilityLabelKey? string

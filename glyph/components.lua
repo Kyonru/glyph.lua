@@ -217,6 +217,9 @@ function Components.tabs(props, tabs)
   for index, tab in ipairs(tabs or {}) do
     children[#children + 1] = Components.button({
       label = I18n.resolveLabel(tab) or tostring(index),
+      width = tab.width or props.tabWidth,
+      height = tab.height or props.tabHeight,
+      padding = tab.padding or props.tabPadding,
       onClick = function()
         if props.onChange then
           props.onChange(index, tab)

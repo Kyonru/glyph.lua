@@ -44,6 +44,26 @@ describe("ui helpers", function()
     assert.are.equal("skew", meter.props.shape.kind)
   end)
 
+  it("applies shared tab sizing props to generated tab buttons", function()
+    local tabs = ui.tabs({
+      tabWidth = 92,
+      tabHeight = 26,
+      tabPadding = { x = 8, y = 4 },
+    }, {
+      { label = "Text", content = ui.text("text") },
+      { label = "HUD", width = 70, content = ui.text("hud") },
+    })
+
+    local row = tabs.children[1]
+    local first = row.children[1]
+    local second = row.children[2]
+
+    assert.are.equal(92, first.props.width)
+    assert.are.equal(26, first.props.height)
+    assert.are.same({ x = 8, y = 4 }, first.props.padding)
+    assert.are.equal(70, second.props.width)
+  end)
+
   it("creates rich text and typography convenience nodes", function()
     local rich = ui.richText("Ready [color=#ffff00]go[/color]")
     local title = ui.h1("Mission")

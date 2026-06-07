@@ -280,9 +280,14 @@ Controlled tabs:
 ```lua
 ui.tabs({
   active = activeTab,
+  tabWidth = 92,
+  tabPadding = { x = 10, y = 4 },
   onChange = setActiveTab,
 }, tabs)
 ```
+
+Use `tabWidth`, per-tab `width`, or `tabPadding` when tabs should read as a
+segmented control with stable button sizes.
 
 ## Panel
 
