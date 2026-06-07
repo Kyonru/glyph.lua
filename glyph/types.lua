@@ -255,6 +255,7 @@ local GlyphPadding = {}
 ---@field left? number|string
 ---@field inset? number|GlyphPadding
 ---@field zIndex? number
+---@field zScope? "local"|"root"
 ---@field focusable? boolean
 ---@field active? boolean
 ---@field disabled? boolean

@@ -65,6 +65,30 @@ local function orderedChildren(node, reverse)
   return result
 end
 
+local function isRootZScoped(node)
+  local props = node and node.props or {}
+  return props.position == "absolute" and props.zScope == "root"
+end
+
+local function zIndexFor(node)
+  return (node and node.props and node.props.zIndex) or 0
+end
+
+local function sortStackEntries(entries, reverse)
+  table.sort(entries, function(a, b)
+    if a.zIndex == b.zIndex then
+      if reverse then
+        return a.order > b.order
+      end
+      return a.order < b.order
+    end
+    if reverse then
+      return a.zIndex > b.zIndex
+    end
+    return a.zIndex < b.zIndex
+  end)
+end
+
 local function sameDeps(a, b)
   if a == b then
     return true
@@ -812,7 +836,37 @@ function Runtime:renderLayers()
   end
 end
 
-local function hitTestNode(runtime, node, parentX, parentY, x, y)
+local function collectRootZScoped(runtime, node, parentX, parentY, entries)
+  local layout = node.layout or {}
+  local absX = parentX + (layout.x or 0)
+  local absY = parentY + (layout.y or 0)
+  local childX = absX
+  local childY = absY
+
+  if node.type == "scrollView" then
+    local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - (layout.height or 0)))
+    local scrollKey = node.path
+    local offset = math.min(maxScroll, math.max(0, (scrollKey and runtime.scrollOffsets[scrollKey]) or 0))
+    childY = absY - offset
+  end
+
+  for _, child in ipairs(orderedChildren(node)) do
+    if isRootZScoped(child) then
+      entries[#entries + 1] = {
+        node = child,
+        parentX = childX,
+        parentY = childY,
+        zIndex = zIndexFor(child),
+        order = #entries + 1,
+      }
+    else
+      collectRootZScoped(runtime, child, childX, childY, entries)
+    end
+  end
+end
+
+local function hitTestNode(runtime, node, parentX, parentY, x, y, opts)
+  opts = opts or {}
   local layout = node.layout or {}
   local absX = parentX + (layout.x or 0)
   local absY = parentY + (layout.y or 0)
@@ -835,9 +889,11 @@ local function hitTestNode(runtime, node, parentX, parentY, x, y)
 
   if hitChildren then
     for _, child in ipairs(orderedChildren(node, true)) do
-      local hit = hitTestNode(runtime, child, childX, childY, x, y)
-      if hit then
-        return hit
+      if opts.includeRootZScoped or not isRootZScoped(child) then
+        local hit = hitTestNode(runtime, child, childX, childY, x, y, opts)
+        if hit then
+          return hit
+        end
       end
     end
   end
@@ -852,6 +908,19 @@ local function hitTestNode(runtime, node, parentX, parentY, x, y)
 end
 
 local function walkHitTest(runtime, root, ox, oy, x, y)
+  local entries = {}
+  collectRootZScoped(runtime, root, ox, oy, entries)
+  sortStackEntries(entries, true)
+
+  for _, entry in ipairs(entries) do
+    local hit = hitTestNode(runtime, entry.node, entry.parentX, entry.parentY, x, y, {
+      includeRootZScoped = true,
+    })
+    if hit then
+      return hit
+    end
+  end
+
   return hitTestNode(runtime, root, ox, oy, x, y)
 end
 
@@ -1918,6 +1987,28 @@ local function drawMeterPart(graphics, bounds, shape, style, ctx)
   end
 end
 
+---@param style GlyphStyle
+---@return GlyphStyle
+local function meterPartFillStyle(style)
+  local fillStyle = Style.copyValue(style)
+  fillStyle.borderColor = nil
+  fillStyle.borderWidth = nil
+  return fillStyle
+end
+
+---@param style GlyphStyle
+---@return GlyphStyle|nil
+local function meterPartBorderStyle(style)
+  if not style.borderColor or (style.borderWidth or 0) <= 0 then
+    return nil
+  end
+
+  return {
+    borderColor = style.borderColor,
+    borderWidth = style.borderWidth,
+  }
+end
+
 ---@param graphics table
 ---@param bounds GlyphBounds
 ---@param props GlyphMeterProps|table
@@ -1927,41 +2018,55 @@ end
 local function drawLinearMeter(graphics, bounds, props, style, ctx)
   local ratio, overfill = meterRatio(props)
   local shape = props.shape or style.shape or { kind = "rect", radius = style.radius or 0 }
-  local track = partStyle(style.background, props.trackStyle, { background = { 0, 0, 0, 0.28 } })
+  local trackFallback = {
+    background = { 0, 0, 0, 0.28 },
+    borderColor = style.borderColor,
+    borderWidth = style.borderWidth,
+  }
+  local track = partStyle(style.background, props.trackStyle, trackFallback)
   local fill = partStyle(style.color, props.fillStyle, { background = style.color or { 0.16, 0.72, 0.48, 1 } })
   local over = partStyle(nil, props.overfillStyle, { background = { 1, 0.82, 0.18, 1 } })
   local segments = props.segments or 0
   local gap = props.gap or 0
+  local trackBorder = meterPartBorderStyle(track)
 
-  drawMeterPart(graphics, bounds, shape, track, ctx)
+  drawMeterPart(graphics, bounds, shape, trackBorder and meterPartFillStyle(track) or track, ctx)
 
-  if segments > 1 then
-    local horizontal = props.direction ~= "up" and props.direction ~= "down"
-    local totalGap = gap * (segments - 1)
-    local segmentLength = math.max(0, ((horizontal and bounds.width or bounds.height) - totalGap) / segments)
-    local filled = ratio * segments
-    for index = 1, segments do
-      local amount = clamp01(filled - (index - 1))
-      if amount > 0 then
-        local segmentBounds
-        if horizontal then
-          local x = bounds.x + (index - 1) * (segmentLength + gap)
-          segmentBounds = { x = x, y = bounds.y, width = segmentLength * amount, height = bounds.height }
-        else
-          local y = bounds.y + bounds.height - index * segmentLength - (index - 1) * gap
-          segmentBounds = { x = bounds.x, y = y + segmentLength * (1 - amount), width = bounds.width, height = segmentLength * amount }
+  if ratio > 0 or overfill > 0 then
+    withClip(graphics, shape, bounds, ctx, function()
+      if segments > 1 then
+        local horizontal = props.direction ~= "up" and props.direction ~= "down"
+        local totalGap = gap * (segments - 1)
+        local segmentLength = math.max(0, ((horizontal and bounds.width or bounds.height) - totalGap) / segments)
+        local filled = ratio * segments
+        for index = 1, segments do
+          local amount = clamp01(filled - (index - 1))
+          if amount > 0 then
+            local segmentBounds
+            if horizontal then
+              local x = bounds.x + (index - 1) * (segmentLength + gap)
+              segmentBounds = { x = x, y = bounds.y, width = segmentLength * amount, height = bounds.height }
+            else
+              local y = bounds.y + bounds.height - index * segmentLength - (index - 1) * gap
+              segmentBounds = { x = bounds.x, y = y + segmentLength * (1 - amount), width = bounds.width, height = segmentLength * amount }
+            end
+            drawMeterPart(graphics, segmentBounds, shape, fill, ctx)
+          end
         end
-        drawMeterPart(graphics, segmentBounds, shape, fill, ctx)
+      else
+        if ratio > 0 then
+          drawMeterPart(graphics, linearFillBounds(bounds, ratio, props.direction), shape, fill, ctx)
+        end
       end
-    end
-  else
-    if ratio > 0 then
-      drawMeterPart(graphics, linearFillBounds(bounds, ratio, props.direction), shape, fill, ctx)
-    end
+
+      if overfill > 0 then
+        drawMeterPart(graphics, linearFillBounds(bounds, clamp01(overfill), props.direction), shape, over, ctx)
+      end
+    end)
   end
 
-  if overfill > 0 then
-    drawMeterPart(graphics, linearFillBounds(bounds, clamp01(overfill), props.direction), shape, over, ctx)
+  if trackBorder then
+    drawMeterPart(graphics, bounds, shape, trackBorder, ctx)
   end
 end
 
@@ -1973,8 +2078,8 @@ end
 ---@return nil
 local function drawRadialMeter(graphics, bounds, props, style, ctx)
   local ratio = meterRatio(props)
-  local track = partStyle(nil, props.trackStyle, { color = style.background or { 0, 0, 0, 0.3 } })
-  local fill = partStyle(nil, props.fillStyle, { color = style.color or { 0.16, 0.72, 0.48, 1 } })
+  local track = partStyle(nil, props.trackStyle, { background = style.background or { 0, 0, 0, 0.3 } })
+  local fill = partStyle(nil, props.fillStyle, { background = style.color or { 0.16, 0.72, 0.48, 1 } })
   local thickness = props.thickness or style.lineWidth or style.borderWidth or 8
   local radius = math.max(0, math.min(bounds.width, bounds.height) / 2 - thickness / 2)
   local cx = bounds.x + bounds.width / 2
@@ -1990,10 +2095,10 @@ local function drawRadialMeter(graphics, bounds, props, style, ctx)
 
   if graphics.arc then
     color(ctx.love, track.color or track.background)
-    graphics.arc("line", cx, cy, radius, startAngle, endAngle, props.segments or 32)
+    graphics.arc("line", "open", cx, cy, radius, startAngle, endAngle, props.segments or 32)
     if ratio > 0 then
       color(ctx.love, fill.color or fill.background)
-      graphics.arc("line", cx, cy, radius, startAngle, fillEnd, props.segments or 32)
+      graphics.arc("line", "open", cx, cy, radius, startAngle, fillEnd, props.segments or 32)
     end
   end
 
@@ -2257,7 +2362,7 @@ local function applyDrawState(love, style, node, runtime)
   end
 end
 
-function Runtime:drawNode(node, x, y)
+function Runtime:drawNode(node, x, y, stackContext)
   local love = self.love or _G.love
   if not love or not love.graphics then
     return
@@ -2435,7 +2540,18 @@ function Runtime:drawNode(node, x, y)
       self.scrollOffsets[node.path] = offset
       runWithRestore(function()
         for _, child in ipairs(orderedChildren(node)) do
-          self:drawNode(child, absX, absY - offset)
+          if stackContext and stackContext.promoted and not stackContext.drawingPromoted and isRootZScoped(child) then
+            stackContext.order = (stackContext.order or 0) + 1
+            stackContext.promoted[#stackContext.promoted + 1] = {
+              node = child,
+              parentX = absX,
+              parentY = absY - offset,
+              zIndex = zIndexFor(child),
+              order = stackContext.order,
+            }
+          else
+            self:drawNode(child, absX, absY - offset, stackContext)
+          end
         end
       end, function()
         if love.graphics.setScissor then
@@ -2469,7 +2585,18 @@ function Runtime:drawNode(node, x, y)
       end
     else
       for _, child in ipairs(orderedChildren(node)) do
-        self:drawNode(child, absX, absY)
+        if stackContext and stackContext.promoted and not stackContext.drawingPromoted and isRootZScoped(child) then
+          stackContext.order = (stackContext.order or 0) + 1
+          stackContext.promoted[#stackContext.promoted + 1] = {
+            node = child,
+            parentX = absX,
+            parentY = absY,
+            zIndex = zIndexFor(child),
+            order = stackContext.order,
+          }
+        else
+          self:drawNode(child, absX, absY, stackContext)
+        end
       end
     end
   end
@@ -2500,7 +2627,19 @@ function Runtime:drawNode(node, x, y)
 end
 
 function Runtime:draw(root)
-  self:drawNode(root, 0, 0)
+  local stackContext = {
+    promoted = {},
+    order = 0,
+  }
+
+  self:drawNode(root, 0, 0, stackContext)
+  sortStackEntries(stackContext.promoted)
+  for _, entry in ipairs(stackContext.promoted) do
+    self:drawNode(entry.node, entry.parentX, entry.parentY, {
+      drawingPromoted = true,
+    })
+  end
+
   for _, ghost in ipairs(self.exitAnimations) do
     if not ghost.done then
       ghost.node._glyphAnimation = ghost.subject
