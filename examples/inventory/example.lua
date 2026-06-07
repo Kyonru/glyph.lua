@@ -673,8 +673,6 @@ end
 
 local function slotDraw(store, index, itemId)
 	return function(node, x, y, width, height, loveModule, _, ctx)
-		recordBounds(store, index, x, y, width, height)
-
 		local item = itemFor(itemId)
 		local rarity = item and item.rarity or "common"
 		local accent = rarityColors[rarity] or rarityColors.common
@@ -747,6 +745,9 @@ local function slotNode(kind, store, slots, index, size)
 			if button == 1 and itemId then
 				startUniformDrag(kind, index, itemId, x, y)
 			end
+		end,
+		onLayout = function(bounds)
+			recordBounds(store, index, bounds.x, bounds.y, bounds.width, bounds.height)
 		end,
 		role = "button",
 		accessibilityLabel = item and (item.name .. " " .. rarityNames[item.rarity]) or "Empty slot",
@@ -963,7 +964,7 @@ local function drawCaseBoard(_, x, y, width, height, loveModule, _, ctx)
 	local g = loveModule.graphics
 	drawPanelFrame(_, x, y, width, height, loveModule, _, ctx)
 
-	caseBoardBounds = {
+	local boardBounds = caseBoardBounds or {
 		x = x + CASE_PADDING,
 		y = y + CASE_PADDING,
 		width = CASE_COLUMNS * CASE_CELL + (CASE_COLUMNS - 1) * CASE_GAP,
@@ -971,12 +972,12 @@ local function drawCaseBoard(_, x, y, width, height, loveModule, _, ctx)
 	}
 
 	ctx:color({ 0.022, 0.022, 0.02, 0.86 })
-	ctx:rect("fill", caseBoardBounds.x, caseBoardBounds.y, caseBoardBounds.width, caseBoardBounds.height, 4)
+	ctx:rect("fill", boardBounds.x, boardBounds.y, boardBounds.width, boardBounds.height, 4)
 
 	for row = 1, CASE_ROWS do
 		for col = 1, CASE_COLUMNS do
-			local cx = caseBoardBounds.x + (col - 1) * (CASE_CELL + CASE_GAP)
-			local cy = caseBoardBounds.y + (row - 1) * (CASE_CELL + CASE_GAP)
+			local cx = boardBounds.x + (col - 1) * (CASE_CELL + CASE_GAP)
+			local cy = boardBounds.y + (row - 1) * (CASE_CELL + CASE_GAP)
 			ctx:color((row + col) % 2 == 0 and { 0.085, 0.076, 0.064, 0.8 } or { 0.058, 0.053, 0.048, 0.8 })
 			ctx:rect("fill", cx, cy, CASE_CELL, CASE_CELL, 3)
 			ctx:color({ 0.82, 0.58, 0.28, 0.18 })
@@ -988,8 +989,8 @@ local function drawCaseBoard(_, x, y, width, height, loveModule, _, ctx)
 	if candidate and candidate.col and candidate.row then
 		local valid = candidate.valid
 		local overlay = valid and colors.green or colors.red
-		local cx = caseBoardBounds.x + (candidate.col - 1) * (CASE_CELL + CASE_GAP)
-		local cy = caseBoardBounds.y + (candidate.row - 1) * (CASE_CELL + CASE_GAP)
+		local cx = boardBounds.x + (candidate.col - 1) * (CASE_CELL + CASE_GAP)
+		local cy = boardBounds.y + (candidate.row - 1) * (CASE_CELL + CASE_GAP)
 		local cw = candidate.entry.w * CASE_CELL + (candidate.entry.w - 1) * CASE_GAP
 		local ch = candidate.entry.h * CASE_CELL + (candidate.entry.h - 1) * CASE_GAP
 		ctx:color(overlay, valid and 0.26 or 0.34)
@@ -1078,6 +1079,14 @@ local function caseBoard(m)
 	return ui.stack({
 		width = m.caseBoardWidth,
 		height = m.caseBoardHeight,
+		onLayout = function(bounds)
+			caseBoardBounds = {
+				x = bounds.x + CASE_PADDING,
+				y = bounds.y + CASE_PADDING,
+				width = CASE_COLUMNS * CASE_CELL + (CASE_COLUMNS - 1) * CASE_GAP,
+				height = CASE_ROWS * CASE_CELL + (CASE_ROWS - 1) * CASE_GAP,
+			}
+		end,
 		draw = drawCaseBoard,
 	}, children)
 end

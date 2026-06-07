@@ -119,6 +119,92 @@ local function absoluteWalk(node, parentX, parentY, fn)
   end
 end
 
+---@param node GlyphNode|nil
+---@return GlyphLayoutBounds
+local function layoutBounds(node)
+  local layout = node and node.layout or {}
+  return {
+    x = layout.x or 0,
+    y = layout.y or 0,
+    width = layout.width or 0,
+    height = layout.height or 0,
+  }
+end
+
+---@param node GlyphNode|nil
+---@param x number
+---@param y number
+---@return GlyphLayoutBounds
+local function viewportBounds(node, x, y)
+  local layout = node and node.layout or {}
+  return {
+    x = x,
+    y = y,
+    width = layout.width or 0,
+    height = layout.height or 0,
+  }
+end
+
+---@param a GlyphLayoutBounds|nil
+---@param b GlyphLayoutBounds|nil
+---@return boolean
+local function sameBounds(a, b)
+  return a
+    and b
+    and a.x == b.x
+    and a.y == b.y
+    and a.width == b.width
+    and a.height == b.height
+end
+
+---@param bounds GlyphLayoutBounds
+---@return GlyphLayoutBounds
+local function copyBounds(bounds)
+  return {
+    x = bounds.x,
+    y = bounds.y,
+    width = bounds.width,
+    height = bounds.height,
+  }
+end
+
+---@param node GlyphNode|nil
+---@param kind string
+---@return string
+local function layoutCallbackKey(node, kind)
+  return kind .. ":" .. tostring((node and node.path) or node)
+end
+
+---@param runtime table
+---@param node GlyphNode
+---@param kind string
+---@param callback? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
+---@param bounds GlyphLayoutBounds
+---@return nil
+local function publishLayoutCallback(runtime, node, kind, callback, bounds)
+  local key = layoutCallbackKey(node, kind)
+  if type(callback) ~= "function" then
+    if runtime.layoutCallbackCache then
+      runtime.layoutCallbackCache[key] = nil
+    end
+    return
+  end
+
+  local cache = runtime.layoutCallbackCache or {}
+  runtime.layoutCallbackCache = cache
+  local previous = cache[key]
+  if previous and previous.callback == callback and sameBounds(previous.bounds, bounds) then
+    return
+  end
+
+  local published = copyBounds(bounds)
+  cache[key] = {
+    callback = callback,
+    bounds = published,
+  }
+  callback(published, node)
+end
+
 local function assignPaths(node, path, parent)
   node.path = path
   node.parent = parent
@@ -226,6 +312,7 @@ function Runtime.new()
     keyDownPath = nil,
     keyDownKey = nil,
     scrollOffsets = {},
+    layoutCallbackCache = {},
     inputCursors = {},
     focusPath = nil,
     memoCache = setmetatable({}, { __mode = "k" }),
@@ -633,6 +720,44 @@ function Runtime:layoutRoot(root, availableWidth, availableHeight)
   self.bus:dispatch("layout", root)
 end
 
+---@param root GlyphNode|nil
+---@param originX? number
+---@param originY? number
+---@return nil
+function Runtime:publishLayoutCallbacks(root, originX, originY)
+  if not root then
+    return
+  end
+
+  local function walk(node, parentX, parentY)
+    local layout = node.layout or {}
+    local absX = parentX + (layout.x or 0)
+    local absY = parentY + (layout.y or 0)
+    local props = node.props or {}
+
+    publishLayoutCallback(self, node, "bounds", props.onBounds, layoutBounds(node))
+    publishLayoutCallback(self, node, "layout", props.onLayout, viewportBounds(node, absX, absY))
+
+    local childX = absX
+    local childY = absY
+    if node.type == "scrollView" then
+      local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - (layout.height or 0)))
+      local scrollKey = node.path
+      local offset = math.min(maxScroll, math.max(0, (scrollKey and self.scrollOffsets[scrollKey]) or 0))
+      if scrollKey then
+        self.scrollOffsets[scrollKey] = offset
+      end
+      childY = absY - offset
+    end
+
+    for _, child in ipairs(orderedChildren(node)) do
+      walk(child, childX, childY)
+    end
+  end
+
+  walk(root, originX or 0, originY or 0)
+end
+
 function Runtime:update(dt)
   self.lastDt = dt or 0
   self.styleClock = self.styleClock + (dt or 0)
@@ -670,6 +795,7 @@ function Runtime:render(component)
       local loveModule = self.love or _G.love
       local viewportWidth, viewportHeight = viewportSize(self, loveModule)
       self:layoutRoot(root, viewportWidth, viewportHeight)
+      self:publishLayoutCallbacks(root, 0, 0)
       self:draw(root)
     end
 
@@ -791,6 +917,7 @@ function Runtime:renderLayer(layer, viewportWidth, viewportHeight)
 
   self:layoutRoot(layer.root, layer.width or viewportWidth, layer.height or viewportHeight)
   local bounds = resolveLayerBounds(layer, viewportWidth, viewportHeight)
+  self:publishLayoutCallbacks(layer.root, bounds.x, bounds.y)
 
   local progress = layer.state == "open" and 1 or layer.progress
   local phase = layer.state == "exiting" and "exit" or "enter"

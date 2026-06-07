@@ -14,6 +14,12 @@ describe("runtime", function()
     Feedback.clear()
   end)
 
+  local function layoutAndPublish(runtime, component, width, height, originX, originY)
+    runtime:build(component)
+    runtime:layoutRoot(runtime.root, width or 800, height or 600)
+    runtime:publishLayoutCallbacks(runtime.root, originX or 0, originY or 0)
+  end
+
   it("persists useState values across renders", function()
     local runtime = Runtime.new()
     local setCount
@@ -30,6 +36,215 @@ describe("runtime", function()
     setCount(2)
     runtime:build(App)
     assert.are.equal("Count: 2", runtime.root.value)
+  end)
+
+  it("publishes local parent-relative bounds with onBounds", function()
+    local runtime = Runtime.new()
+    local seen
+
+    layoutAndPublish(runtime, function()
+      return Components.column({ padding = { left = 7, top = 9 } }, {
+        Components.box({
+          width = 20,
+          height = 10,
+          onBounds = function(bounds)
+            seen = bounds
+          end,
+        }),
+      })
+    end, 120, 80)
+
+    assert.are.same({ x = 7, y = 9, width = 20, height = 10 }, seen)
+  end)
+
+  it("publishes viewport-absolute bounds with onLayout", function()
+    local runtime = Runtime.new()
+    local seen
+
+    layoutAndPublish(runtime, function()
+      return Components.column({ padding = { left = 7, top = 9 } }, {
+        Components.box({
+          width = 20,
+          height = 10,
+          onLayout = function(bounds)
+            seen = bounds
+          end,
+        }),
+      })
+    end, 120, 80, 30, 40)
+
+    assert.are.same({ x = 37, y = 49, width = 20, height = 10 }, seen)
+  end)
+
+  it("publishes layout callbacks only when bounds change", function()
+    local runtime = Runtime.new()
+    local width = 20
+    local calls = 0
+    local callback = function()
+      calls = calls + 1
+    end
+
+    local function App()
+      return Components.box({
+        width = width,
+        height = 10,
+        onLayout = callback,
+      })
+    end
+
+    layoutAndPublish(runtime, App, 120, 80)
+    runtime:layoutRoot(runtime.root, 120, 80)
+    runtime:publishLayoutCallbacks(runtime.root, 0, 0)
+
+    width = 30
+    layoutAndPublish(runtime, App, 120, 80)
+
+    assert.are.equal(2, calls)
+  end)
+
+  it("republishes layout callbacks when callback identity changes", function()
+    local runtime = Runtime.new()
+    local calls = 0
+    local callback = function()
+      calls = calls + 1
+    end
+
+    local function App()
+      return Components.box({
+        width = 20,
+        height = 10,
+        onLayout = callback,
+      })
+    end
+
+    layoutAndPublish(runtime, App, 120, 80)
+    callback = function()
+      calls = calls + 1
+    end
+    layoutAndPublish(runtime, App, 120, 80)
+
+    assert.are.equal(2, calls)
+  end)
+
+  it("republishes layout callbacks when a callback prop is restored", function()
+    local runtime = Runtime.new()
+    local enabled = true
+    local calls = 0
+    local callback = function()
+      calls = calls + 1
+    end
+
+    local function App()
+      return Components.box({
+        width = 20,
+        height = 10,
+        onLayout = enabled and callback or nil,
+      })
+    end
+
+    layoutAndPublish(runtime, App, 120, 80)
+    enabled = false
+    layoutAndPublish(runtime, App, 120, 80)
+    enabled = true
+    layoutAndPublish(runtime, App, 120, 80)
+
+    assert.are.equal(2, calls)
+  end)
+
+  it("publishes scrollView child layout at its scrolled visual position", function()
+    local runtime = Runtime.new()
+    local seen
+
+    layoutAndPublish(runtime, function()
+      return Components.scrollView({ width = 100, height = 50 }, {
+        Components.column({}, {
+          Components.box({ width = 100, height = 20 }),
+          Components.box({ width = 100, height = 20 }),
+          Components.box({ width = 100, height = 20 }),
+          Components.box({ width = 100, height = 20 }),
+          Components.box({
+            width = 100,
+            height = 20,
+            onLayout = function(bounds)
+              seen = bounds
+            end,
+          }),
+        }),
+      })
+    end, 100, 50)
+
+    runtime.scrollOffsets["0"] = 40
+    runtime:publishLayoutCallbacks(runtime.root, 0, 0)
+
+    assert.are.same({ x = 0, y = 40, width = 100, height = 20 }, seen)
+  end)
+
+  it("includes scene layer offsets in onLayout bounds", function()
+    local runtime = Runtime.new()
+    local seen
+    runtime:setLove({
+      graphics = {
+        getDimensions = function()
+          return 800, 600
+        end,
+        getLineWidth = function()
+          return 1
+        end,
+        setLineWidth = function() end,
+        getShader = function()
+          return nil
+        end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function() end,
+        push = function() end,
+        pop = function() end,
+        translate = function() end,
+        setStencilTest = function() end,
+        setScissor = function() end,
+      },
+    })
+
+    runtime.scene:push("panel", function()
+      return Components.column({ padding = { left = 5, top = 6 } }, {
+        Components.box({
+          width = 20,
+          height = 10,
+          onLayout = function(bounds)
+            seen = bounds
+          end,
+        }),
+      })
+    end, {
+      width = 200,
+      height = 100,
+      align = "center",
+      transition = "none",
+    })
+
+    runtime:render()
+
+    assert.are.same({ x = 305, y = 256, width = 20, height = 10 }, seen)
+  end)
+
+  it("does not include visual-only animation transforms in layout bounds", function()
+    local runtime = Runtime.new()
+    local seen
+
+    layoutAndPublish(runtime, function()
+      return Components.box({
+        width = 20,
+        height = 10,
+        onLayout = function(bounds)
+          seen = bounds
+        end,
+      })
+    end, 120, 80)
+
+    runtime.root._glyphAnimation = { x = 40, y = 30, scale = 2 }
+    runtime:publishLayoutCallbacks(runtime.root, 0, 0)
+
+    assert.are.same({ x = 0, y = 0, width = 20, height = 10 }, seen)
   end)
 
   it("runs effects when deps change and cleans up previous effect", function()

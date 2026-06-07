@@ -150,6 +150,42 @@ end)
 off()
 ```
 
+## Node Layout Callbacks
+
+Use `onBounds` and `onLayout` when app code needs node geometry for drag/drop,
+tooltips, popovers, minimap markers, overlays, or contextual menus.
+
+`onBounds(bounds, node)` receives the node’s local parent-relative layout:
+
+```lua
+ui.box({
+  width = 64,
+  height = 64,
+  onBounds = function(bounds, node)
+    print(bounds.x, bounds.y, bounds.width, bounds.height)
+  end,
+})
+```
+
+`onLayout(bounds, node)` receives viewport-space bounds in the same coordinate
+space as routed pointer input. It includes parent offsets, scene/modal layer
+offsets, and `scrollView` visual scroll offsets.
+
+```lua
+ui.button({
+  label = "Drag",
+  onLayout = function(bounds)
+    dragTargets.primary = bounds
+  end,
+})
+```
+
+Both callbacks fire after layout publication and before drawing, only when the
+reported rectangle changes for that node path or when the callback function
+identity changes. Reported bounds are rectangular layout geometry; they do not
+include visual-only animation, feedback, shape, clip, stencil, or custom
+transition transforms.
+
 ## Audio Cue Events
 
 Glyph emits `audio` callbacks when configured cues resolve for interaction

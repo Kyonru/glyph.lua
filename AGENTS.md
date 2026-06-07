@@ -126,6 +126,7 @@ Poor core API examples:
 - Mouse/touch and keyboard/gamepad activation should use the same press/release lifecycle so pressed styles, audio cues, and accessibility activation events stay consistent.
 - Fixed viewport backends convert pointer coordinates before hit testing. Pointer events outside the virtual viewport should not hit UI.
 - Spatial navigation should stay layout-agnostic. Use `navGroup` for soft grouping and `navScope`/`navTrap`/`onNavigateExit` for submenus.
+- Use `onLayout` or `onBounds` to capture node geometry for drag/drop, tooltips, popovers, overlays, and contextual menus. Do not mutate app geometry state from custom draw callbacks unless the state is strictly draw-local.
 - Scene layers route input top-down. Blocking layers stop input from reaching lower layers; non-blocking overlays pass through.
 - Modals are scene layers with `kind = "modal"`, not a separate runtime.
 - Escape should close the top eligible scene/modal layer unless `escapeToClose = false`.

@@ -73,7 +73,7 @@ Responsive game-console localization demo with locale switching, keyed command/s
 
 ## Inventory
 
-Medieval/MMO inventory demo using `ui.grid`, the `potions.png` spritesheet, app-owned drag/drop state, scrollable uniform slots, paged uniform slots, and a variable-size case grid with rejected invalid placements.
+Medieval/MMO inventory demo using `ui.grid`, `onLayout` drop-target bounds, the `potions.png` spritesheet, app-owned drag/drop state, scrollable uniform slots, paged uniform slots, and a variable-size case grid with rejected invalid placements.
 
 ## Juice
 

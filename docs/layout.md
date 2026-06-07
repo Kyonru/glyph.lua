@@ -141,6 +141,26 @@ Root-scoped absolute nodes are promoted above the current render root after
 normal content, ordered by `zIndex`, and hit-tested in the same order. Scene
 layers still remain separate stacking roots.
 
+## Capturing Bounds
+
+Use node callbacks instead of custom draw callbacks when app code needs
+geometry. `onBounds` reports local parent-relative layout, while `onLayout`
+reports viewport-space layout in the same coordinate system as pointer input.
+
+```lua
+ui.box({
+  width = 120,
+  height = 48,
+  onLayout = function(bounds)
+    tooltipAnchor = bounds
+  end,
+})
+```
+
+`onLayout` includes parent offsets, scene/modal layer offsets, and scroll view
+visual offsets. It intentionally ignores visual-only animation, feedback, and
+transition transforms.
+
 ## Text Wrapping
 
 Use `wrap = true` with a known width:

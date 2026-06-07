@@ -70,6 +70,8 @@ local GlyphStyle = {}
 ---@field height number
 local GlyphBounds = {}
 
+---@alias GlyphLayoutBounds GlyphBounds
+
 ---@class GlyphShape
 ---@field kind? "rect"|"skew"|"polygon"|"circle"|"ellipse"|"blob"
 ---@field radius? number
@@ -232,6 +234,8 @@ local GlyphPadding = {}
 ---@class GlyphProps
 ---@field style? GlyphStyle
 ---@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table, style: GlyphStyle, ctx: GlyphDrawContext)
+---@field onBounds? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
+---@field onLayout? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
 ---@field width? number|string
 ---@field height? number|string
 ---@field minWidth? number
