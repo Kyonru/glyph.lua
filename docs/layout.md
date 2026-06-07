@@ -74,6 +74,38 @@ and use the same absolute positioning rules as other containers.
 `ui.grid` is intentionally not CSS Grid: it has no spans, templates, masonry, or
 per-child placement in v1.
 
+Use `ui.grid.pointToCell` with viewport-space bounds from `onLayout` when pointer
+input needs to address a uniform grid:
+
+```lua
+local bounds
+
+ui.grid({
+  columns = 8,
+  cellWidth = 58,
+  cellHeight = 58,
+  gap = 8,
+  onLayout = function(nextBounds)
+    bounds = nextBounds
+  end,
+}, slots)
+
+local cell = ui.grid.pointToCell(bounds, {
+  columns = 8,
+  cellWidth = 58,
+  cellHeight = 58,
+  gap = 8,
+  count = #slots,
+}, pointerX, pointerY)
+
+if cell then
+  selectSlot(cell.index)
+end
+```
+
+The helper returns `{ column, row, index, localX, localY }` or `nil` when the
+pointer is outside the grid, inside a gap, or beyond `count`.
+
 ## Percent Sizes
 
 Percent sizes resolve against the parent’s available content bounds.
@@ -140,6 +172,23 @@ ui.box({
 Root-scoped absolute nodes are promoted above the current render root after
 normal content, ordered by `zIndex`, and hit-tested in the same order. Scene
 layers still remain separate stacking roots.
+
+For overlays, prefer `ui.portal` over spelling out the absolute/root-scope props:
+
+```lua
+ui.portal({
+  left = pointerX - 32,
+  top = pointerY - 32,
+  width = 64,
+  height = 64,
+  zIndex = 500,
+  interactive = false,
+}, previewNode)
+```
+
+`ui.portal` is not a modal or scene layer. It is a named stack-like wrapper for
+root-scoped absolute content such as drag previews, tooltips, popovers, menus,
+and HUD callouts.
 
 ## Capturing Bounds
 

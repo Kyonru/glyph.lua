@@ -688,6 +688,115 @@ describe("ui helpers", function()
     assert.are.equal(8, receivedPolygon[7])
   end)
 
+  it("draws nine-slice images with cached quads and restores color", function()
+    local runtime = Runtime.new()
+    local quads = {}
+    local draws = {}
+    local colors = {}
+    local currentColor = { 0.2, 0.3, 0.4, 0.5 }
+    local image = {
+      getWidth = function() return 30 end,
+      getHeight = function() return 20 end,
+    }
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        getColor = function()
+          return currentColor[1], currentColor[2], currentColor[3], currentColor[4]
+        end,
+        setColor = function(r, g, b, a)
+          currentColor = { r, g, b, a }
+          colors[#colors + 1] = { r, g, b, a }
+        end,
+        newQuad = function(x, y, width, height, sourceWidth, sourceHeight)
+          local quad = { x, y, width, height, sourceWidth, sourceHeight }
+          quads[#quads + 1] = quad
+          return quad
+        end,
+        draw = function(drawable, quad, x, y, rotation, sx, sy)
+          draws[#draws + 1] = { drawable, quad, x, y, rotation, sx, sy }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.box({
+        width = 100,
+        height = 80,
+        draw = function(_, x, y, _, _, _, _, ctx)
+          ctx:nineSlice(image, { x = x + 10, y = y + 5, width = 70, height = 50 }, {
+            border = { left = 4, right = 6, top = 5, bottom = 7 },
+            tint = { 1, 0.5, 0.25, 0.8 },
+            opacity = 0.5,
+          })
+        end,
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(9, #quads)
+    assert.are.equal(18, #draws)
+    assert.are.same({ 0, 0, 4, 5, 30, 20 }, quads[1])
+    assert.are.same({ 4, 5, 20, 8, 30, 20 }, quads[5])
+    assert.are.same({ image, quads[1], 10, 5, 0, 1, 1 }, draws[1])
+    assert.are.same({ image, quads[5], 14, 10, 0, 3, 4.75 }, draws[5])
+    assert.are.same({ 1, 0.5, 0.25, 0.4 }, colors[1])
+    assert.are.same({ 0.2, 0.3, 0.4, 0.5 }, colors[2])
+    assert.are.same({ 0.2, 0.3, 0.4, 0.5 }, currentColor)
+  end)
+
+  it("can skip the center patch for nine-slice frames", function()
+    local runtime = Runtime.new()
+    local draws = {}
+    local image = {
+      getWidth = function() return 16 end,
+      getHeight = function() return 16 end,
+    }
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        getColor = function() return 1, 1, 1, 1 end,
+        setColor = function() end,
+        newQuad = function(x, y, width, height)
+          return { x = x, y = y, width = width, height = height }
+        end,
+        draw = function(_, quad)
+          draws[#draws + 1] = quad
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.box({
+        width = 40,
+        height = 40,
+        draw = function(_, x, y, width, height, _, _, ctx)
+          ctx:nineSlice(image, { x = x, y = y, width = width, height = height }, {
+            border = 4,
+            center = false,
+          })
+        end,
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(8, #draws)
+    for _, quad in ipairs(draws) do
+      assert.is_false(quad.x == 4 and quad.y == 4 and quad.width == 8 and quad.height == 8)
+    end
+  end)
+
   it("resolves registered typography fonts and restores graphics font", function()
     local runtime = Runtime.new()
     local calls = {}

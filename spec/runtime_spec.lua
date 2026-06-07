@@ -1103,6 +1103,91 @@ describe("runtime", function()
     assert.are.equal("floating", clicked)
   end)
 
+  it("draws portal nodes above later sibling branches", function()
+    local runtime = Runtime.new()
+    local calls = {}
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+      },
+    })
+
+    local function App()
+      return Components.row({ width = 220, height = 120 }, {
+        Components.box({ width = 100, height = 100 }, {
+          Components.portal({
+            left = 80,
+            top = 0,
+            width = 100,
+            height = 100,
+            zIndex = 5,
+            draw = function()
+              calls[#calls + 1] = "portal"
+            end,
+          }),
+        }),
+        Components.box({
+          width = 100,
+          height = 100,
+          draw = function()
+            calls[#calls + 1] = "later"
+          end,
+        }),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "later", "portal" }, calls)
+  end)
+
+  it("hit tests portal children before later sibling branches", function()
+    local runtime = Runtime.new()
+    local clicked = nil
+
+    local function App()
+      return Components.row({ width = 220, height = 120 }, {
+        Components.box({ width = 100, height = 100 }, {
+          Components.portal({
+            left = 80,
+            top = 0,
+            width = 100,
+            height = 100,
+            zIndex = 5,
+          }, {
+            Components.button({
+              label = "Floating",
+              width = 100,
+              height = 100,
+              onClick = function()
+                clicked = "portal"
+              end,
+            }),
+          }),
+        }),
+        Components.button({
+          label = "Later",
+          width = 100,
+          height = 100,
+          onClick = function()
+            clicked = "later"
+          end,
+        }),
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(110, 20, 1)
+    runtime:mousereleased(110, 20, 1)
+
+    assert.are.equal("portal", clicked)
+  end)
+
   it("restores stencil state after clipped child drawing", function()
     local runtime = Runtime.new()
     local calls = {}

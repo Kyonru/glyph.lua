@@ -175,6 +175,22 @@ describe("layout", function()
     assert.are.equal(16, tree.children[4].layout.y)
   end)
 
+  it("keeps ui.grid callable while exposing helper methods", function()
+    local tree = ui.grid({ columns = 2, cellWidth = 16, gap = 2 }, {
+      ui.box({}),
+      ui.box({}),
+      ui.box({}),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal("table", type(ui.grid))
+    assert.are.equal("function", type(ui.grid.pointToCell))
+    assert.are.equal("grid", tree.type)
+    assert.are.equal(34, tree.layout.width)
+    assert.are.equal(34, tree.layout.height)
+  end)
+
   it("defaults grid cell height to cell width", function()
     local tree = ui.grid({ columns = 2, cellWidth = 18, gap = 3 }, {
       ui.box({}),
@@ -277,6 +293,56 @@ describe("layout", function()
     assert.are.equal(70, tree.children[3].layout.y)
   end)
 
+  it("maps pointer coordinates into fixed grid cells", function()
+    local bounds = { x = 10, y = 20, width = 81, height = 43 }
+    local props = {
+      columns = 3,
+      cellWidth = 20,
+      cellHeight = 10,
+      gap = 5,
+      padding = { x = 2, y = 3 },
+      count = 5,
+    }
+
+    local cell = ui.grid.pointToCell(bounds, props, 40, 25)
+
+    assert.are.same({ column = 2, row = 1, index = 2, localX = 3, localY = 2 }, cell)
+    assert.is_nil(ui.grid.pointToCell(bounds, props, 34, 25))
+    assert.is_nil(ui.grid.pointToCell(bounds, props, 63, 39))
+  end)
+
+  it("maps responsive grid cells using the same column math as layout", function()
+    local bounds = { x = 5, y = 7, width = 250, height = 180 }
+    local props = {
+      minCellWidth = 70,
+      maxColumns = 3,
+      gap = 10,
+      count = 4,
+    }
+
+    local third = ui.grid.pointToCell(bounds, props, 5 + 172 + 10, 12)
+    local fourth = ui.grid.pointToCell(bounds, props, 12, 7 + 86 + 3)
+
+    assert.are.same({ column = 3, row = 1, index = 3, localX = 10, localY = 5 }, third)
+    assert.are.same({ column = 1, row = 2, index = 4, localX = 7, localY = 3 }, fourth)
+  end)
+
+  it("honors grid helper offsets from justify and align", function()
+    local bounds = { x = 0, y = 0, width = 100, height = 80 }
+    local props = {
+      columns = 2,
+      cellWidth = 20,
+      cellHeight = 10,
+      gap = 5,
+      justify = "center",
+      align = "end",
+      count = 3,
+    }
+
+    assert.are.same({ column = 1, row = 1, index = 1, localX = 2.5, localY = 0 }, ui.grid.pointToCell(bounds, props, 30, 55))
+    assert.is_nil(ui.grid.pointToCell(bounds, props, 10, 55))
+  end)
+
   it("lays out stack children at the same origin", function()
     local tree = ui.stack({ width = 100, height = 80, padding = 5 }, {
       ui.box({ width = 30, height = 20 }),
@@ -361,6 +427,24 @@ describe("layout", function()
 
     assert.are.equal(80, tree.layout.width)
     assert.are.equal(40, tree.children[3].layout.x)
+  end)
+
+  it("creates root-scoped portals without affecting parent flow", function()
+    local tree = ui.column({ gap = 4 }, {
+      ui.box({ width = 20, height = 10 }),
+      ui.portal({ left = 3, top = 4, width = 200, height = 100, zIndex = 50 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal("portal", tree.children[2].type)
+    assert.are.equal("absolute", tree.children[2].props.position)
+    assert.are.equal("root", tree.children[2].props.zScope)
+    assert.are.equal("stack", tree.children[2].props.display)
+    assert.are.equal(20, tree.layout.width)
+    assert.are.equal(10, tree.layout.height)
+    assert.are.equal(3, tree.children[2].layout.x)
+    assert.are.equal(4, tree.children[2].layout.y)
   end)
 
   it("wraps text to a fixed width", function()

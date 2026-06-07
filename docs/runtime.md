@@ -303,8 +303,9 @@ These are useful inside custom draw callbacks.
 
 - Hit testing follows visual order.
 - Higher `zIndex` wins among siblings.
-- `position = "absolute"` with `zScope = "root"` is promoted above normal
-  content in the current render root and hit-tested before local content.
+- `ui.portal` is promoted above normal content in the current render root and
+  hit-tested before local content. The lower-level form is `position = "absolute"`
+  with `zScope = "root"`.
 - Later stack children draw above earlier children and receive events first.
 - `interactive = false` lets decorative nodes pass events through.
 - Scene layers route input top-down.

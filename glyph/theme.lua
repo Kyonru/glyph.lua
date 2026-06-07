@@ -87,6 +87,7 @@ theme.components = {
   row = {},
   column = {},
   grid = {},
+  portal = {},
   scrollView = {},
   scrollBar = {
     width = theme.scrollbarWidth,

@@ -72,6 +72,24 @@ local GlyphBounds = {}
 
 ---@alias GlyphLayoutBounds GlyphBounds
 
+---@class GlyphNineSliceBorder
+---@field left? number
+---@field right? number
+---@field top? number
+---@field bottom? number
+---@field x? number
+---@field y? number
+local GlyphNineSliceBorder = {}
+
+---@class GlyphNineSliceOpts
+---@field border? number|GlyphNineSliceBorder
+---@field sourceWidth? number
+---@field sourceHeight? number
+---@field tint? GlyphColor
+---@field opacity? number
+---@field center? boolean
+local GlyphNineSliceOpts = {}
+
 ---@class GlyphShape
 ---@field kind? "rect"|"skew"|"polygon"|"circle"|"ellipse"|"blob"
 ---@field radius? number
@@ -117,6 +135,7 @@ local GlyphStencil = {}
 ---@field clip fun(self: GlyphDrawContext, shape: boolean|GlyphShape|fun(ctx: GlyphDrawContext): any, fn: fun())
 ---@field stencil fun(self: GlyphDrawContext, shapeOrFn: GlyphShape|fun(ctx: GlyphDrawContext): any, fn: fun(), opts?: GlyphStencil)
 ---@field meter fun(self: GlyphDrawContext, bounds?: GlyphBounds, opts?: GlyphMeterProps)
+---@field nineSlice fun(self: GlyphDrawContext, image: any, bounds: GlyphBounds, opts?: GlyphNineSliceOpts)
 ---@field text fun(self: GlyphDrawContext, value: any, x: number, y: number)
 ---@field printf fun(self: GlyphDrawContext, value: any, x: number, y: number, limit: number, align?: string)
 ---@field skewBox fun(self: GlyphDrawContext, opts?: table): number[]
@@ -450,6 +469,26 @@ local GlyphMeterProps = {}
 ---@field minCellWidth? number
 ---@field maxColumns? number
 local GlyphGridProps = {}
+
+---@class GlyphGridPointProps : GlyphGridProps
+---@field count? number optional item count for rejecting empty trailing cells and honoring vertical alignment
+local GlyphGridPointProps = {}
+
+---@class GlyphGridCell
+---@field column number
+---@field row number
+---@field index number
+---@field localX number
+---@field localY number
+local GlyphGridCell = {}
+
+---@class GlyphGridApi
+---@field __call fun(self: GlyphGridApi, props?: GlyphGridProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field pointToCell fun(bounds: GlyphBounds, props: GlyphGridPointProps|GlyphGridProps, x: number, y: number): GlyphGridCell|nil
+local GlyphGridApi = {}
+
+---@class GlyphPortalProps : GlyphProps
+local GlyphPortalProps = {}
 
 ---@class GlyphTabsProps : GlyphProps
 ---@field active? number

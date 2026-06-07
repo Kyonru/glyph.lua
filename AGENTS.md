@@ -52,8 +52,8 @@ make docs
 
 Glyph should provide primitives and reusable systems:
 
-- Core components: `text`, `image`, `box`, `stack`, `row`, `column`, `grid`, `button`, `input`, `scrollView`, `tabs`, `panel`.
-- Generic visual primitives: `meter`, shape descriptors, clipping/stencil masks, and draw context helpers.
+- Core components: `text`, `image`, `box`, `stack`, `row`, `column`, `grid`, `portal`, `button`, `input`, `scrollView`, `tabs`, `panel`.
+- Generic visual primitives: `meter`, shape descriptors, clipping/stencil masks, nine-slice drawing, and draw context helpers.
 - Layout primitives: flex row/column, uniform grid layout, stack/absolute layout, percent sizing, padding/gap, grow/flex, text wrapping.
 - Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus.
 - Input systems: pointer/touch, keyboard activation, spatial navigation, and opt-in digital gamepad mapping.
@@ -71,11 +71,13 @@ Good core API examples:
 
 - `ui.stack`
 - `ui.grid`
+- `ui.portal`
 - `ui.image`
 - `ui.transitions.custom`
 - `ui.scene.push`
 - `ctx:polygon`
 - `ui.meter`
+- `ctx:nineSlice`
 - `ui.feedback.define`
 - `ui.richText`
 - `ui.i18n.configure`
@@ -121,13 +123,14 @@ Poor core API examples:
 
 - Draw order and hit-test order must match. If a child visually appears above another child, it should receive pointer events first.
 - Non-interactive decoration must set `interactive = false` so events pass through.
-- Local `zIndex` orders siblings. Absolute floating UI that must escape later sibling branches should use `zScope = "root"` so draw and hit-test promotion stay matched.
+- Local `zIndex` orders siblings. Floating UI that must escape later sibling branches should prefer `ui.portal`; use raw `position = "absolute", zScope = "root"` only when a lower-level primitive is clearer.
 - Touch is installed automatically by `ui.install` / `ui.load`; gamepad mapping is opt-in with `install.gamepad = true` or manual `ui.gamepadpressed/released`.
 - Mouse/touch and keyboard/gamepad activation should use the same press/release lifecycle so pressed styles, audio cues, and accessibility activation events stay consistent.
 - Fixed viewport backends convert pointer coordinates before hit testing. Pointer events outside the virtual viewport should not hit UI.
 - Spatial navigation should stay layout-agnostic. Use `navGroup` for soft grouping and `navScope`/`navTrap`/`onNavigateExit` for submenus.
 - Use `onLayout` or `onBounds` to capture node geometry for drag/drop, tooltips, popovers, overlays, and contextual menus. Do not mutate app geometry state from custom draw callbacks unless the state is strictly draw-local.
 - Use `ui.drag` for generic pointer drag lifecycles. Keep app-specific swapping, collision, placement, validation, and drag previews outside core.
+- Use `ui.grid.pointToCell` with `onLayout` bounds for uniform grid pointer mapping. Keep variable-size placement, collision, and inventory rules app-owned.
 - Scene layers route input top-down. Blocking layers stop input from reaching lower layers; non-blocking overlays pass through.
 - Modals are scene layers with `kind = "modal"`, not a separate runtime.
 - Escape should close the top eligible scene/modal layer unless `escapeToClose = false`.
@@ -152,7 +155,7 @@ Poor core API examples:
 - `style.transition` is state-style interpolation; `enter`/`exit` animation props are visual-only node lifecycle animation; `ui.feedback` is triggerable game-feel sequencing.
 - Text styling should use `theme.typography`, `theme.fonts`, `theme.textScale`, and `textStyle` presets for repeated type systems.
 - Rich/game text should use the optional SYSL backend through `ui.richTextBackend`; do not grow a custom rich-text parser in core.
-- Shape, clip, stencil, and meter drawing must not alter layout or hit-testing geometry unless a later explicit API adds shape-aware hit tests.
+- Shape, clip, stencil, meter, and nine-slice drawing must not alter layout or hit-testing geometry unless a later explicit API adds shape-aware hit tests.
 
 ## Animation Rules
 

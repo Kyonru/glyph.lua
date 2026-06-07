@@ -321,6 +321,7 @@ function Runtime.new()
     previousStyles = {},
     animatedStyles = {},
     imagePlans = {},
+    nineSliceQuads = {},
     animationStates = {},
     animationMounted = {},
     animationMountedByRoot = {},
@@ -2450,6 +2451,226 @@ drawMeter = function(graphics, bounds, props, style, ctx)
   end
 end
 
+---@param image any
+---@param opts? GlyphNineSliceOpts|table
+---@return number
+---@return number
+local function nineSliceSourceSize(image, opts)
+  opts = opts or {}
+  local sourceWidth = opts.sourceWidth
+  local sourceHeight = opts.sourceHeight
+
+  if sourceWidth == nil and image and type(image.getWidth) == "function" then
+    local ok, width = pcall(image.getWidth, image)
+    if ok then
+      sourceWidth = width
+    end
+  end
+
+  if sourceHeight == nil and image and type(image.getHeight) == "function" then
+    local ok, height = pcall(image.getHeight, image)
+    if ok then
+      sourceHeight = height
+    end
+  end
+
+  return math.max(0, tonumber(sourceWidth) or 0), math.max(0, tonumber(sourceHeight) or 0)
+end
+
+---@param border? number|GlyphNineSliceBorder|table
+---@param sourceWidth number
+---@param sourceHeight number
+---@return GlyphNineSliceBorder
+local function nineSliceBorder(border, sourceWidth, sourceHeight)
+  local result
+  if type(border) == "number" then
+    result = {
+      left = border,
+      right = border,
+      top = border,
+      bottom = border,
+    }
+  else
+    border = border or {}
+    result = {
+      left = border.left or border.x or 0,
+      right = border.right or border.x or 0,
+      top = border.top or border.y or 0,
+      bottom = border.bottom or border.y or 0,
+    }
+  end
+
+  result.left = math.max(0, math.min(sourceWidth, result.left or 0))
+  result.right = math.max(0, math.min(sourceWidth, result.right or 0))
+  result.top = math.max(0, math.min(sourceHeight, result.top or 0))
+  result.bottom = math.max(0, math.min(sourceHeight, result.bottom or 0))
+
+  if result.left + result.right > sourceWidth and sourceWidth > 0 then
+    local scale = sourceWidth / (result.left + result.right)
+    result.left = result.left * scale
+    result.right = result.right * scale
+  end
+
+  if result.top + result.bottom > sourceHeight and sourceHeight > 0 then
+    local scale = sourceHeight / (result.top + result.bottom)
+    result.top = result.top * scale
+    result.bottom = result.bottom * scale
+  end
+
+  return result
+end
+
+---@param border GlyphNineSliceBorder
+---@param width number
+---@param height number
+---@return GlyphNineSliceBorder
+local function nineSliceDestinationBorder(border, width, height)
+  local result = {
+    left = border.left,
+    right = border.right,
+    top = border.top,
+    bottom = border.bottom,
+  }
+
+  if result.left + result.right > width and width > 0 then
+    local scale = width / (result.left + result.right)
+    result.left = result.left * scale
+    result.right = result.right * scale
+  end
+
+  if result.top + result.bottom > height and height > 0 then
+    local scale = height / (result.top + result.bottom)
+    result.top = result.top * scale
+    result.bottom = result.bottom * scale
+  end
+
+  return result
+end
+
+---@param runtime table
+---@param love table
+---@param image any
+---@param sourceWidth number
+---@param sourceHeight number
+---@param border GlyphNineSliceBorder
+---@return table|nil
+local function nineSliceQuads(runtime, love, image, sourceWidth, sourceHeight, border)
+  local graphics = love and love.graphics
+  if not graphics or type(graphics.newQuad) ~= "function" then
+    return nil
+  end
+
+  local key = table.concat({
+    tostring(image),
+    tostring(sourceWidth),
+    tostring(sourceHeight),
+    tostring(border.left),
+    tostring(border.right),
+    tostring(border.top),
+    tostring(border.bottom),
+  }, "|")
+  runtime.nineSliceQuads = runtime.nineSliceQuads or {}
+  if runtime.nineSliceQuads[key] then
+    return runtime.nineSliceQuads[key]
+  end
+
+  local left = border.left
+  local right = border.right
+  local top = border.top
+  local bottom = border.bottom
+  local centerWidth = math.max(0, sourceWidth - left - right)
+  local centerHeight = math.max(0, sourceHeight - top - bottom)
+  local xs = { 0, left, left + centerWidth }
+  local ys = { 0, top, top + centerHeight }
+  local widths = { left, centerWidth, right }
+  local heights = { top, centerHeight, bottom }
+  local quads = {}
+
+  for row = 1, 3 do
+    for column = 1, 3 do
+      local sourceW = widths[column]
+      local sourceH = heights[row]
+      if sourceW > 0 and sourceH > 0 then
+        quads[(row - 1) * 3 + column] = graphics.newQuad(xs[column], ys[row], sourceW, sourceH, sourceWidth, sourceHeight)
+      end
+    end
+  end
+
+  runtime.nineSliceQuads[key] = quads
+  return quads
+end
+
+---@param runtime table
+---@param love table
+---@param image any
+---@param bounds GlyphBounds
+---@param opts? GlyphNineSliceOpts|table
+---@return nil
+local function drawNineSlice(runtime, love, image, bounds, opts)
+  opts = opts or {}
+  local graphics = love and love.graphics
+  if not image or not graphics or type(graphics.draw) ~= "function" then
+    return
+  end
+
+  bounds = bounds or {}
+  local x = bounds.x or 0
+  local y = bounds.y or 0
+  local width = bounds.width or 0
+  local height = bounds.height or 0
+  if width <= 0 or height <= 0 then
+    return
+  end
+
+  local sourceWidth, sourceHeight = nineSliceSourceSize(image, opts)
+  if sourceWidth <= 0 or sourceHeight <= 0 then
+    return
+  end
+
+  local sourceBorder = nineSliceBorder(opts.border, sourceWidth, sourceHeight)
+  local quads = nineSliceQuads(runtime, love, image, sourceWidth, sourceHeight, sourceBorder)
+  if not quads then
+    return
+  end
+
+  local destBorder = nineSliceDestinationBorder(sourceBorder, width, height)
+  local centerWidth = math.max(0, sourceWidth - sourceBorder.left - sourceBorder.right)
+  local centerHeight = math.max(0, sourceHeight - sourceBorder.top - sourceBorder.bottom)
+  local destCenterWidth = math.max(0, width - destBorder.left - destBorder.right)
+  local destCenterHeight = math.max(0, height - destBorder.top - destBorder.bottom)
+  local sourceWidths = { sourceBorder.left, centerWidth, sourceBorder.right }
+  local sourceHeights = { sourceBorder.top, centerHeight, sourceBorder.bottom }
+  local destXs = { x, x + destBorder.left, x + width - destBorder.right }
+  local destYs = { y, y + destBorder.top, y + height - destBorder.bottom }
+  local destWidths = { destBorder.left, destCenterWidth, destBorder.right }
+  local destHeights = { destBorder.top, destCenterHeight, destBorder.bottom }
+  local previousColor
+
+  if graphics.getColor then
+    previousColor = { graphics.getColor() }
+  end
+  color(love, withOpacity(opts.tint or { 1, 1, 1, 1 }, opts.opacity or 1))
+
+  for row = 1, 3 do
+    for column = 1, 3 do
+      local index = (row - 1) * 3 + column
+      local quad = quads[index]
+      local sourceW = sourceWidths[column]
+      local sourceH = sourceHeights[row]
+      local destW = destWidths[column]
+      local destH = destHeights[row]
+      local isCenter = row == 2 and column == 2
+      if quad and sourceW > 0 and sourceH > 0 and destW > 0 and destH > 0 and not (isCenter and opts.center == false) then
+        graphics.draw(image, quad, destXs[column], destYs[row], 0, destW / sourceW, destH / sourceH)
+      end
+    end
+  end
+
+  if previousColor and graphics.setColor then
+    graphics.setColor(previousColor[1], previousColor[2], previousColor[3], previousColor[4])
+  end
+end
+
 ---@param runtime table
 ---@param node GlyphNode
 ---@param x number
@@ -2559,6 +2780,14 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
   ---@return nil
   function ctx:meter(bounds, opts)
     drawMeter(graphics, bounds or self, opts or {}, style, self)
+  end
+
+  ---@param image any
+  ---@param bounds GlyphBounds
+  ---@param opts? GlyphNineSliceOpts
+  ---@return nil
+  function ctx:nineSlice(image, bounds, opts)
+    drawNineSlice(runtime, love, image, bounds or self, opts)
   end
 
   ---@param value any

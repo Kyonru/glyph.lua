@@ -22,10 +22,10 @@ Core belongs in `glyph/` only when it is reusable across many games and tools. G
 
 Add to core:
 
-- Layout primitives and constraints, including row/column, uniform grid, stack, and absolute positioning.
+- Layout primitives and constraints, including row/column, uniform grid, stack, portal overlays, and absolute positioning.
 - Event routing and focus/hover/press behavior.
 - Generic style, theme, shader, and transition hooks.
-- Generic image, sprite sheet quad helpers, meter, shape, clipping, stencil, and custom draw helpers.
+- Generic image, sprite sheet quad helpers, meter, shape, clipping, stencil, nine-slice drawing, and custom draw helpers.
 - Theme-driven typography, font refs, text scaling, and optional SYSL-backed rich text.
 - Scene/layer/modal mechanics.
 - Spatial navigation primitives and opt-in gamepad mapping.
@@ -81,9 +81,10 @@ The runtime in `glyph/runtime.lua` owns:
 - Viewport coordinate conversion for pointer/touch input.
 
 Draw order and hit order must match. If `zIndex` or stack order changes drawing, hit testing must follow the same order in reverse.
-Local `zIndex` orders siblings. `position = "absolute", zScope = "root"` promotes floating UI above normal content in the current render root and must keep draw and hit-test order matched.
+Local `zIndex` orders siblings. Prefer `ui.portal` for floating UI that must escape later sibling branches in the current render root. Raw `position = "absolute", zScope = "root"` remains available for lower-level primitives and must keep draw and hit-test order matched.
 Use `onLayout` or `onBounds` for app-owned geometry capture such as drag/drop targets, tooltips, popovers, overlays, and contextual menus. Avoid mutating app geometry state from custom draw callbacks unless the state is strictly draw-local.
 Use `ui.drag` for generic pointer drag lifecycles. Keep app-specific swapping, collision, placement, validation, and drag previews outside core.
+Use `ui.grid.pointToCell` with `onLayout` bounds for uniform grid pointer mapping. Keep variable-size placement, collision, and inventory rules app-owned.
 
 For input changes, add runtime tests that press and release controls, not just geometry assertions.
 
@@ -125,7 +126,7 @@ Rules:
 - Custom draw receives `style` and `ctx`.
 - Any shader, blend, line width, font, scissor, stencil, canvas, or transform mutation must be restored.
 - `style.audio` and component `audio` tables are cue metadata; core emits events only.
-- Shape/clip/stencil/meter drawing is visual-only. Hit testing remains rectangular unless an explicit shape-hit API is added later.
+- Shape/clip/stencil/meter/nine-slice drawing is visual-only. Hit testing remains rectangular unless an explicit shape-hit API is added later.
 
 ## Typography Work
 

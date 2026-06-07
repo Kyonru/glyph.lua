@@ -190,6 +190,9 @@ Responsive grids use `minCellWidth` and optional `maxColumns`:
 ui.grid({ width = "100%", minCellWidth = 140, maxColumns = 5, gap = 10 }, cards)
 ```
 
+Use `ui.grid.pointToCell(bounds, gridProps, x, y)` with `onLayout` bounds when
+drag/drop or pointer selection needs a row-major cell index.
+
 ## Stack
 
 Use `ui.stack` for layered UI.
@@ -204,6 +207,28 @@ ui.stack({ width = "100%", height = "100%" }, {
 ```
 
 Later children draw above earlier children unless `zIndex` changes the order.
+
+## Portal
+
+Use `ui.portal` for floating overlays that should escape later sibling branches
+inside the current render root.
+
+```lua
+ui.portal({
+  left = pointerX - 32,
+  top = pointerY - 32,
+  width = 64,
+  height = 64,
+  zIndex = 500,
+  interactive = false,
+}, {
+  ui.image({ source = atlas, quad = potionQuad, fit = "contain" }),
+})
+```
+
+`ui.portal` defaults to `position = "absolute"`, `zScope = "root"`, and stack
+layout. It is useful for drag previews, tooltips, menus, and HUD callouts, but
+it does not create a scene or modal layer.
 
 ## Button
 

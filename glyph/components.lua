@@ -173,6 +173,17 @@ function Components.grid(props, children)
   return createNode("grid", props, children)
 end
 
+---@param props? GlyphPortalProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
+function Components.portal(props, children)
+  props = normalizeProps(props)
+  props.position = props.position or "absolute"
+  props.zScope = props.zScope or "root"
+  props.display = props.display or "stack"
+  return createNode("portal", props, children)
+end
+
 ---@param props? GlyphButtonProps
 ---@return GlyphNode
 function Components.button(props)

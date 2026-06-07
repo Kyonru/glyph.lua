@@ -55,6 +55,7 @@ Useful methods:
 - `ctx:clip(shape, fn)`
 - `ctx:stencil(shapeOrFn, fn, opts?)`
 - `ctx:meter(bounds, opts)`
+- `ctx:nineSlice(image, bounds, opts)`
 - `ctx:text(value, x, y)`
 - `ctx:printf(value, x, y, limit, align)`
 - `ctx:pulse(speed, phase)`
@@ -194,6 +195,35 @@ end
 Blob, stencil, shader, particle, and splat-style visuals are usually app or
 example code. Keep the core primitive generic, then layer the visual identity in
 custom draw and feedback sequences.
+
+## Nine-Slice Frames
+
+Use `ctx:nineSlice` when a Love2D image should scale like a game UI frame,
+window, tooltip, or item slot. Glyph draws the nine patches and caches the quads;
+the artwork and style still belong to the app.
+
+```lua
+ui.box({
+  width = 320,
+  height = 180,
+  draw = function(_, x, y, width, height, love, style, ctx)
+    ctx:nineSlice(frameImage, {
+      x = x,
+      y = y,
+      width = width,
+      height = height,
+    }, {
+      border = { left = 12, right = 12, top = 14, bottom = 14 },
+      tint = { 1, 0.92, 0.72, 1 },
+      opacity = style.opacity,
+    })
+  end,
+}, content)
+```
+
+Pass `border = 8` for an even border, or `center = false` to draw only the
+frame. V1 stretches edges and center patches; tiled/repeated edges are left to
+app-specific custom draw.
 
 ## Public Helper APIs
 

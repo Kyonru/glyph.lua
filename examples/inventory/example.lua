@@ -20,6 +20,13 @@ local CASE_ROWS = 6
 local CASE_CELL = 52
 local CASE_GAP = 4
 local CASE_PADDING = 10
+local CASE_GRID_PROPS = {
+	columns = CASE_COLUMNS,
+	cellWidth = CASE_CELL,
+	cellHeight = CASE_CELL,
+	gap = CASE_GAP,
+	count = CASE_COLUMNS * CASE_ROWS,
+}
 
 local colors = {
 	bg = { 0.025, 0.024, 0.023, 1 },
@@ -578,18 +585,13 @@ local function pointerCell()
 	if not caseBoardBounds then
 		return nil, nil
 	end
-	local stride = CASE_CELL + CASE_GAP
-	local localX = pointerX - caseBoardBounds.x
-	local localY = pointerY - caseBoardBounds.y
-	if localX < 0 or localY < 0 then
+
+	local cell = ui.grid.pointToCell(caseBoardBounds, CASE_GRID_PROPS, pointerX, pointerY)
+	if not cell then
 		return nil, nil
 	end
-	local col = math.floor(localX / stride) + 1
-	local row = math.floor(localY / stride) + 1
-	if col < 1 or row < 1 or col > CASE_COLUMNS or row > CASE_ROWS then
-		return nil, nil
-	end
-	return col, row
+
+	return cell.column, cell.row
 end
 
 local function caseCandidate()
@@ -1273,13 +1275,11 @@ local function dragPreview()
 	local item = drag.item
 	local accent = rarityColors[item.rarity] or rarityColors.common
 
-	return ui.stack({
-		position = "absolute",
+	return ui.portal({
 		left = pointerX - size / 2,
 		top = pointerY - size / 2,
 		width = size,
 		height = size,
-		zScope = "root",
 		zIndex = 500,
 		interactive = false,
 		draw = function(_, x, y, width, height, loveModule, _, ctx)

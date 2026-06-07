@@ -1,6 +1,6 @@
 local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local GridMath = require(prefix .. ".grid_math")
 local RichTextBackend = require(prefix .. ".rich_text_backend")
-local Responsive = require(prefix .. ".responsive")
 local Typography = require(prefix .. ".typography")
 
 local Layout = {}
@@ -527,39 +527,20 @@ function Layout.compute(root, context)
   end
 
   local function visitGrid(node, availableWidth, availableHeight, props, children, pad)
-    local gap = props.gap or 0
-    local resolvedWidth = resolveSize(props.width, availableWidth)
-    local resolvedHeight = resolveSize(props.height, availableHeight)
     local assignedWidth = node.layout.assignedWidth
     local assignedHeight = node.layout.assignedHeight
-    local candidateWidth = assignedWidth or resolvedWidth or (props.minCellWidth and availableWidth) or nil
-    local columnContainerWidth = nil
-
-    if candidateWidth then
-      columnContainerWidth = math.max(0, clamp(candidateWidth, props.minWidth, props.maxWidth) - pad.left - pad.right)
-    elseif availableWidth then
-      columnContainerWidth = math.max(0, availableWidth - pad.left - pad.right)
-    end
-
-    local columns = math.max(1, math.floor(props.columns or 1))
-    local cellWidth = nil
-
-    if props.minCellWidth then
-      local maxColumns = props.maxColumns and math.max(1, math.floor(props.maxColumns)) or nil
-      local plan = Responsive.columns(columnContainerWidth or props.minCellWidth or 0, {
-        min = props.minCellWidth,
-        maxCount = maxColumns,
-        gap = gap,
-      })
-      columns = math.max(1, math.floor(plan.count or 1))
-      cellWidth = math.max(0, plan.width or 0)
-    else
-      cellWidth = resolveSize(props.cellWidth, columnContainerWidth) or numericSize(props.cellWidth)
-      cellWidth = cellWidth or 0
-    end
-
-    local cellHeight = resolveSize(props.cellHeight, availableHeight) or numericSize(props.cellHeight) or cellWidth
     local flowCount = 0
+    for _, child in ipairs(children) do
+      if not isAbsolute(child) then
+        flowCount = flowCount + 1
+      end
+    end
+
+    local plan = GridMath.resolve(props, availableWidth, availableHeight, assignedWidth, assignedHeight, flowCount)
+    local gap = plan.gap
+    local columns = plan.columns
+    local cellWidth = plan.cellWidth
+    local cellHeight = plan.cellHeight
 
     for _, child in ipairs(children) do
       child.layout = child.layout or {}
@@ -567,7 +548,6 @@ function Layout.compute(root, context)
       child.layout.assignedHeight = nil
 
       if not isAbsolute(child) then
-        flowCount = flowCount + 1
         child.layout.assignedWidth = cellWidth
         child.layout.assignedHeight = cellHeight
         child.dirty = child.dirty or {}
@@ -576,37 +556,14 @@ function Layout.compute(root, context)
       end
     end
 
-    local rows = flowCount > 0 and math.ceil(flowCount / columns) or 0
-    local gridWidth = columns * cellWidth + math.max(0, columns - 1) * gap
-    local gridHeight = rows > 0 and (rows * cellHeight + (rows - 1) * gap) or 0
-
-    node.layout.width = clamp(assignedWidth or resolvedWidth or (gridWidth + pad.left + pad.right), props.minWidth, props.maxWidth)
-    node.layout.height = clamp(assignedHeight or resolvedHeight or (gridHeight + pad.top + pad.bottom), props.minHeight, props.maxHeight)
-    node.layout.contentWidth = math.max(0, node.layout.width - pad.left - pad.right)
-    node.layout.contentHeight = math.max(0, node.layout.height - pad.top - pad.bottom)
+    node.layout.width = plan.width
+    node.layout.height = plan.height
+    node.layout.contentWidth = plan.contentWidth
+    node.layout.contentHeight = plan.contentHeight
 
     if node.type == "scrollView" then
-      node.layout.scrollContentWidth = gridWidth
-      node.layout.scrollContentHeight = gridHeight
-    end
-
-    local justify = props.justify or "start"
-    local align = props.align or "start"
-    local offsetX = 0
-    local offsetY = 0
-    local remainingX = math.max(0, node.layout.contentWidth - gridWidth)
-    local remainingY = math.max(0, node.layout.contentHeight - gridHeight)
-
-    if justify == "center" then
-      offsetX = remainingX / 2
-    elseif justify == "end" then
-      offsetX = remainingX
-    end
-
-    if align == "center" then
-      offsetY = remainingY / 2
-    elseif align == "end" then
-      offsetY = remainingY
+      node.layout.scrollContentWidth = plan.gridWidth
+      node.layout.scrollContentHeight = plan.gridHeight
     end
 
     flowCount = 0
@@ -614,8 +571,8 @@ function Layout.compute(root, context)
       if not isAbsolute(child) then
         local column = flowCount % columns
         local row = math.floor(flowCount / columns)
-        child.layout.x = pad.left + offsetX + column * (cellWidth + gap)
-        child.layout.y = pad.top + offsetY + row * (cellHeight + gap)
+        child.layout.x = pad.left + plan.offsetX + column * (cellWidth + gap)
+        child.layout.y = pad.top + plan.offsetY + row * (cellHeight + gap)
         flowCount = flowCount + 1
       end
     end

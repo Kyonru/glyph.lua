@@ -10,6 +10,7 @@ local Animation = require(prefix .. ".animation")
 local Components = require(prefix .. ".components")
 local CallbackBus = require(prefix .. ".callback_bus")
 local Feedback = require(prefix .. ".feedback")
+local GridMath = require(prefix .. ".grid_math")
 local I18n = require(prefix .. ".i18n")
 local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
@@ -37,7 +38,8 @@ local runtime = Runtime.new()
 ---@field row fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field column fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field stack fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
----@field grid fun(props?: GlyphGridProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field grid GlyphGridApi
+---@field portal fun(props?: GlyphPortalProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field button fun(props?: GlyphButtonProps): GlyphNode
 ---@field input fun(props?: GlyphInputProps): GlyphNode
 ---@field meter fun(props?: GlyphMeterProps, children?: GlyphNode[]|GlyphNode): GlyphNode
@@ -168,6 +170,14 @@ end
 for name, fn in pairs(Components) do
   ui[name] = fn
 end
+
+ui.grid = setmetatable({
+  pointToCell = GridMath.pointToCell,
+}, {
+  __call = function(_, props, children)
+    return Components.grid(props, children)
+  end,
+})
 
 ---@param props? GlyphTabsProps
 ---@param tabs? GlyphTab[]
