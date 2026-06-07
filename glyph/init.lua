@@ -36,6 +36,7 @@ local runtime = Runtime.new()
 ---@field row fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field column fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field stack fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field grid fun(props?: GlyphGridProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field button fun(props?: GlyphButtonProps): GlyphNode
 ---@field input fun(props?: GlyphInputProps): GlyphNode
 ---@field meter fun(props?: GlyphMeterProps, children?: GlyphNode[]|GlyphNode): GlyphNode

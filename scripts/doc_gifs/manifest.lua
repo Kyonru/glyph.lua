@@ -487,7 +487,7 @@ local targets = {
     id = "layout",
     title = "Layout",
     docs = { "docs/layout.md" },
-    alt = "Animated GIF showing Glyph rows, columns, stack layering, and absolute positioning.",
+    alt = "Animated GIF showing Glyph rows, columns, grids, stack layering, and absolute positioning.",
     update = function(ctx)
       ctx.slide = wave(ctx, 2.2)
       ctx.layoutLoad = 48 + wave(ctx, 3.1) * 42
@@ -509,10 +509,24 @@ local targets = {
           fillStyle = { background = colorValue },
         })
       end
+      local gridColors = { palette.teal, palette.gold, palette.coral, palette.blue, palette.violet, palette.teal }
+      local gridCells = {}
+      for index = 1, 18 do
+        local colorValue = gridColors[((index - 1) % #gridColors) + 1]
+        local active = index == 7 or index == 14
+        gridCells[#gridCells + 1] = ui.box({
+          style = {
+            background = cloneColor(colorValue, active and (0.3 + wave(ctx, 5 + index * 0.1) * 0.18) or 0.18),
+            borderColor = colorValue,
+            borderWidth = active and 2 or 1,
+            radius = 5,
+          },
+        })
+      end
 
-      return stage(ctx, "Layout", "Flow layout and absolute overlays share one tree.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
-        panel("row and column flow", { width = 430, height = 292 }, {
-          ui.row({ width = "100%", gap = 10, align = "stretch", height = 112 }, {
+      return stage(ctx, "Layout", "Flow, grid, and absolute overlays share one tree.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
+        panel("row, column, and grid flow", { width = 430, height = 292 }, {
+          ui.row({ width = "100%", gap = 10, align = "stretch", height = 92 }, {
             ui.box({
               flex = 1,
               height = "100%",
@@ -554,11 +568,11 @@ local targets = {
             }),
           }),
           ui.column({ width = "100%", gap = 8 }, {
-            ui.row({ width = "100%", height = 30, gap = 8, align = "center" }, {
+            ui.row({ width = "100%", height = 26, gap = 8, align = "center" }, {
               ui.text("column", { width = 70, textStyle = "caption", style = { color = palette.muted } }),
               ui.meter({
                 flex = 1,
-                height = 22,
+                height = 20,
                 value = ctx.layoutLoad or 70,
                 max = 100,
                 shape = { kind = "rect", radius = 6 },
@@ -567,17 +581,18 @@ local targets = {
                 style = { borderColor = cloneColor(palette.blue, 0.72), borderWidth = 1, radius = 6 },
               }),
             }),
-            ui.row({ width = "100%", height = 30, gap = 8, align = "center" }, {
+            ui.row({ width = "100%", height = 26, gap = 8, align = "center" }, {
               ui.text("percent", { width = 70, textStyle = "caption", style = { color = palette.muted } }),
-              ui.box({ width = "72%", height = 22, style = { background = cloneColor(palette.violet, 0.2), borderColor = palette.violet, borderWidth = 1, radius = 6 } }),
+              ui.box({ width = "72%", height = 20, style = { background = cloneColor(palette.violet, 0.2), borderColor = palette.violet, borderWidth = 1, radius = 6 } }),
             }),
-            ui.row({ width = "100%", height = 30, gap = 8, align = "center" }, {
+            ui.row({ width = "100%", height = 26, gap = 8, align = "center" }, {
               ui.text("align", { width = 70, textStyle = "caption", style = { color = palette.muted } }),
-              ui.box({ width = "46%", height = 22, style = { background = cloneColor(palette.teal, 0.2), borderColor = palette.teal, borderWidth = 1, radius = 6 } }),
+              ui.box({ width = "46%", height = 20, style = { background = cloneColor(palette.teal, 0.2), borderColor = palette.teal, borderWidth = 1, radius = 6 } }),
               ui.box({ flex = 1, height = 1, interactive = false }),
               ui.text("end", { textStyle = "caption", style = { color = palette.gold } }),
             }),
           }),
+          ui.grid({ columns = 6, cellWidth = 34, cellHeight = 24, gap = 5 }, gridCells),
         }),
         panel("stack and absolute", { flex = 1, height = 292 }, {
           ui.stack({ width = "100%", height = 214 }, {

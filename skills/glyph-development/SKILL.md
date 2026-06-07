@@ -22,7 +22,7 @@ Core belongs in `glyph/` only when it is reusable across many games and tools. G
 
 Add to core:
 
-- Layout primitives and constraints.
+- Layout primitives and constraints, including row/column, uniform grid, stack, and absolute positioning.
 - Event routing and focus/hover/press behavior.
 - Generic style, theme, shader, and transition hooks.
 - Generic image, meter, shape, clipping, stencil, and custom draw helpers.
@@ -55,6 +55,7 @@ The layout engine is pure Lua in `glyph/layout.lua`.
 Follow these rules:
 
 - `row` and `column` own flex flow.
+- `grid` owns uniform row-major cells; keep inventory/item placement policy in examples or apps.
 - `stack` owns layered children.
 - `position = "absolute"` removes a child from flow.
 - Absolute children never affect parent size.

@@ -340,6 +340,7 @@ local function metrics(mode)
 	local margin = 18
 	local usableHeight = math.max(540, viewport.height - margin * 2)
 	local contentHeight = math.max(420, usableHeight - 72 - 12 - 40)
+	local contentWidth = math.max(0, viewport.width - (margin + showcaseInset) - margin)
 
 	return {
 		width = viewport.width,
@@ -347,6 +348,7 @@ local function metrics(mode)
 		margin = margin,
 		left = margin + showcaseInset,
 		right = margin,
+		contentWidth = contentWidth,
 		contentHeight = contentHeight,
 		caseBoardWidth = CASE_PADDING * 2 + CASE_COLUMNS * CASE_CELL + (CASE_COLUMNS - 1) * CASE_GAP,
 		caseBoardHeight = CASE_PADDING * 2 + CASE_ROWS * CASE_CELL + (CASE_ROWS - 1) * CASE_GAP,
@@ -752,19 +754,13 @@ local function slotNode(kind, store, slots, index, size)
 	}, children)
 end
 
-local function slotRows(kind, store, slots, count, columns, size)
-	local rows = {}
-	for row = 1, math.ceil(count / columns) do
-		local children = {}
-		for column = 1, columns do
-			local index = (row - 1) * columns + column
-			if index <= count then
-				children[#children + 1] = slotNode(kind, store, slots, index, size)
-			end
-		end
-		rows[#rows + 1] = ui.row({ gap = SLOT_GAP }, children)
+local function slotNodes(kind, store, slots, first, count, size)
+	local nodes = {}
+	for offset = 0, count - 1 do
+		local index = first + offset
+		nodes[#nodes + 1] = slotNode(kind, store, slots, index, size)
 	end
-	return rows
+	return nodes
 end
 
 local function sectionTitle(title, caption)
@@ -858,7 +854,12 @@ local function satchelPanel(m)
 					borderWidth = 1,
 					radius = 5,
 				},
-			}, slotRows("satchel", satchelBounds, satchelSlots, SATCHEL_SLOT_COUNT, SATCHEL_COLUMNS, SATCHEL_SLOT_SIZE)),
+			}, ui.grid({
+				columns = SATCHEL_COLUMNS,
+				cellWidth = SATCHEL_SLOT_SIZE,
+				cellHeight = SATCHEL_SLOT_SIZE,
+				gap = SLOT_GAP,
+			}, slotNodes("satchel", satchelBounds, satchelSlots, 1, SATCHEL_SLOT_COUNT, SATCHEL_SLOT_SIZE))),
 		}),
 		ui.column({ grow = 1, gap = 14 }, {
 			statusPanel(math.max(196, math.floor(m.contentHeight * 0.46))),
@@ -903,16 +904,6 @@ local function pagesPanel(m)
 	local pageCount = math.ceil(PAGE_SLOT_COUNT / PAGE_SIZE)
 	local first = (currentPage - 1) * PAGE_SIZE + 1
 	local gridWidth = PAGE_COLUMNS * PAGE_SLOT_SIZE + (PAGE_COLUMNS - 1) * SLOT_GAP
-	local gridRows = {}
-
-	for row = 1, PAGE_ROWS do
-		local children = {}
-		for column = 1, PAGE_COLUMNS do
-			local absoluteIndex = first + (row - 1) * PAGE_COLUMNS + column - 1
-			children[#children + 1] = slotNode("page", pageBounds, pageSlots, absoluteIndex, PAGE_SLOT_SIZE)
-		end
-		gridRows[#gridRows + 1] = ui.row({ gap = SLOT_GAP }, children)
-	end
 
 	return ui.row({ height = m.contentHeight, gap = 16 }, {
 		panel({
@@ -941,7 +932,12 @@ local function pagesPanel(m)
 					end),
 				}),
 			}),
-			ui.column({ gap = SLOT_GAP }, gridRows),
+			ui.grid({
+				columns = PAGE_COLUMNS,
+				cellWidth = PAGE_SLOT_SIZE,
+				cellHeight = PAGE_SLOT_SIZE,
+				gap = SLOT_GAP,
+			}, slotNodes("page", pageBounds, pageSlots, first, PAGE_SIZE, PAGE_SLOT_SIZE)),
 		}),
 		ui.column({ grow = 1, gap = 14 }, {
 			statusPanel(math.max(196, math.floor(m.contentHeight * 0.46))),
@@ -1086,10 +1082,63 @@ local function caseBoard(m)
 	}, children)
 end
 
+local function caseRulesPanel(props)
+	props = props or {}
+
+	return panel({
+		width = props.width or "100%",
+		height = props.height,
+		grow = props.grow,
+		padding = 14,
+		display = "column",
+		gap = 10,
+	}, {
+		ui.text("Case Rules", { style = { color = colors.gold } }),
+		ui.text("Items keep their rectangular spans. The preview turns green for a valid space and red when the item would collide or leave the case.", {
+			width = "100%",
+			wrap = true,
+			style = { color = colors.parchmentDim, lineHeight = 19 },
+		}),
+	})
+end
+
 local function casePanel(m)
+	local boardPanelWidth = m.caseBoardWidth + 28
+	local compact = m.contentWidth < boardPanelWidth + 16 + 320
+
+	if compact then
+		return ui.scrollView({
+			key = "inventory-case-scroll",
+			width = "100%",
+			height = m.contentHeight,
+			padding = { right = 10 },
+			gap = 14,
+			showScrollbar = true,
+			style = {
+				background = { 0.025, 0.022, 0.02, 0.58 },
+				borderColor = { 0.66, 0.45, 0.22, 0.35 },
+				borderWidth = 1,
+				radius = 5,
+			},
+		}, {
+			panel({
+				width = boardPanelWidth,
+				height = m.caseBoardHeight + 90,
+				padding = 14,
+				display = "column",
+				gap = 12,
+			}, {
+				sectionTitle("Case", "variable-size cells with collision and bounds rejection"),
+				caseBoard(m),
+			}),
+			statusPanel(172),
+			caseRulesPanel({ height = 154 }),
+		})
+	end
+
 	return ui.row({ height = m.contentHeight, gap = 16 }, {
 		panel({
-			width = m.caseBoardWidth + 28,
+			width = boardPanelWidth,
 			height = m.contentHeight,
 			padding = 14,
 			display = "column",
@@ -1100,20 +1149,7 @@ local function casePanel(m)
 		}),
 		ui.column({ grow = 1, gap = 14 }, {
 			statusPanel(math.max(196, math.floor(m.contentHeight * 0.46))),
-			panel({
-				width = "100%",
-				grow = 1,
-				padding = 14,
-				display = "column",
-				gap = 10,
-			}, {
-				ui.text("Case Rules", { style = { color = colors.gold } }),
-				ui.text("Items keep their rectangular spans. The preview turns green for a valid space and red when the item would collide or leave the case.", {
-					width = "100%",
-					wrap = true,
-					style = { color = colors.parchmentDim, lineHeight = 19 },
-				}),
-			}),
+			caseRulesPanel({ grow = 1 }),
 		}),
 	})
 end

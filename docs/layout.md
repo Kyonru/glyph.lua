@@ -5,7 +5,7 @@ icon: lucide/layout-grid
 # Layout
 
 <!-- glyph:feature-gif layout -->
-![Animated GIF showing Glyph rows, columns, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif)
+![Animated GIF showing Glyph rows, columns, grids, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif)
 <!-- /glyph:feature-gif layout -->
 
 Glyph uses a small pure-Lua layout engine. The model is explicit and game-friendly, not CSS.
@@ -45,6 +45,34 @@ ui.column({ width = "100%", height = "100%", align = "center", justify = "center
   }),
 })
 ```
+
+## Grid Layout
+
+`ui.grid` places uniform cells row-major. Use it for inventory slots, card
+groups, skill trees, menu pads, and other repeated fixed-format UI.
+
+```lua
+ui.grid({ columns = 8, cellWidth = 58, cellHeight = 58, gap = 8 }, slots)
+```
+
+When `minCellWidth` is set, Glyph derives the column count from the available
+width using the same math as `ui.columns`.
+
+```lua
+ui.grid({
+  width = "100%",
+  minCellWidth = 160,
+  maxColumns = 4,
+  gap = 10,
+}, cards)
+```
+
+Grid children are assigned the resolved cell width and height before measuring.
+`cellHeight` defaults to `cellWidth`. Absolute children are ignored by grid flow
+and use the same absolute positioning rules as other containers.
+
+`ui.grid` is intentionally not CSS Grid: it has no spans, templates, masonry, or
+per-child placement in v1.
 
 ## Percent Sizes
 

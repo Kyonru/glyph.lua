@@ -137,6 +137,21 @@ ui.row({ gap = 8, width = "100%" }, {
 })
 ```
 
+## Grid
+
+Use `ui.grid` for uniform repeated cells such as inventory slots, cards, menu
+buttons, and skill nodes.
+
+```lua
+ui.grid({ columns = 4, cellWidth = 72, cellHeight = 72, gap = 8 }, slotNodes)
+```
+
+Responsive grids use `minCellWidth` and optional `maxColumns`:
+
+```lua
+ui.grid({ width = "100%", minCellWidth = 140, maxColumns = 5, gap = 10 }, cards)
+```
+
 ## Stack
 
 Use `ui.stack` for layered UI.

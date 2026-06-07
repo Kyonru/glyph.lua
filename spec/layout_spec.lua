@@ -155,6 +155,128 @@ describe("layout", function()
     assert.are.equal(47, tree.layout.height)
   end)
 
+  it("lays out fixed grid children row-major", function()
+    local tree = ui.grid({ columns = 3, cellWidth = 20, cellHeight = 12, gap = 4 }, {
+      ui.box({}),
+      ui.box({}),
+      ui.box({}),
+      ui.box({}),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(68, tree.layout.width)
+    assert.are.equal(28, tree.layout.height)
+    assert.are.equal(0, tree.children[1].layout.x)
+    assert.are.equal(0, tree.children[1].layout.y)
+    assert.are.equal(24, tree.children[2].layout.x)
+    assert.are.equal(0, tree.children[2].layout.y)
+    assert.are.equal(0, tree.children[4].layout.x)
+    assert.are.equal(16, tree.children[4].layout.y)
+  end)
+
+  it("defaults grid cell height to cell width", function()
+    local tree = ui.grid({ columns = 2, cellWidth = 18, gap = 3 }, {
+      ui.box({}),
+      ui.box({}),
+      ui.box({}),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(18, tree.children[1].layout.height)
+    assert.are.equal(39, tree.layout.width)
+    assert.are.equal(39, tree.layout.height)
+  end)
+
+  it("uses responsive grid columns from available width", function()
+    local tree = ui.grid({ width = 250, minCellWidth = 70, maxColumns = 3, gap = 10 }, {
+      ui.box({}),
+      ui.box({}),
+      ui.box({}),
+      ui.box({}),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(250, tree.layout.width)
+    assert.are.equal(76, tree.children[1].layout.width)
+    assert.are.equal(0, tree.children[1].layout.x)
+    assert.are.equal(86, tree.children[2].layout.x)
+    assert.are.equal(172, tree.children[3].layout.x)
+    assert.are.equal(86, tree.children[4].layout.y)
+  end)
+
+  it("remeasures grid children with assigned cell size", function()
+    local tree = ui.grid({ columns = 1, cellWidth = 50, cellHeight = 30 }, {
+      ui.text("alpha beta gamma", { wrap = true }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(50, tree.children[1].layout.width)
+    assert.are.equal(30, tree.children[1].layout.height)
+    assert.are.same({ "alpha", "beta", "gamma" }, tree.children[1].wrappedText.lines)
+  end)
+
+  it("combines grid padding and gap", function()
+    local tree = ui.grid({ columns = 2, cellWidth = 20, cellHeight = 10, gap = 5, padding = { x = 3, y = 4 } }, {
+      ui.box({}),
+      ui.box({}),
+      ui.box({}),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(51, tree.layout.width)
+    assert.are.equal(33, tree.layout.height)
+    assert.are.equal(3, tree.children[1].layout.x)
+    assert.are.equal(4, tree.children[1].layout.y)
+    assert.are.equal(28, tree.children[2].layout.x)
+    assert.are.equal(19, tree.children[3].layout.y)
+  end)
+
+  it("keeps absolute children out of grid flow", function()
+    local tree = ui.grid({ columns = 2, cellWidth = 20, cellHeight = 10, gap = 5, padding = 2 }, {
+      ui.box({ width = 8, height = 8 }),
+      ui.box({ position = "absolute", width = 6, height = 6, right = 1, bottom = 1 }),
+      ui.box({ width = 8, height = 8 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(49, tree.layout.width)
+    assert.are.equal(14, tree.layout.height)
+    assert.are.equal(27, tree.children[3].layout.x)
+    assert.are.equal(2, tree.children[3].layout.y)
+    assert.are.equal(40, tree.children[2].layout.x)
+    assert.are.equal(5, tree.children[2].layout.y)
+  end)
+
+  it("justifies and aligns the grid inside explicit bounds", function()
+    local tree = ui.grid({
+      width = 100,
+      height = 80,
+      columns = 2,
+      cellWidth = 20,
+      cellHeight = 10,
+      gap = 5,
+      justify = "center",
+      align = "end",
+    }, {
+      ui.box({}),
+      ui.box({}),
+      ui.box({}),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(27.5, tree.children[1].layout.x)
+    assert.are.equal(55, tree.children[1].layout.y)
+    assert.are.equal(52.5, tree.children[2].layout.x)
+    assert.are.equal(70, tree.children[3].layout.y)
+  end)
+
   it("lays out stack children at the same origin", function()
     local tree = ui.stack({ width = 100, height = 80, padding = 5 }, {
       ui.box({ width = 30, height = 20 }),

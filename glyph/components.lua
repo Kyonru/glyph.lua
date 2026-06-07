@@ -164,6 +164,15 @@ function Components.column(props, children)
   return createNode("column", props, children)
 end
 
+---@param props? GlyphGridProps
+---@param children? GlyphNode[]|GlyphNode
+---@return GlyphNode
+function Components.grid(props, children)
+  props = normalizeProps(props)
+  props.display = "grid"
+  return createNode("grid", props, children)
+end
+
 ---@param props? GlyphButtonProps
 ---@return GlyphNode
 function Components.button(props)

@@ -52,9 +52,9 @@ make docs
 
 Glyph should provide primitives and reusable systems:
 
-- Core components: `text`, `image`, `box`, `stack`, `row`, `column`, `button`, `input`, `scrollView`, `tabs`, `panel`.
+- Core components: `text`, `image`, `box`, `stack`, `row`, `column`, `grid`, `button`, `input`, `scrollView`, `tabs`, `panel`.
 - Generic visual primitives: `meter`, shape descriptors, clipping/stencil masks, and draw context helpers.
-- Layout primitives: flex row/column, stack/absolute layout, percent sizing, padding/gap, grow/flex, text wrapping.
+- Layout primitives: flex row/column, uniform grid layout, stack/absolute layout, percent sizing, padding/gap, grow/flex, text wrapping.
 - Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus.
 - Input systems: pointer/touch, keyboard activation, spatial navigation, and opt-in digital gamepad mapping.
 - Style systems: themes, variants, state styles, transitions, shaders, custom draw context, and audio cue metadata.
@@ -70,6 +70,7 @@ Keep game-specific widgets out of core. Examples may include things like HUD but
 Good core API examples:
 
 - `ui.stack`
+- `ui.grid`
 - `ui.image`
 - `ui.transitions.custom`
 - `ui.scene.push`
@@ -107,11 +108,12 @@ Poor core API examples:
 ## Layout Rules
 
 - `row` and `column` lay out children in flex flow.
+- `grid` lays out uniform row-major cells. Fixed grids use `columns`, `cellWidth`, and optional `cellHeight`; responsive grids use `minCellWidth` and optional `maxColumns`.
 - `stack` layers children; later children draw above earlier children unless `zIndex` changes the order.
 - `position = "absolute"` removes a child from parent flow.
 - Absolute children support `x`, `y`, `top`, `right`, `bottom`, `left`, `inset`, `zIndex`, width/height, percent sizes, and min/max sizes.
 - Absolute children never determine parent size. Parent size must come from explicit dimensions, flex, percent size, or normal flow children.
-- Plain `box` is a visual/container primitive. If children need layout, set `display = "row"`, `display = "column"`, or use `ui.stack`.
+- Plain `box` is a visual/container primitive. If children need layout, set `display = "row"`, `display = "column"`, `display = "grid"`, or use `ui.stack`.
 - Text with wrapping must draw with a numeric resolved width. Do not let percent-size strings leak into Love2D `printf`.
 - Typography measurement and drawing must share the same resolver so `textScale`, `textStyle`, and font refs stay layout-accurate. SYSL-backed rich text should measure from textbox `get.width`, `get.height`, and `get.lines`.
 

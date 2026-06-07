@@ -369,6 +369,14 @@ local GlyphInputProps = {}
 ---@field labelCacheKey? string|number
 local GlyphMeterProps = {}
 
+---@class GlyphGridProps : GlyphProps
+---@field columns? number
+---@field cellWidth? number
+---@field cellHeight? number
+---@field minCellWidth? number
+---@field maxColumns? number
+local GlyphGridProps = {}
+
 ---@class GlyphTabsProps : GlyphProps
 ---@field active? number
 ---@field defaultActive? number
