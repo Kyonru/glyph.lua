@@ -228,6 +228,8 @@ Meters support:
 - `direction = "right" | "left" | "up" | "down"` for linear meters
 - `shape` for rectangular, skewed, polygon, circle, ellipse, or blob fills
 - `segments`, `gap`, `thickness`, `startAngle`, and `endAngle`
+- `style.background` and `style.borderColor` for the track, with clipped fills that stay inside the track shape
+- radial and arc meters draw open arcs and honor `fillStyle.background` or `fillStyle.color`
 - `label`, children overlays, `trackStyle`, `fillStyle`, `overfillStyle`, and `backgroundStyle`
 - `labelKey`, `labelParams`, and `labelCacheKey` for localized labels
 

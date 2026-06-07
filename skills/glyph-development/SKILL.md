@@ -80,6 +80,7 @@ The runtime in `glyph/runtime.lua` owns:
 - Viewport coordinate conversion for pointer/touch input.
 
 Draw order and hit order must match. If `zIndex` or stack order changes drawing, hit testing must follow the same order in reverse.
+Local `zIndex` orders siblings. `position = "absolute", zScope = "root"` promotes floating UI above normal content in the current render root and must keep draw and hit-test order matched.
 
 For input changes, add runtime tests that press and release controls, not just geometry assertions.
 

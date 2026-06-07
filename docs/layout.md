@@ -80,6 +80,7 @@ Supported props:
 - `top`, `right`, `bottom`, `left`
 - `inset`
 - `zIndex`
+- `zScope = "root"` for promoted root-level stacking
 - `width`, `height`, percent sizes, min/max sizes
 
 Examples:
@@ -93,6 +94,24 @@ ui.box({ position = "absolute", inset = 0 })
 When both `left` and `right` are set, Glyph derives width. When both `top` and `bottom` are set, Glyph derives height.
 
 Absolute children never affect parent size. Give the parent explicit dimensions, `flex`, percent size, or normal-flow children.
+
+By default, `zIndex` only orders siblings within the same parent. For floating
+UI that must draw and hit-test above later sibling branches, use a root-scoped
+absolute node:
+
+```lua
+ui.box({
+  position = "absolute",
+  zScope = "root",
+  zIndex = 20,
+  right = 12,
+  top = 12,
+})
+```
+
+Root-scoped absolute nodes are promoted above the current render root after
+normal content, ordered by `zIndex`, and hit-tested in the same order. Scene
+layers still remain separate stacking roots.
 
 ## Text Wrapping
 

@@ -280,6 +280,79 @@ describe("ui helpers", function()
     assert.are.equal(120, fills[1].width)
   end)
 
+  it("clips linear meter fill to the track shape and redraws the track border", function()
+    local runtime = Runtime.new()
+    local calls = {}
+
+    local graphics = {
+      getLineWidth = function()
+        return 1
+      end,
+      setLineWidth = function(width)
+        calls[#calls + 1] = { "lineWidth", width }
+      end,
+      getShader = function()
+        return nil
+      end,
+      setShader = function() end,
+      setColor = function() end,
+      rectangle = function(mode, x, y, width, height)
+        calls[#calls + 1] = { "rectangle", mode, x, y, width, height }
+      end,
+      stencil = function(fn, action, value)
+        calls[#calls + 1] = { "stencil", action, value }
+        fn()
+      end,
+      setStencilTest = function(compare, value)
+        calls[#calls + 1] = { "stencilTest", compare, value }
+      end,
+      print = function() end,
+    }
+
+    runtime:setLove({ graphics = graphics })
+
+    runtime:build(function()
+      return Components.meter({
+        value = 95,
+        max = 100,
+        width = 120,
+        height = 12,
+        shape = { kind = "rect", radius = 6 },
+        style = {
+          borderColor = { 1, 1, 1, 1 },
+          borderWidth = 2,
+        },
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    local clippedFillIndex
+    local clipStartIndex
+    local clipEndIndex
+    local borderIndex
+
+    for index, call in ipairs(calls) do
+      if call[1] == "stencilTest" and call[2] == "equal" then
+        clipStartIndex = index
+      elseif call[1] == "stencilTest" and call[2] == nil and clipStartIndex and not clipEndIndex then
+        clipEndIndex = index
+      elseif call[1] == "rectangle" and call[2] == "fill" and call[5] == 114 then
+        clippedFillIndex = index
+      elseif call[1] == "rectangle" and call[2] == "line" then
+        borderIndex = index
+      end
+    end
+
+    assert.is_not_nil(clipStartIndex)
+    assert.is_not_nil(clipEndIndex)
+    assert.is_not_nil(clippedFillIndex)
+    assert.is_not_nil(borderIndex)
+    assert.is_true(clipStartIndex < clippedFillIndex)
+    assert.is_true(clippedFillIndex < clipEndIndex)
+    assert.is_true(clipEndIndex < borderIndex)
+  end)
+
   it("does not draw radial meter fill arc when value is zero", function()
     local runtime = Runtime.new()
     local arcs = {}
@@ -295,9 +368,10 @@ describe("ui helpers", function()
         end,
         setShader = function() end,
         setColor = function() end,
-        arc = function(mode, x, y, radius, startAngle, endAngle)
+        arc = function(mode, arcType, x, y, radius, startAngle, endAngle)
           arcs[#arcs + 1] = {
             mode = mode,
+            arcType = arcType,
             x = x,
             y = y,
             radius = radius,
@@ -325,7 +399,63 @@ describe("ui helpers", function()
     runtime:draw(runtime.root)
 
     assert.are.equal(1, #arcs)
+    assert.are.equal("open", arcs[1].arcType)
     assert.is_true(arcs[1].endAngle > arcs[1].startAngle)
+  end)
+
+  it("draws radial meter arcs open and honors fill background", function()
+    local runtime = Runtime.new()
+    local arcs = {}
+    local currentColor
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function()
+          return 1
+        end,
+        setLineWidth = function() end,
+        getShader = function()
+          return nil
+        end,
+        setShader = function() end,
+        setColor = function(r, g, b, a)
+          currentColor = { r, g, b, a }
+        end,
+        arc = function(mode, arcType, x, y, radius, startAngle, endAngle)
+          arcs[#arcs + 1] = {
+            mode = mode,
+            arcType = arcType,
+            color = currentColor,
+            x = x,
+            y = y,
+            radius = radius,
+            startAngle = startAngle,
+            endAngle = endAngle,
+          }
+        end,
+        rectangle = function() end,
+        print = function() end,
+      },
+    })
+
+    runtime:build(function()
+      return Components.meter({
+        kind = "arc",
+        value = 5,
+        max = 10,
+        width = 80,
+        height = 80,
+        fillStyle = { background = { 1, 0.2, 0.1, 1 } },
+        style = { color = { 0.9, 0.9, 0.9, 1 } },
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(2, #arcs)
+    assert.are.equal("open", arcs[1].arcType)
+    assert.are.equal("open", arcs[2].arcType)
+    assert.are.same({ 1, 0.2, 0.1, 1 }, arcs[2].color)
   end)
 
   it("converts pointer input through the viewport backend", function()

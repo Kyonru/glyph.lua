@@ -96,7 +96,7 @@ local function header(title, subtitle)
       ui.h1(title, { style = { color = palette.text } }),
       ui.text(subtitle, { style = { color = palette.muted } }),
     }),
-    pill("docs GIF", palette.teal),
+    pill("live UI", palette.teal),
   })
 end
 
@@ -110,14 +110,23 @@ local function background(ctx)
       local g = loveModule.graphics
       g.setColor(palette.bg)
       g.rectangle("fill", x, y, width, height)
-      g.setColor(1, 1, 1, 0.045)
-      for ix = -80, width, 40 do
-        g.line(x + ix + wave(ctx, 1.1) * 26, y, x + ix + 120, y + height)
+
+      local drift = wave(ctx, 1.1) * 28
+      g.setColor(1, 1, 1, 0.035)
+      for ix = -120, width + 120, 36 do
+        g.line(x + ix + drift, y, x + ix + 116 + drift, y + height)
       end
-      g.setColor(palette.teal[1], palette.teal[2], palette.teal[3], 0.06)
-      g.circle("fill", x + width * 0.16, y + height * 0.18, 150)
-      g.setColor(palette.coral[1], palette.coral[2], palette.coral[3], 0.055)
-      g.circle("fill", x + width * 0.84, y + height * 0.78, 190)
+      g.setColor(1, 1, 1, 0.025)
+      for iy = 36, height, 46 do
+        g.line(x, y + iy, x + width, y + iy)
+      end
+
+      g.setColor(palette.teal[1], palette.teal[2], palette.teal[3], 0.08)
+      g.polygon("fill", x, y + 54, x + 172, y + 30, x + 260, y + height, x, y + height)
+      g.setColor(palette.coral[1], palette.coral[2], palette.coral[3], 0.07)
+      g.polygon("fill", x + width * 0.68, y + height, x + width, y + height * 0.54, x + width, y + height, x + width * 0.82, y + height)
+      g.setColor(palette.blue[1], palette.blue[2], palette.blue[3], 0.055)
+      g.rectangle("fill", x, y + height - 74, width, 24)
     end,
   })
 end
@@ -225,7 +234,7 @@ local targets = {
       { at = 1.75, run = function(ctx) ctx.count = ctx.count + 1 end },
     },
     component = function(ctx)
-      return stage(ctx, "Getting Started", "A small app function becomes a live UI tree.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Getting Started", "A small app function becomes a live UI tree.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         codeBlock({
           "local function App()",
           "  local count = " .. tostring(ctx.count),
@@ -285,7 +294,7 @@ local targets = {
     },
     component = function(ctx)
       local image = ctx.images and ctx.images.components
-      return stage(ctx, "Components", "The core widget set stays generic and composable.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Components", "The core widget set stays generic and composable.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("primitives", { width = 418, height = 294 }, {
           ui.h2("Mission Console", { style = { color = palette.text } }),
           ui.row({ gap = 12, align = "center" }, {
@@ -336,20 +345,93 @@ local targets = {
     alt = "Animated GIF showing Glyph rows, columns, stack layering, and absolute positioning.",
     update = function(ctx)
       ctx.slide = wave(ctx, 2.2)
+      ctx.layoutLoad = 48 + wave(ctx, 3.1) * 42
     end,
     component = function(ctx)
       local slide = ctx.slide or 0
-      return stage(ctx, "Layout", "Flow layout and absolute overlays share one tree.", ui.row({ gap = 14 }, {
-        panel("row and column flow", { width = 390, height = 292 }, {
-          ui.row({ gap = 8, height = 58 }, {
-            ui.box({ flex = 1, style = { background = cloneColor(palette.teal, 0.28), radius = 6 } }),
-            ui.box({ flex = 2, style = { background = cloneColor(palette.gold, 0.28), radius = 6 } }),
-            ui.box({ flex = 1, style = { background = cloneColor(palette.coral, 0.28), radius = 6 } }),
+      local function flowMeter(value, colorValue)
+        return ui.meter({
+          value = value,
+          max = 100,
+          width = "100%",
+          height = 10,
+          shape = { kind = "rect", radius = 5 },
+          trackStyle = {
+            background = cloneColor(colorValue, 0.16),
+            borderColor = cloneColor(colorValue, 0.48),
+            borderWidth = 1,
+          },
+          fillStyle = { background = colorValue },
+        })
+      end
+
+      return stage(ctx, "Layout", "Flow layout and absolute overlays share one tree.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
+        panel("row and column flow", { width = 430, height = 292 }, {
+          ui.row({ width = "100%", gap = 10, align = "stretch", height = 112 }, {
+            ui.box({
+              flex = 1,
+              height = "100%",
+              padding = 10,
+              display = "column",
+              gap = 6,
+              style = { background = cloneColor(palette.teal, 0.2), borderColor = palette.teal, borderWidth = 1, radius = 8 },
+            }, {
+              ui.text("row", { textStyle = "caption", style = { color = palette.muted } }),
+              ui.text("flex 1", { textStyle = "h2", style = { color = palette.text } }),
+              flowMeter(42 + wave(ctx, 4.2) * 40, palette.teal),
+            }),
+            ui.box({
+              flex = 1.7,
+              height = "100%",
+              padding = 10,
+              display = "column",
+              gap = 6,
+              style = { background = cloneColor(palette.gold, 0.18), borderColor = palette.gold, borderWidth = 1, radius = 8 },
+            }, {
+              ui.text("center", { textStyle = "caption", style = { color = palette.muted } }),
+              ui.text("flex 1.7", { textStyle = "h2", style = { color = palette.text } }),
+              ui.row({ gap = 5, width = "100%" }, {
+                pill("grow", palette.gold),
+                ui.box({ flex = 1, height = 1, interactive = false }),
+              }),
+            }),
+            ui.box({
+              flex = 1,
+              height = "100%",
+              padding = 10,
+              display = "column",
+              gap = 6,
+              style = { background = cloneColor(palette.coral, 0.2), borderColor = palette.coral, borderWidth = 1, radius = 8 },
+            }, {
+              ui.text("edge", { textStyle = "caption", style = { color = palette.muted } }),
+              ui.text("flex 1", { textStyle = "h2", style = { color = palette.text } }),
+              flowMeter(68 + wave(ctx, 3.8) * 22, palette.coral),
+            }),
           }),
-          ui.column({ gap = 8 }, {
-            ui.box({ height = 34, width = "100%", style = { background = cloneColor(palette.blue, 0.22), radius = 6 } }),
-            ui.box({ height = 34, width = "72%", style = { background = cloneColor(palette.violet, 0.22), radius = 6 } }),
-            ui.box({ height = 34, width = "46%", style = { background = cloneColor(palette.teal, 0.22), radius = 6 } }),
+          ui.column({ width = "100%", gap = 8 }, {
+            ui.row({ width = "100%", height = 30, gap = 8, align = "center" }, {
+              ui.text("column", { width = 70, textStyle = "caption", style = { color = palette.muted } }),
+              ui.meter({
+                flex = 1,
+                height = 22,
+                value = ctx.layoutLoad or 70,
+                max = 100,
+                shape = { kind = "rect", radius = 6 },
+                trackStyle = { background = cloneColor(palette.blue, 0.18) },
+                fillStyle = { background = cloneColor(palette.blue, 0.42) },
+                style = { borderColor = cloneColor(palette.blue, 0.72), borderWidth = 1, radius = 6 },
+              }),
+            }),
+            ui.row({ width = "100%", height = 30, gap = 8, align = "center" }, {
+              ui.text("percent", { width = 70, textStyle = "caption", style = { color = palette.muted } }),
+              ui.box({ width = "72%", height = 22, style = { background = cloneColor(palette.violet, 0.2), borderColor = palette.violet, borderWidth = 1, radius = 6 } }),
+            }),
+            ui.row({ width = "100%", height = 30, gap = 8, align = "center" }, {
+              ui.text("align", { width = 70, textStyle = "caption", style = { color = palette.muted } }),
+              ui.box({ width = "46%", height = 22, style = { background = cloneColor(palette.teal, 0.2), borderColor = palette.teal, borderWidth = 1, radius = 6 } }),
+              ui.box({ flex = 1, height = 1, interactive = false }),
+              ui.text("end", { textStyle = "caption", style = { color = palette.gold } }),
+            }),
           }),
         }),
         panel("stack and absolute", { flex = 1, height = 292 }, {
@@ -366,9 +448,11 @@ local targets = {
               top = 46,
               width = 172,
               height = 78,
+              zScope = "root",
+              zIndex = 8,
               style = { background = cloneColor(palette.teal, 0.22), borderColor = palette.teal, borderWidth = 2, radius = 8 },
             }, {
-              ui.text("absolute child", { position = "absolute", left = 16, top = 26, style = { color = palette.text } }),
+              ui.text("root-scoped absolute", { position = "absolute", left = 16, top = 26, style = { color = palette.text } }),
             }),
             ui.box({
               position = "absolute",
@@ -406,7 +490,7 @@ local targets = {
     component = function(ctx)
       local accents = { palette.teal, palette.gold, palette.coral }
       local accent = accents[ctx.mode or 1]
-      return stage(ctx, "Styling", "Theme tokens, variants, and states resolve into draw styles.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Styling", "Theme tokens, variants, and states resolve into draw styles.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("theme tokens", { width = 336, height = 286 }, {
           ui.row({ gap = 10 }, {
             ui.box({ width = 56, height = 56, style = { background = palette.teal, radius = 8 } }),
@@ -491,14 +575,14 @@ local targets = {
       { at = 2.0, run = function(ctx) remember(ctx, "afterRender", 5) end },
     },
     component = function(ctx)
-      return stage(ctx, "Runtime", "One runtime owns hooks, event routing, and draw traversal.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Runtime", "One runtime owns hooks, event routing, and draw traversal.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("interactive tree", { flex = 1, height = 294 }, {
           ui.row({ gap = 10 }, {
             ui.button({ label = "Inspect", active = ctx.focus == 1, width = 130 }),
             ui.button({ label = "Run", active = ctx.focus == 2, width = 130 }),
             ui.input({ value = "Filter", width = 190, active = ctx.focus == 3 }),
           }),
-          ui.row({ gap = 14 }, {
+          ui.row({ gap = 14, width = "100%", align = "stretch" }, {
             metric("hover", ctx.focus == 1 and "node.1" or "none", palette.teal),
             metric("focus", "node." .. tostring(ctx.focus), palette.gold),
             metric("dirty", wave(ctx, 6) > 0.45 and "true" or "false", palette.coral),
@@ -533,7 +617,7 @@ local targets = {
       { at = 1.85, run = function(ctx) ctx.bus:dispatch("event", "afterRender") end },
     },
     component = function(ctx)
-      return stage(ctx, "Callback Bus", "Registrations run by priority with snapshot-safe dispatch.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Callback Bus", "Registrations run by priority with snapshot-safe dispatch.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("registered handlers", { width = 430, height = 282 }, {
           ui.row({ gap = 8, align = "center" }, {
             pill("priority -10", palette.teal),
@@ -584,7 +668,7 @@ local targets = {
       { at = 1.65, run = function(ctx) ctx.locale = "en"; ui.i18n.setLocale("en") end },
     },
     component = function(ctx)
-      return stage(ctx, "I18n", "Glyph resolves keys while apps own locale policy.", ui.row({ gap = 14 }, {
+      return stage(ctx, "I18n", "Glyph resolves keys while apps own locale policy.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("keyed props", { flex = 1, height = 280 }, {
           ui.h2(ui.t("title"), { style = { color = palette.gold } }),
           ui.input({ placeholderKey = "input", value = "", width = "100%" }),
@@ -634,7 +718,7 @@ local targets = {
       { at = 1.85, run = function() ui.accessibility.announce("Modal opened", { kind = "announce" }) end },
     },
     component = function(ctx)
-      return stage(ctx, "Accessibility", "Metadata, snapshots, and events for app-owned adapters.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Accessibility", "Metadata, snapshots, and events for app-owned adapters.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("semantic nodes", { flex = 1, height = 286 }, {
           ui.button({
             label = "Launch",
@@ -665,51 +749,108 @@ local targets = {
     docs = { "docs/responsive.md" },
     alt = "Animated GIF showing Glyph responsive breakpoints, columns, and virtual viewport mapping.",
     setup = function(ctx)
-      ctx.simWidth = 620
+      ctx.simWidth = 680
     end,
     update = function(ctx)
-      ctx.simWidth = math.floor(620 + wave(ctx, 1.8) * 300)
+      ctx.simWidth = math.floor(620 + wave(ctx, 1.8) * 320)
     end,
     component = function(ctx)
-      local columns = ctx.simWidth > 820 and 3 or ctx.simWidth > 700 and 2 or 1
+      local plan = ui.columns(ctx.simWidth, { min = 210, maxCount = 3, gap = 10 })
+      local breakpoint = ctx.simWidth >= 860 and "lg" or ctx.simWidth >= 720 and "md" or "sm"
       local cards = {}
-      for index = 1, columns do
+      local labels = { "systems", "party", "map" }
+      local colors = { palette.teal, palette.gold, palette.coral }
+      for index = 1, plan.count do
         cards[index] = ui.box({
-          flex = 1,
-          height = 92,
+          width = plan.width,
+          height = 104,
           style = {
-            background = cloneColor(({ palette.teal, palette.gold, palette.coral })[index], 0.24),
-            borderColor = ({ palette.teal, palette.gold, palette.coral })[index],
+            background = cloneColor(colors[index], 0.2),
+            borderColor = colors[index],
             borderWidth = 1,
             radius = 8,
           },
+          draw = function(_, x, y, width, height, loveModule)
+            local g = loveModule.graphics
+            g.setColor(colors[index][1], colors[index][2], colors[index][3], 0.16)
+            for stripe = 0, 4 do
+              g.rectangle("fill", x + 16 + stripe * 18, y + height - 24, 10, 6, 3, 3)
+            end
+            g.setColor(1, 1, 1, 0.08)
+            g.rectangle("line", x + 10, y + 10, width - 20, height - 20, 6, 6)
+          end,
         }, {
-          ui.text("column " .. tostring(index), { position = "absolute", left = 16, top = 36, style = { color = palette.text } }),
+          ui.text(labels[index], { position = "absolute", left = 18, top = 22, textStyle = "h2", style = { color = palette.text } }),
+          ui.text("column " .. tostring(index), { position = "absolute", left = 18, top = 62, textStyle = "caption", style = { color = cloneColor(palette.text, 0.72) } }),
         })
       end
 
-      return stage(ctx, "Responsive", "Breakpoints and viewport adapters keep game UI predictable.", ui.row({ gap = 14 }, {
-        panel("adaptive columns", { flex = 1, height = 284 }, {
-          metric("simulated width", tostring(ctx.simWidth) .. "px", palette.teal),
-          ui.row({ gap = 10, width = "100%" }, cards),
-          ui.meter({ value = ctx.simWidth - 600, min = 0, max = 340, height = 14, fillStyle = { background = palette.blue } }),
-        }),
-        panel("virtual viewport", { width = 320, height = 284 }, {
-          ui.text("screen 960x540", { style = { color = palette.muted } }),
+      return stage(ctx, "Responsive", "Breakpoints and viewport adapters keep game UI predictable.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
+        panel("adaptive command deck", { flex = 1, height = 308 }, {
+          ui.row({ width = "100%", gap = 12, align = "center" }, {
+            metric("container", tostring(ctx.simWidth) .. "px", palette.teal),
+            metric("breakpoint", breakpoint, palette.gold),
+            metric("columns", tostring(plan.count), palette.coral),
+          }),
           ui.box({
-            width = 252,
-            height = 142,
-            style = { background = cloneColor(palette.blue, 0.16), borderColor = palette.blue, borderWidth = 1, radius = 8 },
+            width = "100%",
+            height = 148,
+            padding = 12,
+            display = "column",
+            style = {
+              background = { 0.025, 0.034, 0.046, 1 },
+              borderColor = cloneColor(palette.blue, 0.42),
+              borderWidth = 1,
+              radius = 8,
+            },
+          }, {
+            ui.row({ gap = plan.gap, width = "100%" }, cards),
+          }),
+          ui.meter({
+            value = ctx.simWidth - 600,
+            min = 0,
+            max = 360,
+            height = 14,
+            fillStyle = { background = palette.blue },
+            trackStyle = { background = { 1, 1, 1, 0.08 } },
+          }),
+        }),
+        panel("virtual viewport", { width = 318, height = 308 }, {
+          ui.row({ gap = 10, align = "center" }, {
+            pill("960x540", palette.blue),
+            ui.text("screen", { style = { color = palette.muted } }),
+          }),
+          ui.box({
+            width = 270,
+            height = 164,
+            style = { background = cloneColor(palette.blue, 0.15), borderColor = palette.blue, borderWidth = 1, radius = 8 },
+            draw = function(_, x, y, width, height, loveModule)
+              local g = loveModule.graphics
+              g.setColor(1, 1, 1, 0.055)
+              for gx = 24, width - 24, 28 do
+                g.line(x + gx, y + 16, x + gx, y + height - 16)
+              end
+              for gy = 24, height - 24, 28 do
+                g.line(x + 16, y + gy, x + width - 16, y + gy)
+              end
+              g.setColor(palette.teal[1], palette.teal[2], palette.teal[3], 0.18)
+              g.rectangle("fill", x + 64, y + 50, 120, 54, 8, 8)
+            end,
           }, {
             ui.box({
               position = "absolute",
-              left = 38 + wave(ctx, 3.2) * 112,
-              top = 48,
-              width = 26,
-              height = 26,
-              style = { background = palette.teal, radius = 13 },
+              left = 44 + wave(ctx, 3.2) * 148,
+              top = 58,
+              width = 28,
+              height = 28,
+              style = { background = palette.teal, borderColor = { 1, 1, 1, 0.58 }, borderWidth = 1, radius = 14 },
             }),
-            ui.text("virtual 320x180", { position = "absolute", left = 18, bottom = 16, style = { color = palette.text } }),
+            ui.text("virtual 320x180", { position = "absolute", left = 18, bottom = 18, style = { color = palette.text } }),
+          }),
+          ui.text("Pointer math stays inside the virtual frame.", {
+            wrap = true,
+            width = "100%",
+            style = { color = palette.muted },
           }),
         }),
       }))
@@ -725,47 +866,117 @@ local targets = {
       ctx.phase = wave(ctx, 3)
     end,
     component = function(ctx)
-      return stage(ctx, "Custom Draw", "Game-specific visuals stay in app draw functions.", ui.row({ gap = 14 }, {
+      local arcValue = 40 + (ctx.phase or 0) * 55
+      return stage(ctx, "Custom Draw", "Game-specific visuals stay in app draw functions.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("draw context", { flex = 1, height = 292 }, {
           ui.box({
             width = "100%",
             height = 205,
-            draw = function(_, x, y, width, height, loveModule)
-              local g = loveModule.graphics
-              g.setColor(0.03, 0.04, 0.055, 1)
-              g.rectangle("fill", x, y, width, height, 8, 8)
-              local points = ui.polygonBox(x + 34, y + 34, width - 68, 76, { skew = 22 })
-              g.setColor(palette.teal)
-              g.polygon("fill", points)
-              g.setColor(1, 1, 1, 0.82)
-              g.polygon("line", points)
-              g.setColor(palette.gold)
-              for i = 1, 18 do
-                local px = x + 34 + i * ((width - 80) / 18)
-                local py = y + 156 + math.sin(i * 0.8 + (ctx.time or 0) * 5) * 28
-                g.circle("fill", px, py, 4 + ctx.phase * 2)
+            draw = function(_, x, y, width, height, _, _, drawCtx)
+              drawCtx:color({ 0.03, 0.04, 0.055, 1 })
+              drawCtx:rect("fill", x, y, width, height, 8)
+
+              drawCtx:color({ 1, 1, 1, 0.035 })
+              for ix = 28, width - 28, 32 do
+                drawCtx:line(x + ix, y + 18, x + ix, y + height - 18)
               end
-              g.setColor(palette.coral[1], palette.coral[2], palette.coral[3], 0.24)
-              g.circle("fill", x + width - 86, y + 74, 44)
+
+              local hull = { x = x + 32, y = y + 34, width = width - 64, height = 82 }
+              local hullPoints = ui.polygonBox(hull.x, hull.y, hull.width, hull.height, { skew = 24 })
+              local hullShape = function()
+                return function(mode)
+                  drawCtx:polygon(mode, hullPoints)
+                end
+              end
+
+              drawCtx:color(cloneColor(palette.teal, 0.26))
+              drawCtx:polygon("fill", hullPoints)
+              drawCtx:clip(hullShape, function()
+                local scanX = hull.x - 70 + (ctx.phase or 0) * (hull.width + 140)
+                drawCtx:color(cloneColor(palette.blue, 0.3))
+                drawCtx:rect("fill", scanX, hull.y - 10, 86, hull.height + 20)
+                drawCtx:color(cloneColor(palette.coral, 0.34))
+                drawCtx:shape("fill", { kind = "circle", segments = 40 }, {
+                  x = hull.x + hull.width - 100,
+                  y = hull.y + 4,
+                  width = 92,
+                  height = 92,
+                })
+                drawCtx:color({ 1, 1, 1, 0.07 })
+                for stripe = 0, 8 do
+                  drawCtx:line(hull.x - 20, hull.y + stripe * 12, hull.x + hull.width + 20, hull.y + stripe * 12)
+                end
+              end)
+              drawCtx:color(cloneColor(palette.text, 0.78))
+              drawCtx:polygon("line", hullPoints)
+
+              local points = {}
+              for i = 0, 20 do
+                local px = x + 38 + i * ((width - 76) / 20)
+                local py = y + 154 + math.sin(i * 0.72 + (ctx.time or 0) * 4.6) * 23
+                points[#points + 1] = px
+                points[#points + 1] = py
+              end
+              drawCtx:color(cloneColor(palette.gold, 0.46))
+              drawCtx:line((table.unpack or unpack)(points))
+              drawCtx:color(palette.gold)
+              for i = 1, #points, 4 do
+                drawCtx:shape("fill", { kind = "circle", segments = 12 }, {
+                  x = points[i] - 4,
+                  y = points[i + 1] - 4,
+                  width = 8,
+                  height = 8,
+                })
+              end
             end,
           }),
         }),
-        panel("visual-only masks", { width = 320, height = 292 }, {
-          ui.meter({
-            kind = "arc",
-            value = 40 + ctx.phase * 55,
-            max = 100,
-            width = 128,
-            height = 128,
-            thickness = 12,
-            fillStyle = { background = palette.coral },
-          }, {
-            ui.text("ARC", { style = { color = palette.text } }),
-          }),
-          ui.text("Shape, clip, stencil, and helper drawing do not change layout geometry.", {
-            wrap = true,
+        panel("helper primitives", { width = 320, height = 292 }, {
+          ui.box({
             width = "100%",
-            style = { color = palette.muted },
+            height = 205,
+            draw = function(_, x, y, width, height, _, _, drawCtx)
+              drawCtx:color({ 0.03, 0.04, 0.055, 1 })
+              drawCtx:rect("fill", x, y, width, height, 8)
+              drawCtx:color({ 1, 1, 1, 0.04 })
+              drawCtx:rect("line", x + 12, y + 12, width - 24, height - 24, 6)
+
+              local arcBounds = { x = x + 28, y = y + 26, width = 132, height = 132 }
+              drawCtx:meter(arcBounds, {
+                kind = "arc",
+                value = arcValue,
+                max = 100,
+                thickness = 13,
+                segments = 56,
+                trackStyle = { background = { 1, 1, 1, 0.11 } },
+                fillStyle = { background = palette.coral },
+              })
+              drawCtx:color(palette.text)
+              drawCtx:printf(tostring(math.floor(arcValue + 0.5)) .. "%", arcBounds.x, arcBounds.y + 56, arcBounds.width, "center")
+
+              local blobBounds = { x = x + 194, y = y + 42, width = 78, height = 66 }
+              local blob = drawCtx:blob(blobBounds, {
+                points = 10,
+                variance = 0.18,
+                phase = (ctx.time or 0) * 1.8,
+                seed = 23,
+              })
+              drawCtx:color(cloneColor(palette.violet, 0.34))
+              drawCtx:polygon("fill", blob)
+              drawCtx:color(palette.violet)
+              drawCtx:polygon("line", blob)
+
+              drawCtx:color(cloneColor(palette.teal, 0.22))
+              drawCtx:shape("fill", { kind = "rect", radius = 7 }, { x = x + 184, y = y + 132, width = 94, height = 36 })
+              drawCtx:color(palette.teal)
+              drawCtx:shape("line", { kind = "rect", radius = 7 }, { x = x + 184, y = y + 132, width = 94, height = 36 })
+              drawCtx:color(palette.text)
+              drawCtx:printf("mask", x + 184, y + 143, 94, "center")
+            end,
+          }),
+          ui.row({ width = "100%", gap = 8 }, {
+            metric("clip", "active", palette.teal),
+            metric("arc", tostring(math.floor(arcValue + 0.5)) .. "%", palette.coral),
           }),
         }),
       }))
@@ -801,7 +1012,7 @@ local targets = {
         })
       end
 
-      return stage(ctx, "Animations", "Flux-backed visual animation leaves layout stable.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Animations", "Flux-backed visual animation leaves layout stable.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("animated state", { flex = 1, height = 292 }, {
           ui.meter({ value = ctx.values.meter, max = 100, height = 18, fillStyle = { background = palette.gold } }),
           ui.box({
@@ -860,7 +1071,7 @@ local targets = {
       { at = 1.69, run = function() ui.mousereleased(160, 282, 1) end },
     },
     component = function(ctx)
-      return stage(ctx, "Feedback", "Sequences compose animation, audio metadata, and app-owned FX.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Feedback", "Sequences compose animation, audio metadata, and app-owned FX.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("triggerable sequence", { flex = 1, height = 286 }, {
           ui.button({
             label = "Launch Pulse",
@@ -953,7 +1164,7 @@ local targets = {
     end,
     component = function(ctx)
       local p = ctx.progress or 0
-      return stage(ctx, "Transitions", "Layers can fade, slide, animate, or delegate custom drawing.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Transitions", "Layers can fade, slide, animate, or delegate custom drawing.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("built-ins", { flex = 1, height = 284 }, {
           ui.stack({ width = "100%", height = 190 }, {
             ui.box({ position = "absolute", left = 20, top = 22, width = 280, height = 128, style = { background = cloneColor(palette.blue, 0.22), borderColor = palette.blue, borderWidth = 1, radius = 8 } }),
@@ -1024,7 +1235,7 @@ local targets = {
         })
       end
 
-      return stage(ctx, "Navigation", "Directional focus works without layout-specific widgets.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Navigation", "Directional focus works without layout-specific widgets.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("focus grid", { flex = 1, height = 286 }, {
           ui.row({ gap = 10 }, { buttons[1], buttons[2], buttons[3] }),
           ui.row({ gap = 10 }, { buttons[4], buttons[5], buttons[6] }),
@@ -1075,7 +1286,7 @@ local targets = {
         })
       end
 
-      return stage(ctx, "Performance", "Memo, static nodes, and visible windows keep work bounded.", ui.row({ gap = 14 }, {
+      return stage(ctx, "Performance", "Memo, static nodes, and visible windows keep work bounded.", ui.row({ gap = 14, width = "100%", align = "stretch" }, {
         panel("visible rows", { flex = 1, height = 310 }, rows),
         panel("work budget", { width = 318, height = 310 }, {
           metric("mounted rows", "8 / 10k", palette.teal),

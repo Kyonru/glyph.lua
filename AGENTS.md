@@ -119,6 +119,7 @@ Poor core API examples:
 
 - Draw order and hit-test order must match. If a child visually appears above another child, it should receive pointer events first.
 - Non-interactive decoration must set `interactive = false` so events pass through.
+- Local `zIndex` orders siblings. Absolute floating UI that must escape later sibling branches should use `zScope = "root"` so draw and hit-test promotion stay matched.
 - Touch is installed automatically by `ui.install` / `ui.load`; gamepad mapping is opt-in with `install.gamepad = true` or manual `ui.gamepadpressed/released`.
 - Mouse/touch and keyboard/gamepad activation should use the same press/release lifecycle so pressed styles, audio cues, and accessibility activation events stay consistent.
 - Fixed viewport backends convert pointer coordinates before hit testing. Pointer events outside the virtual viewport should not hit UI.
