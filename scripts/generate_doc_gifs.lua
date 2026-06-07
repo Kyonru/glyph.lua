@@ -30,6 +30,31 @@ local function writeFile(path, content)
   file:close()
 end
 
+local function filesMatch(left, right)
+  if not fileExists(left) or not fileExists(right) then
+    return false
+  end
+
+  return readFile(left) == readFile(right)
+end
+
+local function replaceFile(source, destination)
+  local ok, err = os.rename(source, destination)
+  if ok then
+    return
+  end
+
+  if fileExists(destination) then
+    os.remove(destination)
+    ok, err = os.rename(source, destination)
+    if ok then
+      return
+    end
+  end
+
+  error("could not replace " .. destination .. " with " .. source .. " (" .. tostring(err) .. ")", 2)
+end
+
 local function run(command)
   print(command)
   local ok, reason, code = os.execute(command)
@@ -175,11 +200,13 @@ local function captureTarget(target, opts, tools)
   local totalFrames = math.max(1, math.floor((target.duration or 2.6) * fps + 0.5))
   local frameDir = opts.tmpRoot .. "/" .. target.id
   local outputPath = opts.outputDir .. "/" .. target.id .. ".gif"
+  local tempOutputPath = opts.outputDir .. "/." .. target.id .. ".tmp.gif"
   local palettePath = frameDir .. "/palette.png"
   local patternPath = frameDir .. "/%04d.png"
 
   mkdir(frameDir)
   cleanFrames(frameDir, math.max(totalFrames + 12, 720))
+  os.remove(tempOutputPath)
 
   local loveCommand = table.concat({
     shellQuote(tools.love),
@@ -204,17 +231,18 @@ local function captureTarget(target, opts, tools)
   mkdir(opts.outputDir)
   run(table.concat({
     shellQuote(tools.ffmpeg),
-    "-y -v error -framerate",
+    "-y -v error -bitexact -framerate",
     tostring(fps),
     "-start_number 1 -i",
     shellQuote(patternPath),
     "-vf palettegen=stats_mode=diff",
+    "-map_metadata -1",
     shellQuote(palettePath),
   }, " "))
 
   run(table.concat({
     shellQuote(tools.ffmpeg),
-    "-y -v error -framerate",
+    "-y -v error -bitexact -framerate",
     tostring(fps),
     "-start_number 1 -i",
     shellQuote(patternPath),
@@ -223,18 +251,27 @@ local function captureTarget(target, opts, tools)
     "-filter_complex",
     shellQuote("[0:v][1:v]paletteuse=dither=bayer:bayer_scale=2"),
     "-loop 0",
-    shellQuote(outputPath),
+    "-map_metadata -1",
+    "-f gif",
+    shellQuote(tempOutputPath),
   }, " "))
 
-  if not fileExists(outputPath) then
-    error("ffmpeg did not produce " .. outputPath, 2)
+  if not fileExists(tempOutputPath) then
+    error("ffmpeg did not produce " .. tempOutputPath, 2)
+  end
+
+  local changed = not filesMatch(tempOutputPath, outputPath)
+  if changed then
+    replaceFile(tempOutputPath, outputPath)
+    print("generated " .. outputPath)
+  else
+    os.remove(tempOutputPath)
+    print("unchanged " .. outputPath)
   end
 
   if not opts.keepFrames then
     cleanupFrames(frameDir, math.max(totalFrames + 12, 720))
   end
-
-  print("generated " .. outputPath)
 end
 
 local function selectedTargets(opts, targets)
