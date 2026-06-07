@@ -69,9 +69,13 @@ local activeTab = 1
 local currentPage = 1
 local pointerX = 0
 local pointerY = 0
+local pendingDrag = nil
 local drag = nil
 local status = "Drag potions to reorganize the active inventory."
 local statusTone = "neutral"
+local feedbackParticles = {}
+local feedbackBounds = {}
+local offFeedback = nil
 
 local satchelSlots = {}
 local pageSlots = {}
@@ -79,6 +83,7 @@ local caseEntries = {}
 local satchelBounds = {}
 local pageBounds = {}
 local caseBoardBounds = nil
+local feedbackNodes = {}
 local inventoryDragStart = nil
 
 local catalog = {
@@ -152,6 +157,7 @@ local exampleTheme = {
 			borderWidth = 1,
 			radius = 5,
 			hover = { background = { 0.18, 0.12, 0.07, 0.98 }, borderColor = colors.gold },
+			focused = { background = { 0.18, 0.12, 0.07, 0.98 }, borderColor = colors.gold },
 			pressed = { background = { 0.08, 0.05, 0.035, 0.98 } },
 			active = { background = { 0.28, 0.18, 0.07, 0.98 }, color = { 1, 0.88, 0.55, 1 } },
 		},
@@ -162,6 +168,7 @@ local exampleTheme = {
 			borderWidth = 1,
 			radius = 5,
 			hover = { background = { 0.15, 0.1, 0.06, 0.98 }, color = colors.parchment },
+			focused = { background = { 0.15, 0.1, 0.06, 0.98 }, color = colors.parchment, borderColor = colors.gold },
 			pressed = { background = { 0.07, 0.046, 0.032, 0.98 } },
 			active = { background = { 0.33, 0.22, 0.09, 0.98 }, color = { 1, 0.88, 0.56, 1 } },
 		},
@@ -338,10 +345,12 @@ local function resetArrangements()
 
 	activeTab = 1
 	currentPage = 1
+	pendingDrag = nil
 	drag = nil
 	satchelBounds = {}
 	pageBounds = {}
 	caseBoardBounds = nil
+	feedbackNodes = {}
 	setStatus("Drag potions to reorganize the active inventory.", "neutral")
 end
 
@@ -527,6 +536,262 @@ local function markDirty()
 	end
 end
 
+local function copyColor(color, alpha)
+	color = color or colors.gold
+	return {
+		color[1] or 1,
+		color[2] or 1,
+		color[3] or 1,
+		(color[4] or 1) * (alpha or 1),
+	}
+end
+
+local function boundsCenter(bounds)
+	if not bounds then
+		if pointerX == 0 and pointerY == 0 then
+			local viewport = ui.viewport()
+			return viewport.width / 2, viewport.height / 2
+		end
+		return pointerX, pointerY
+	end
+	return bounds.x + bounds.width / 2, bounds.y + bounds.height / 2
+end
+
+local function boundsForNode(node)
+	local key = node and node.props and node.props.key or nil
+	return key and feedbackBounds[key] or nil
+end
+
+local function recordFeedbackNode(node, bounds)
+	local key = node and node.props and node.props.key or nil
+	if key then
+		feedbackBounds[key] = bounds
+		feedbackNodes[key] = node
+	end
+end
+
+local function spawnFeedbackParticles(bounds, opts)
+	opts = opts or {}
+	local cx, cy = boundsCenter(bounds)
+	local count = opts.count or 8
+	local color = opts.color or colors.gold
+	local speed = opts.speed or 56
+	local spread = opts.spread or 1
+
+	for index = 1, count do
+		local angle = (index / count) * math.pi * 2 + math.random() * 0.45
+		local velocity = speed * (0.45 + math.random() * 0.75) * spread
+		feedbackParticles[#feedbackParticles + 1] = {
+			x = cx + (math.random() - 0.5) * ((bounds and bounds.width or 20) * 0.5),
+			y = cy + (math.random() - 0.5) * ((bounds and bounds.height or 20) * 0.5),
+			vx = math.cos(angle) * velocity,
+			vy = math.sin(angle) * velocity - 18,
+			life = opts.life or (0.34 + math.random() * 0.18),
+			age = 0,
+			size = opts.size or (2 + math.random() * 3),
+			color = copyColor(color, opts.opacity or 1),
+		}
+	end
+	markDirty()
+end
+
+local function handleFeedbackEvent(event)
+	if type(event) ~= "table" or type(event.kind) ~= "string" or not event.kind:match("^inventory%.") then
+		return
+	end
+
+	local payload = event.payload or {}
+	local bounds = boundsForNode(event.node)
+	if event.kind == "inventory.glint" then
+		spawnFeedbackParticles(bounds, {
+			count = payload.count or 3,
+			color = payload.color or colors.gold,
+			speed = 34,
+			life = 0.24,
+			size = 2,
+			opacity = 0.86,
+		})
+	elseif event.kind == "inventory.spark" then
+		spawnFeedbackParticles(bounds, {
+			count = payload.count or 5,
+			color = payload.color or colors.blue,
+			speed = 44,
+			life = 0.28,
+			size = 2.4,
+			opacity = 0.78,
+		})
+	elseif event.kind == "inventory.drop.good" then
+		spawnFeedbackParticles(nil, {
+			count = payload.count or 16,
+			color = payload.color or colors.green,
+			speed = 82,
+			spread = 1.2,
+			life = 0.42,
+			size = 3,
+		})
+	elseif event.kind == "inventory.drop.bad" then
+		spawnFeedbackParticles(nil, {
+			count = payload.count or 12,
+			color = payload.color or colors.red,
+			speed = 70,
+			spread = 0.8,
+			life = 0.3,
+			size = 2.5,
+		})
+	end
+end
+
+local function updateFeedbackParticles(dt)
+	if #feedbackParticles == 0 then
+		return
+	end
+
+	local write = 1
+	for read = 1, #feedbackParticles do
+		local particle = feedbackParticles[read]
+		particle.age = particle.age + dt
+		if particle.age < particle.life then
+			particle.vy = particle.vy + 92 * dt
+			particle.x = particle.x + particle.vx * dt
+			particle.y = particle.y + particle.vy * dt
+			feedbackParticles[write] = particle
+			write = write + 1
+		end
+	end
+	for index = write, #feedbackParticles do
+		feedbackParticles[index] = nil
+	end
+	markDirty()
+end
+
+local function drawFeedbackParticles(_, _, _, _, _, _, _, ctx)
+	for _, particle in ipairs(feedbackParticles) do
+		local t = math.max(0, 1 - particle.age / particle.life)
+		ctx:color(particle.color, t)
+		ctx:rect("fill", particle.x - particle.size / 2, particle.y - particle.size / 2, particle.size, particle.size, 2)
+	end
+end
+
+local function feedbackOverlay()
+	if #feedbackParticles == 0 then
+		return nil
+	end
+
+	local viewport = ui.viewport()
+	return ui.portal({
+		left = 0,
+		top = 0,
+		width = viewport.width,
+		height = viewport.height,
+		zIndex = 470,
+		interactive = false,
+		draw = drawFeedbackParticles,
+	})
+end
+
+local function playNodeFeedback(name, node, trigger)
+	ui.feedback.play(name, node, {
+		trigger = trigger or "manual",
+		restart = true,
+		key = name,
+	})
+end
+
+local function previewDrag()
+	return drag or pendingDrag
+end
+
+local function defineInventoryFeedback()
+	ui.feedback.clear()
+	ui.feedback.define("inventory.slot.hover", {
+		{
+			kind = "parallel",
+			steps = {
+				{ kind = "animate", to = { scale = 1.025, y = -1 }, duration = 0.08, ease = "quadout" },
+				{
+					kind = "random",
+					options = {
+						{ weight = 4, step = { kind = "emit", event = "inventory.glint", payload = { count = 2, color = colors.gold } } },
+						{ weight = 1, step = { kind = "emit", event = "inventory.spark", payload = { count = 3, color = colors.blue } } },
+					},
+				},
+			},
+		},
+		{ kind = "animate", to = { scale = 1, y = 0 }, duration = 0.14, ease = "backout" },
+	})
+	ui.feedback.define("inventory.slot.focus", {
+		{ kind = "parallel", steps = {
+			{ kind = "audio", cue = "inventory-focus" },
+			{ kind = "emit", event = "inventory.glint", payload = { count = 2, color = colors.parchment } },
+			{ kind = "animate", to = { scale = 1.035 }, duration = 0.09, ease = "quadout" },
+		} },
+		{ kind = "animate", to = { scale = 1 }, duration = 0.16, ease = "backout" },
+	})
+	ui.feedback.define("inventory.slot.press", {
+		{ kind = "parallel", steps = {
+			{ kind = "audio", cue = "inventory-press" },
+			{ kind = "animate", to = { scale = 0.94, y = 1 }, duration = 0.055, ease = "quadin" },
+		} },
+	})
+	ui.feedback.define("inventory.slot.release", {
+		{ kind = "animate", to = { scale = 1, y = 0 }, duration = 0.13, ease = "backout" },
+	})
+	ui.feedback.define("inventory.slot.activate", {
+		{ kind = "play", name = "inventory.slot.release", opts = { restart = true, key = "slot.release" } },
+		{ kind = "emit", event = "inventory.spark", payload = { count = 6, color = colors.gold } },
+	})
+	ui.feedback.define("inventory.empty.activate", {
+		{ kind = "parallel", steps = {
+			{ kind = "audio", cue = "inventory-empty" },
+			{ kind = "emit", event = "inventory.glint", payload = { count = 1, color = colors.iron } },
+			{ kind = "animate", to = { opacity = 0.72 }, duration = 0.06 },
+		} },
+		{ kind = "animate", to = { opacity = 1 }, duration = 0.16 },
+	})
+	ui.feedback.define("inventory.drag.start", {
+		{ kind = "parallel", steps = {
+			{ kind = "audio", cue = "inventory-lift" },
+			{ kind = "emit", event = "inventory.glint", payload = { count = 4, color = colors.gold } },
+			{ kind = "animate", to = { scale = 1.06, y = -2 }, duration = 0.08, ease = "quadout" },
+		} },
+	})
+	ui.feedback.define("inventory.drop.good", {
+		{ kind = "parallel", steps = {
+			{ kind = "audio", cue = "inventory-drop-good" },
+			{ kind = "emit", event = "inventory.drop.good", payload = { count = 18, color = colors.green } },
+			{
+				kind = "repeat",
+				count = 1,
+				step = {
+					{ kind = "animate", to = { scale = 1.09, y = -1 }, duration = 0.06, ease = "quadout" },
+					{ kind = "animate", to = { scale = 1, y = 0 }, duration = 0.16, ease = "backout" },
+				},
+			},
+		} },
+	})
+	ui.feedback.define("inventory.drop.bad", {
+		{ kind = "parallel", steps = {
+			{ kind = "audio", cue = "inventory-drop-bad" },
+			{ kind = "emit", event = "inventory.drop.bad", payload = { count = 12, color = colors.red } },
+			{
+				kind = "repeat",
+				count = 2,
+				step = {
+					{ kind = "animate", to = { x = -5 }, duration = 0.035, ease = "quadout" },
+					{ kind = "animate", to = { x = 5 }, duration = 0.035, ease = "quadout" },
+				},
+			},
+		} },
+		{ kind = "animate", to = { x = 0, scale = 1, y = 0 }, duration = 0.09, ease = "backout" },
+	})
+	ui.feedback.define("inventory.nav.change", {
+		{ kind = "parallel", steps = {
+			{ kind = "audio", cue = "inventory-page" },
+			{ kind = "emit", event = "inventory.glint", payload = { count = 3, color = colors.parchment } },
+		} },
+	})
+end
+
 local function updateDragPointer(ctx)
 	pointerX = ctx.x or pointerX
 	pointerY = ctx.y or pointerY
@@ -540,19 +805,20 @@ local function startUniformDrag(kind, sourceIndex, itemId, x, y, button, node)
 	if not item then
 		return
 	end
-	drag = {
+	local data = {
 		kind = kind,
 		sourceIndex = sourceIndex,
 		itemId = itemId,
 		item = item,
 		page = currentPage,
 		size = kind == "page" and PAGE_SLOT_SIZE or SATCHEL_SLOT_SIZE,
+		sourceNode = node,
 	}
+	pendingDrag = data
 	pointerX = x
 	pointerY = y
-	setStatus("Drop " .. item.name .. " onto another slot.", "hint")
 	if inventoryDragStart then
-		inventoryDragStart(x, y, button or 1, node, drag)
+		inventoryDragStart(x, y, button or 1, node, data)
 	end
 	markDirty()
 end
@@ -636,7 +902,7 @@ local function startCaseDrag(entry, x, y, button, node)
 		anchorRow = math.max(1, math.min(entry.h, math.floor((y - itemY) / stride) + 1))
 	end
 
-	drag = {
+	local data = {
 		kind = "case",
 		entryId = entry.id,
 		entry = entry,
@@ -645,26 +911,32 @@ local function startCaseDrag(entry, x, y, button, node)
 		size = math.min(92, CASE_CELL * math.max(entry.w, entry.h)),
 		anchorCol = anchorCol,
 		anchorRow = anchorRow,
+		sourceNode = node,
 	}
+	pendingDrag = data
 	pointerX = x
 	pointerY = y
-	setStatus("Find a legal space for " .. item.name .. ".", "hint")
 	if inventoryDragStart then
-		inventoryDragStart(x, y, button or 1, node, drag)
+		inventoryDragStart(x, y, button or 1, node, data)
 	end
 	markDirty()
 end
 
-local function finishDrag()
+local function finishDrag(ctx)
 	if not drag then
 		return
 	end
 
+	local sourceNode = drag.sourceNode
+	local targetNode = ctx and ctx.targetNode or nil
+	local accepted = false
 	if drag.kind == "satchel" then
 		local target = findSlotAt(satchelBounds, pointerX, pointerY)
 		if target then
 			swapSlots(satchelSlots, drag.sourceIndex, target)
 			setStatus("Satchel reordered.", "good")
+			targetNode = feedbackNodes["satchel-slot-" .. tostring(target)] or targetNode
+			accepted = true
 		else
 			setStatus("Satchel drop missed the grid.", "bad")
 		end
@@ -673,6 +945,8 @@ local function finishDrag()
 		if target and drag.page == currentPage then
 			swapSlots(pageSlots, drag.sourceIndex, target)
 			setStatus("Page slot updated.", "good")
+			targetNode = feedbackNodes["page-slot-" .. tostring(target)] or targetNode
+			accepted = true
 		else
 			setStatus("Drop inside the current page.", "bad")
 		end
@@ -682,21 +956,40 @@ local function finishDrag()
 			drag.entry.col = candidate.col
 			drag.entry.row = candidate.row
 			setStatus("Case placement accepted.", "good")
+			targetNode = feedbackNodes["case-entry-" .. tostring(drag.entry.id)] or targetNode
+			accepted = true
 		else
 			setStatus("That space is blocked or outside the case.", "bad")
 		end
 	end
 
+	local feedbackNode = accepted and (targetNode or sourceNode) or (sourceNode or targetNode)
+	playNodeFeedback(accepted and "inventory.drop.good" or "inventory.drop.bad", feedbackNode, accepted and "drop" or "error")
 	drag = nil
+	pendingDrag = nil
 	markDirty()
 end
 
 inventoryDragStart = ui.drag({
-	onStart = updateDragPointer,
+	minDistance = 6,
+	onStart = function(ctx)
+		drag = ctx.data
+		pendingDrag = nil
+		updateDragPointer(ctx)
+		if drag and drag.item then
+			if drag.kind == "case" then
+				setStatus("Find a legal space for " .. drag.item.name .. ".", "hint")
+			else
+				setStatus("Drop " .. drag.item.name .. " onto another slot.", "hint")
+			end
+			playNodeFeedback("inventory.drag.start", ctx.sourceNode, "drag")
+		end
+		markDirty()
+	end,
 	onMove = updateDragPointer,
 	onDrop = function(ctx)
 		updateDragPointer(ctx)
-		finishDrag()
+		finishDrag(ctx)
 	end,
 	onCancel = function(ctx)
 		updateDragPointer(ctx)
@@ -704,6 +997,7 @@ inventoryDragStart = ui.drag({
 			setStatus("Drag cancelled.", "neutral")
 		end
 		drag = nil
+		pendingDrag = nil
 		markDirty()
 	end,
 })
@@ -713,8 +1007,9 @@ local function slotDraw(store, index, itemId)
 		local item = itemFor(itemId)
 		local rarity = item and item.rarity or "common"
 		local accent = rarityColors[rarity] or rarityColors.common
+		local visibleDrag = previewDrag()
 		local isTarget = drag and pointIn(store[index], pointerX, pointerY)
-		local isSource = drag and drag.itemId == itemId and (drag.sourceIndex == index)
+		local isSource = visibleDrag and visibleDrag.itemId == itemId and (visibleDrag.sourceIndex == index)
 		local isHot = ctx.hot or isTarget
 		local g = loveModule.graphics
 
@@ -756,11 +1051,23 @@ local function countBadge(item, size)
 	})
 end
 
+local function activateSlot(kind, index, itemId)
+	pendingDrag = nil
+	local item = itemFor(itemId)
+	if item then
+		setStatus(string.format("%s selected from %s slot %d.", item.name, kind, index), "good")
+	else
+		setStatus(string.format("%s slot %d is empty.", kind:gsub("^%l", string.upper), index), "neutral")
+	end
+	markDirty()
+end
+
 local function slotNode(kind, store, slots, index, size)
 	local itemId = slots[index]
 	local item = itemFor(itemId)
 	local children = {}
-	local isDraggingSource = drag and drag.kind == kind and drag.sourceIndex == index
+	local visibleDrag = previewDrag()
+	local isDraggingSource = visibleDrag and visibleDrag.kind == kind and visibleDrag.sourceIndex == index
 
 	if item then
 		children[#children + 1] = itemImageNode(item, {
@@ -778,15 +1085,28 @@ local function slotNode(kind, store, slots, index, size)
 		key = kind .. "-slot-" .. index,
 		width = size,
 		height = size,
+		role = "button",
+		focusable = true,
+		navGroup = kind .. "-grid",
+		feedback = {
+			hover = item and "inventory.slot.hover" or nil,
+			focus = "inventory.slot.focus",
+			press = "inventory.slot.press",
+			release = "inventory.slot.release",
+			activate = item and "inventory.slot.activate" or "inventory.empty.activate",
+		},
+		onClick = function()
+			activateSlot(kind, index, itemId)
+		end,
 		onMousePressed = function(x, y, button, node)
 			if button == 1 and itemId then
 				startUniformDrag(kind, index, itemId, x, y, button, node)
 			end
 		end,
-		onLayout = function(bounds)
+		onLayout = function(bounds, node)
 			recordBounds(store, index, bounds.x, bounds.y, bounds.width, bounds.height)
+			recordFeedbackNode(node, bounds)
 		end,
-		role = "button",
 		accessibilityLabel = item and (item.name .. " " .. rarityNames[item.rarity]) or "Empty slot",
 		draw = slotDraw(store, index, itemId),
 	}, children)
@@ -992,6 +1312,14 @@ local function pageButton(label, enabled, onClick)
 		height = 32,
 		disabled = not enabled,
 		onClick = onClick,
+		navGroup = "page-controls",
+		feedback = {
+			hover = "inventory.slot.hover",
+			focus = "inventory.slot.focus",
+			press = "inventory.slot.press",
+			release = "inventory.slot.release",
+			activate = "inventory.nav.change",
+		},
 		style = {
 			background = enabled and { 0.14, 0.09, 0.052, 0.96 } or { 0.06, 0.05, 0.044, 0.82 },
 			color = enabled and colors.parchment or { 0.5, 0.45, 0.36, 1 },
@@ -1023,7 +1351,9 @@ local function pagesPanel(m)
 				ui.row({ gap = 8, align = "center" }, {
 					pageButton("<", currentPage > 1, function()
 						currentPage = math.max(1, currentPage - 1)
+						pendingDrag = nil
 						drag = nil
+						setStatus("Turned to the previous inventory page.", "neutral")
 					end),
 					ui.text(string.format("%d / %d", currentPage, pageCount), {
 						width = 54,
@@ -1032,7 +1362,9 @@ local function pagesPanel(m)
 					}),
 					pageButton(">", currentPage < pageCount, function()
 						currentPage = math.min(pageCount, currentPage + 1)
+						pendingDrag = nil
 						drag = nil
+						setStatus("Turned to the next inventory page.", "neutral")
 					end),
 				}),
 			}),
@@ -1105,12 +1437,22 @@ local function drawCaseBoard(_, x, y, width, height, loveModule, _, ctx)
 	end
 end
 
+local function activateCaseEntry(entry)
+	pendingDrag = nil
+	local item = itemFor(entry and entry.itemId)
+	if item then
+		setStatus(string.format("%s occupies %dx%d cells at %d,%d.", item.name, entry.w, entry.h, entry.col, entry.row), "good")
+	end
+	markDirty()
+end
+
 local function caseItemNode(entry)
 	local item = itemFor(entry.itemId)
 	local stride = CASE_CELL + CASE_GAP
 	local width = entry.w * CASE_CELL + (entry.w - 1) * CASE_GAP
 	local height = entry.h * CASE_CELL + (entry.h - 1) * CASE_GAP
-	local isDragging = drag and drag.kind == "case" and drag.entryId == entry.id
+	local visibleDrag = previewDrag()
+	local isDragging = visibleDrag and visibleDrag.kind == "case" and visibleDrag.entryId == entry.id
 	local accent = item and (rarityColors[item.rarity] or rarityColors.common) or colors.iron
 	local imageSize = math.max(36, math.min(70, width - 18, height - 18))
 
@@ -1148,22 +1490,38 @@ local function caseItemNode(entry)
 		width = width,
 		height = height,
 		zIndex = isDragging and 30 or 5,
+		role = "button",
+		focusable = true,
+		navGroup = "case-grid",
+		feedback = {
+			hover = "inventory.slot.hover",
+			focus = "inventory.slot.focus",
+			press = "inventory.slot.press",
+			release = "inventory.slot.release",
+			activate = "inventory.slot.activate",
+		},
+		onClick = function()
+			activateCaseEntry(entry)
+		end,
 		onMousePressed = function(x, y, button, node)
 			if button == 1 then
 				startCaseDrag(entry, x, y, button, node)
 			end
 		end,
-		role = "button",
+		onLayout = function(bounds, node)
+			recordFeedbackNode(node, bounds)
+		end,
 		accessibilityLabel = item and (item.name .. " case item") or "Case item",
 		draw = function(_, x, y, nodeWidth, nodeHeight, loveModule, _, ctx)
 			local g = loveModule.graphics
-			ctx:color({ 0.055, 0.043, 0.034, isDragging and 0.52 or 0.96 })
+			local hot = ctx.hot or ctx.focused
+			ctx:color(hot and { 0.085, 0.058, 0.038, isDragging and 0.52 or 0.98 } or { 0.055, 0.043, 0.034, isDragging and 0.52 or 0.96 })
 			ctx:rect("fill", x, y, nodeWidth, nodeHeight, 5)
-			ctx:color(accent, isDragging and 0.18 or 0.32)
+			ctx:color(accent, hot and 0.4 or (isDragging and 0.18 or 0.32))
 			ctx:rect("fill", x + 5, y + 5, nodeWidth - 10, nodeHeight - 10, 4)
 			ctx:color({ 0, 0, 0, isDragging and 0.18 or 0.34 })
 			ctx:rect("fill", x + 9, y + 9, nodeWidth - 18, nodeHeight - 18, 3)
-			withLineWidth(g, isDragging and 1 or 2, function()
+			withLineWidth(g, hot and 3 or (isDragging and 1 or 2), function()
 				ctx:color(accent, isDragging and 0.52 or 0.95)
 				ctx:rect("line", x + 1, y + 1, nodeWidth - 2, nodeHeight - 2, 5)
 				ctx:color({ 1, 0.86, 0.45, isDragging and 0.18 or 0.3 })
@@ -1267,12 +1625,13 @@ local function casePanel(m)
 end
 
 local function dragPreview()
-	if not drag or not drag.item then
+	local visibleDrag = previewDrag()
+	if not visibleDrag or not visibleDrag.item then
 		return nil
 	end
 
-	local size = math.max(64, math.min(96, drag.size or 72))
-	local item = drag.item
+	local size = math.max(64, math.min(96, visibleDrag.size or 72))
+	local item = visibleDrag.item
 	local accent = rarityColors[item.rarity] or rarityColors.common
 
 	return ui.portal({
@@ -1382,8 +1741,14 @@ local function tabs(m)
 		active = activeTab,
 		onChange = function(index)
 			activeTab = index
+			pendingDrag = nil
 			drag = nil
 			setStatus("Switched inventory model.", "neutral")
+			ui.feedback.play("inventory.nav.change", nil, {
+				trigger = "activate",
+				restart = true,
+				key = "inventory.nav.change",
+			})
 		end,
 		width = "100%",
 		grow = 1,
@@ -1401,6 +1766,7 @@ local function tabs(m)
 			borderWidth = 1,
 			radius = 5,
 			hover = { background = { 0.15, 0.1, 0.06, 0.98 }, color = colors.parchment },
+			focused = { background = { 0.15, 0.1, 0.06, 0.98 }, color = colors.parchment, borderColor = colors.gold },
 			pressed = { background = { 0.07, 0.046, 0.032, 0.98 } },
 			active = {
 				background = { 0.33, 0.22, 0.09, 0.98 },
@@ -1418,11 +1784,9 @@ end
 local function App(mode)
 	loadPotionSheet()
 	local m = metrics(mode)
-
-	return ui.stack({
-		width = m.width,
-		height = m.height,
-	}, {
+	feedbackBounds = {}
+	feedbackNodes = {}
+	local children = {
 		ui.box({ position = "absolute", inset = 0, interactive = false, draw = drawBackdrop }),
 		ui.column({
 			position = "absolute",
@@ -1435,17 +1799,38 @@ local function App(mode)
 			header(),
 			tabs(m),
 		}),
-		dragPreview(),
-	})
+	}
+
+	local overlay = feedbackOverlay()
+	if overlay then
+		children[#children + 1] = overlay
+	end
+
+	local preview = dragPreview()
+	if preview then
+		children[#children + 1] = preview
+	end
+
+	return ui.stack({
+		width = m.width,
+		height = m.height,
+	}, children)
 end
 
 local function setup()
 	ui.setTheme(exampleTheme)
+	defineInventoryFeedback()
+	if offFeedback then
+		offFeedback()
+	end
+	offFeedback = ui.on("feedback", handleFeedbackEvent)
+	feedbackParticles = {}
 	loadPotionSheet()
 	resetArrangements()
 end
 
 local function update(dt)
+	updateFeedbackParticles(dt or 0)
 	if potionPreviewAnimation and type(potionPreviewAnimation.update) == "function" then
 		potionPreviewAnimation:update(dt or 0)
 		markDirty()
@@ -1453,18 +1838,86 @@ local function update(dt)
 end
 
 local function teardown()
+	pendingDrag = nil
 	drag = nil
 	satchelBounds = {}
 	pageBounds = {}
 	caseBoardBounds = nil
+	feedbackBounds = {}
+	feedbackNodes = {}
+	feedbackParticles = {}
+	if offFeedback then
+		offFeedback()
+		offFeedback = nil
+	end
+	ui.feedback.clear()
+end
+
+local function switchActiveTab(delta)
+	local nextTab = math.max(1, math.min(3, activeTab + delta))
+	if nextTab ~= activeTab then
+		activeTab = nextTab
+		pendingDrag = nil
+		drag = nil
+		setStatus("Switched inventory model.", "neutral")
+		ui.feedback.play("inventory.nav.change", nil, {
+			trigger = "activate",
+			restart = true,
+			key = "inventory.nav.change",
+		})
+		markDirty()
+	end
+end
+
+local function turnPage(delta)
+	local pageCount = math.ceil(PAGE_SLOT_COUNT / PAGE_SIZE)
+	local nextPage = math.max(1, math.min(pageCount, currentPage + delta))
+	if nextPage ~= currentPage then
+		currentPage = nextPage
+		pendingDrag = nil
+		drag = nil
+		setStatus(string.format("Turned to inventory page %d.", currentPage), "neutral")
+		ui.feedback.play("inventory.nav.change", nil, {
+			trigger = "activate",
+			restart = true,
+			key = "inventory.nav.change",
+		})
+		markDirty()
+	end
+end
+
+local function keypressed(key)
+	local directions = {
+		up = "up",
+		down = "down",
+		left = "left",
+		right = "right",
+	}
+	if directions[key] then
+		ui.navigate(directions[key])
+		return true
+	elseif key == "tab" then
+		switchActiveTab(1)
+		return true
+	elseif key == "pageup" then
+		turnPage(-1)
+		return true
+	elseif key == "pagedown" then
+		turnPage(1)
+		return true
+	end
 end
 
 return {
 	id = "inventory",
 	label = "Inventory",
+	install = {
+		gamepad = true,
+	},
 	setup = setup,
 	update = update,
 	teardown = teardown,
+	keypressed = keypressed,
 	window = {
 		width = 1180,
 		height = 720,

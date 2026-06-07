@@ -89,6 +89,35 @@ function Feedback.get(name)
   return Feel.get(name)
 end
 
+function Feedback.validate(sequence)
+  return Feel.validate(sequence)
+end
+
+function Feedback.active()
+  return Feel.active()
+end
+
+function Feedback.targetFor(runtime, node)
+  if not runtime or not node or not runtime.feedbackStates then
+    return nil
+  end
+  local id = feedbackId(node)
+  return id and runtime.feedbackStates[id] or nil
+end
+
+function Feedback.isPlaying(runtime, node, key)
+  if not runtime then
+    return Feel.isPlaying(nil, key)
+  end
+
+  if node ~= nil then
+    local target = Feedback.targetFor(runtime, node)
+    return target ~= nil and Feel.isPlaying(target, key)
+  end
+
+  return Feel.isPlaying(nil, key)
+end
+
 function Feedback.play(runtime, nameOrSequence, node, opts)
   if not runtime or nameOrSequence == nil or nameOrSequence == false then
     return nil
@@ -179,7 +208,24 @@ function Feedback.update(runtime, dt)
   return active
 end
 
-function Feedback.clear(runtime)
+function Feedback.clear(runtime, node)
+  if runtime and node then
+    local target = Feedback.targetFor(runtime, node)
+    if target then
+      Feel.clear(target)
+    end
+    local id = feedbackId(node)
+    if id and runtime.feedbackStates then
+      runtime.feedbackStates[id] = nil
+    end
+    node._glyphFeedback = nil
+    node._glyphFeedbackId = nil
+    if runtime.markDirty then
+      runtime:markDirty()
+    end
+    return
+  end
+
   Feel.clear()
   if runtime then
     runtime.feedbackStates = {}

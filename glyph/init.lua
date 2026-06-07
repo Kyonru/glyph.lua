@@ -121,6 +121,17 @@ ui.feedback = {
   define = function(name, sequence)
     return Feedback.define(name, sequence)
   end,
+  ---@param name string
+  ---@return GlyphFeedbackSequence|nil
+  get = function(name)
+    return Feedback.get(name)
+  end,
+  ---@param sequence GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)
+  ---@return boolean
+  ---@return string|nil
+  validate = function(sequence)
+    return Feedback.validate(sequence)
+  end,
   ---@param nameOrSequence any
   ---@param node? GlyphNode
   ---@param opts? GlyphFeedbackPlayOpts
@@ -128,9 +139,20 @@ ui.feedback = {
   play = function(nameOrSequence, node, opts)
     return Feedback.play(runtime, nameOrSequence, node, opts)
   end,
+  ---@return GlyphFeedbackActiveRun[]
+  active = function()
+    return Feedback.active()
+  end,
+  ---@param node? GlyphNode
+  ---@param key? string|number|table
+  ---@return boolean
+  isPlaying = function(node, key)
+    return Feedback.isPlaying(runtime, node, key)
+  end,
+  ---@param node? GlyphNode
   ---@return nil
-  clear = function()
-    Feedback.clear(runtime)
+  clear = function(node)
+    Feedback.clear(runtime, node)
   end,
 }
 

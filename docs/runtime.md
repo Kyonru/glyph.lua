@@ -104,11 +104,12 @@ Gamepad callbacks are installed only when `install.gamepad` is enabled.
 > coordinates into virtual viewport coordinates before hover, focus, click, and
 > scroll routing. Pointer events outside the virtual viewport do not hit UI.
 
-Buttons use the same press lifecycle for pointer and keyboard activation:
-mouse/touch down and Return/Space down enter the pressed state, and release
-activates the button when focus is still on the same node. This keeps pressed
-styles and audio cues consistent across mouse, keyboard, and gamepad mappings
-that forward to `ui.keypressed` / `ui.keyreleased`.
+Buttons and focusable nodes with `role = "button"` plus `onClick` use the same
+press lifecycle for pointer and keyboard activation: mouse/touch down and
+Return/Space down enter the pressed state, and release activates the node when
+focus is still on the same node. This keeps pressed styles, feedback, audio
+cues, and accessibility activation events consistent across mouse, keyboard,
+and gamepad mappings that forward to `ui.keypressed` / `ui.keyreleased`.
 
 Touch callbacks are wired automatically by `ui.install` / `ui.load`. Gamepad
 mapping is opt-in:
@@ -225,10 +226,10 @@ ui.button({
 `cancel(reason)`.
 
 Set `minDistance` to delay `onStart` until the pointer moves far enough.
-Releasing before the threshold preserves normal button activation. Once a drag
-has started, release calls `onDrop` and suppresses the source button’s normal
-`onClick`. Active drags cancel on Escape, viewport exit, focus loss, or when a
-new drag starts.
+Releasing before the threshold calls `onCancel` with `reason = "threshold"` and
+preserves normal button activation. Once a drag has started, release calls
+`onDrop` and suppresses the source button’s normal `onClick`. Active drags
+cancel on Escape, viewport exit, focus loss, or when a new drag starts.
 
 ## Audio Cue Events
 

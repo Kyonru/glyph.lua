@@ -100,6 +100,18 @@ setting `focusable = true`:
 ui.box({ focusable = true, width = 60, height = 60 })
 ```
 
+Focusable non-button nodes with `onClick` and `role = "button"` use the same
+press/release activation lifecycle as `ui.button`, which is useful for custom
+slots, cards, map markers, and HUD regions:
+
+```lua
+ui.stack({
+  role = "button",
+  focusable = true,
+  onClick = selectSlot,
+})
+```
+
 A node is excluded from navigation when:
 
 - `focusable = false`

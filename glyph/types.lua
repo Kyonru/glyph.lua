@@ -172,24 +172,46 @@ local GlyphAnimationSpec = {}
 local GlyphAnimationTweenOpts = {}
 
 ---@class GlyphFeedbackStep
----@field kind? "animate"|"audio"|"emit"|"callback"|string
+---@field kind? "animate"|"wait"|"pause"|"audio"|"emit"|"callback"|"play"|"parallel"|"repeat"|"random"|"log"|string
 ---@field target? "node"|string
 ---@field from? GlyphAnimationValues
 ---@field to? GlyphAnimationValues
 ---@field duration? number
+---@field time? number
 ---@field delay? number
 ---@field ease? string
 ---@field cue? string
 ---@field audioKind? string
 ---@field event? string
 ---@field name? string
+---@field message? string
+---@field text? string
 ---@field payload? table
+---@field sequence? GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)
+---@field steps? (GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext))[]
+---@field sequences? (GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext))[]
+---@field step? GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)
+---@field feedback? GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)
+---@field options? GlyphFeedbackRandomOption[]
+---@field count? integer
+---@field times? integer
+---@field forever? boolean
+---@field trigger? string
+---@field opts? table
 ---@field callback? fun(ctx: GlyphFeedbackContext)
 ---@field fn? fun(ctx: GlyphFeedbackContext)
 ---@field onStart? fun(subject: GlyphAnimationValues)
 ---@field onUpdate? fun(subject: GlyphAnimationValues, ctx: GlyphFeedbackContext)
 ---@field onComplete? fun(subject: GlyphAnimationValues, ctx: GlyphFeedbackContext)
 local GlyphFeedbackStep = {}
+
+---@class GlyphFeedbackRandomOption
+---@field weight? number
+---@field chance? number
+---@field step? GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)
+---@field sequence? GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)
+---@field steps? GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)
+local GlyphFeedbackRandomOption = {}
 
 ---@alias GlyphFeedbackSequence GlyphFeedbackStep[]
 
@@ -204,6 +226,8 @@ local GlyphFeedbackProps = {}
 
 ---@class GlyphFeedbackPlayOpts
 ---@field trigger? "hover"|"focus"|"press"|"release"|"activate"|"error"|string
+---@field restart? boolean
+---@field key? string|number|table
 ---@field [string] any
 local GlyphFeedbackPlayOpts = {}
 
@@ -223,6 +247,20 @@ local GlyphFeedbackContext = {}
 ---@field tweens? table[]
 local GlyphFeedbackState = {}
 
+---@class GlyphFeedbackActiveRun
+---@field target? any
+---@field source any
+---@field trigger string
+---@field key? string|number|table
+---@field index integer
+---@field count integer
+---@field elapsed number
+---@field waiting boolean
+---@field remaining? number
+---@field tweens integer
+---@field children integer
+local GlyphFeedbackActiveRun = {}
+
 ---@class GlyphFeedbackEvent
 ---@field kind string
 ---@field name? string
@@ -235,8 +273,12 @@ local GlyphFeedbackEvent = {}
 
 ---@class GlyphFeedbackApi
 ---@field define fun(name: string, sequence: GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)): GlyphFeedbackSequence|nil
+---@field get fun(name: string): GlyphFeedbackSequence|nil
+---@field validate fun(sequence: GlyphFeedbackSequence|GlyphFeedbackStep|fun(ctx: GlyphFeedbackContext)): boolean, string|nil
 ---@field play fun(nameOrSequence: any, node?: GlyphNode, opts?: GlyphFeedbackPlayOpts): GlyphFeedbackContext|nil
----@field clear fun()
+---@field active fun(): GlyphFeedbackActiveRun[]
+---@field isPlaying fun(node?: GlyphNode, key?: string|number|table): boolean
+---@field clear fun(node?: GlyphNode)
 local GlyphFeedbackApi = {}
 
 -- ---------------------------------------------------------------------------

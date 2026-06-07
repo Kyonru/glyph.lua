@@ -682,6 +682,79 @@ describe("runtime", function()
     assert.are.same({ "error:error" }, events)
   end)
 
+  it("runs composed feedback sequences and exposes active state", function()
+    local runtime = Runtime.new()
+    local events = {}
+
+    Feedback.clear(runtime)
+    local ok, err = Feedback.validate({
+      {
+        kind = "parallel",
+        steps = {
+          { kind = "emit", event = "spark" },
+          { kind = "animate", to = { scale = 1.2 }, duration = 0.08 },
+        },
+      },
+      { kind = "wait", duration = 0.02 },
+      { kind = "emit", event = "settled" },
+    })
+    assert.is_true(ok, err)
+
+    Feedback.define("combo", {
+      {
+        kind = "parallel",
+        steps = {
+          { kind = "emit", event = "spark" },
+          { kind = "animate", to = { scale = 1.2 }, duration = 0.08 },
+        },
+      },
+      { kind = "wait", duration = 0.02 },
+      { kind = "emit", event = "settled" },
+    })
+    runtime:register("feedback", function(event)
+      events[#events + 1] = event.kind
+    end)
+
+    local function App()
+      return Components.stack({ key = "target", width = 40, height = 20 })
+    end
+
+    runtime:build(App)
+    Feedback.play(runtime, "combo", runtime.root, { key = "combo", restart = true })
+
+    assert.is_true(Feedback.isPlaying(runtime, runtime.root, "combo"))
+    assert.is_true(#Feedback.active() > 0)
+    assert.are.same({ "spark" }, events)
+
+    runtime:update(0.12)
+
+    assert.are.same({ "spark", "settled" }, events)
+    assert.is_false(Feedback.isPlaying(runtime, runtime.root, "combo"))
+  end)
+
+  it("clears one feedback target without dropping registered sequences", function()
+    local runtime = Runtime.new()
+
+    Feedback.clear(runtime)
+    Feedback.define("hold", {
+      { kind = "animate", to = { scale = 1.2 }, duration = 1 },
+    })
+
+    local function App()
+      return Components.stack({ key = "target", width = 40, height = 20 })
+    end
+
+    runtime:build(App)
+    Feedback.play(runtime, "hold", runtime.root, { key = "hold", restart = true })
+
+    assert.is_true(Feedback.isPlaying(runtime, runtime.root, "hold"))
+    Feedback.clear(runtime, runtime.root)
+
+    assert.is_false(Feedback.isPlaying(runtime, runtime.root, "hold"))
+    assert.is_nil(runtime.root._glyphFeedback)
+    assert.is_table(Feedback.get("hold"))
+  end)
+
   it("runs feedback animation without changing layout or hit testing", function()
     local runtime = Runtime.new()
 
@@ -746,6 +819,91 @@ describe("runtime", function()
     runtime:mousereleased(1, 1, 1)
 
     assert.are.same({ "feedback:ui-pop:Go" }, cues)
+  end)
+
+  it("activates focusable non-button nodes with the shared input lifecycle", function()
+    local runtime = Runtime.new()
+    local clicks = 0
+    local events = {}
+
+    Feedback.define("mark", {
+      { kind = "emit", event = "mark" },
+    })
+    runtime:register("feedback", function(event)
+      events[#events + 1] = event.trigger
+    end)
+
+    local function App()
+      return Components.stack({
+        key = "slot",
+        width = 60,
+        height = 40,
+        role = "button",
+        focusable = true,
+        feedback = {
+          press = "mark",
+          release = "mark",
+          activate = "mark",
+        },
+        onClick = function()
+          clicks = clicks + 1
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousereleased(1, 1, 1)
+    runtime:keypressed("return")
+    runtime:keyreleased("return")
+
+    assert.are.equal(2, clicks)
+    assert.are.same({ "press", "release", "activate", "press", "release", "activate" }, events)
+  end)
+
+  it("cancels pending drags below minDistance while preserving click activation", function()
+    local runtime = Runtime.new()
+    local clicks = 0
+    local events = {}
+    local startDrag = runtime:drag({
+      minDistance = 12,
+      onStart = function()
+        events[#events + 1] = "start"
+      end,
+      onCancel = function(ctx)
+        events[#events + 1] = "cancel:" .. tostring(ctx.reason)
+      end,
+      onDrop = function()
+        events[#events + 1] = "drop"
+      end,
+    })
+
+    local function App()
+      return Components.stack({
+        key = "slot",
+        width = 60,
+        height = 40,
+        role = "button",
+        focusable = true,
+        onMousePressed = function(x, y, button, node)
+          startDrag(x, y, button, node, { itemId = "potion" })
+        end,
+        onClick = function()
+          clicks = clicks + 1
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(1, 1, 1)
+    runtime:mousemoved(5, 5)
+    runtime:mousereleased(5, 5, 1)
+
+    assert.are.equal(1, clicks)
+    assert.are.same({ "cancel:threshold" }, events)
   end)
 
   it("keeps button taps valid across a rerender between press and release", function()

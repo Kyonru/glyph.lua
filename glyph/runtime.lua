@@ -270,6 +270,14 @@ local function isActivationKey(key)
   return key == "return" or key == "kpenter" or key == "space"
 end
 
+local function isActivatable(node)
+  local props = node and node.props or nil
+  if not props or props.disabled == true or type(props.onClick) ~= "function" then
+    return false
+  end
+  return node.type == "button" or props.focusable == true or props.role == "button"
+end
+
 ---@param base? GlyphAnimationValues|table
 ---@param feedback? GlyphAnimationValues|table
 ---@return GlyphAnimationValues|table|nil
@@ -1247,6 +1255,14 @@ function Runtime:finishDrag(x, y, button, targetNode)
 
   self.activeDrag = nil
   if not state.started then
+    local previousX = state.x
+    local previousY = state.y
+    state.x = x
+    state.y = y
+    state.targetNode = targetNode
+    state.targetPath = targetNode and targetNode.path or nil
+    local ctx = self:dragContext(state, x, y, previousX, previousY, targetNode, "threshold")
+    self:emitDrag("onCancel", state, ctx)
     self:markDirty()
     return false
   end
@@ -1337,7 +1353,7 @@ function Runtime:mousereleased(x, y, button)
     Feedback.trigger(self, down, "release")
   end
 
-  if not suppressClick and node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
+  if not suppressClick and node and (node == down or node.path == downPath) and isActivatable(node) then
     self:emitAudio("activate", node)
     Feedback.trigger(self, node, "activate")
     Accessibility.emit(self, "activate", node)
@@ -1420,7 +1436,7 @@ function Runtime:keypressed(key)
       self.inputCursors[cursorKey] = math.min(#value, cursor + 1)
       self:markDirty()
     end
-  elseif node and node.type == "button" and isActivationKey(key) and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
+  elseif node and isActivationKey(key) and isActivatable(node) then
     if self.keyDownPath ~= node.path or self.keyDownKey ~= key then
       self.keyDownNode = node
       self.keyDownPath = node.path
@@ -1449,7 +1465,7 @@ function Runtime:keyreleased(key)
       Feedback.trigger(self, down, "release")
     end
 
-    if node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
+    if node and (node == down or node.path == downPath) and isActivatable(node) then
       self:emitAudio("activate", node)
       Feedback.trigger(self, node, "activate")
       Accessibility.emit(self, "activate", node)

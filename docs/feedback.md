@@ -8,7 +8,7 @@ icon: lucide/sparkles
 ![Animated GIF showing Glyph feedback sequences, visual animation, audio metadata, and emitted events.](assets/feature-gifs/feedback.gif)
 <!-- /glyph:feature-gif feedback -->
 
-Glyph feedback sequences are small triggerable stacks for game-feel polish. They can animate a node, emit audio cue metadata, dispatch app-owned FX events, or run a callback.
+Glyph feedback sequences are small triggerable stacks for game-feel polish. They can animate a node, wait, branch into composed child sequences, emit audio cue metadata, dispatch app-owned FX events, or run a callback.
 
 The API is named `ui.feedback`; “juice” is example language, not a widget namespace. Internally, Glyph delegates this behavior to the standalone `feel.lua` package, which can also be required directly with `local feel = require("feel")`.
 
@@ -82,6 +82,33 @@ end)
 }
 ```
 
+The Feel runner also supports composition steps through Glyph: `wait`/`pause`, `play`, `parallel`, `repeat`, `random`, and `log`.
+
+```lua
+ui.feedback.define("slot.drop.good", {
+  {
+    kind = "parallel",
+    steps = {
+      { kind = "audio", cue = "inventory-drop" },
+      { kind = "emit", event = "spark", payload = { count = 12 } },
+      { kind = "animate", to = { scale = 1.08 }, duration = 0.06 },
+    },
+  },
+  { kind = "wait", duration = 0.03 },
+  { kind = "animate", to = { scale = 1 }, duration = 0.14, ease = "backout" },
+})
+```
+
+Use `restart` and `key` when repeated triggers should replace a previous run on the same node:
+
+```lua
+ui.feedback.play("slot.drop.good", node, {
+  trigger = "drop",
+  restart = true,
+  key = "slot.drop",
+})
+```
+
 ## Manual Playback
 
 ```lua
@@ -92,6 +119,16 @@ ui.feedback.play({
 ```
 
 Use `ui.feedback.clear()` in tests or app teardown when registered sequences should be reset.
+
+Use `ui.feedback.clear(node)` to stop and clear feedback values for one node target while keeping registered sequences intact.
+
+You can inspect sequence state when coordinating app-owned systems:
+
+```lua
+local ok, err = ui.feedback.validate(sequence)
+local active = ui.feedback.active()
+local busy = ui.feedback.isPlaying(node, "slot.drop")
+```
 
 ## Standalone Feel
 

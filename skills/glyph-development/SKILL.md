@@ -88,7 +88,7 @@ Use `ui.grid.pointToCell` with `onLayout` bounds for uniform grid pointer mappin
 
 For input changes, add runtime tests that press and release controls, not just geometry assertions.
 
-Keyboard, mouse, touch, and mapped gamepad activation should share the same press/release lifecycle so pressed styles, audio cues, and accessibility activation remain consistent.
+Keyboard, mouse, touch, and mapped gamepad activation should share the same press/release lifecycle so pressed styles, feedback, audio cues, and accessibility activation remain consistent. Focusable non-button nodes with `role = "button"` and `onClick` should participate in that lifecycle.
 
 ## Navigation And Input
 
@@ -153,7 +153,7 @@ Animation lives in `glyph/animation.lua` and uses vendored Flux.
 Feedback lives in `glyph/feedback.lua`.
 
 - Public API is `ui.feedback`, not `ui.juice`.
-- Feedback steps should stay generic: `animate`, `audio`, `emit`, and `callback`.
+- Feedback steps should stay generic: `animate`, `audio`, `emit`, `callback`, and Feel composition steps such as `wait`, `parallel`, `repeat`, `random`, and `play`.
 - Feedback animation composes with node animation and remains visual-only.
 - Trigger hooks should follow the shared lifecycle: hover enter, focus enter, press down, release up, activate before successful button click.
 - Disabled controls should not emit press/release/activate feedback.

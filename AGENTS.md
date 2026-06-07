@@ -125,7 +125,7 @@ Poor core API examples:
 - Non-interactive decoration must set `interactive = false` so events pass through.
 - Local `zIndex` orders siblings. Floating UI that must escape later sibling branches should prefer `ui.portal`; use raw `position = "absolute", zScope = "root"` only when a lower-level primitive is clearer.
 - Touch is installed automatically by `ui.install` / `ui.load`; gamepad mapping is opt-in with `install.gamepad = true` or manual `ui.gamepadpressed/released`.
-- Mouse/touch and keyboard/gamepad activation should use the same press/release lifecycle so pressed styles, audio cues, and accessibility activation events stay consistent.
+- Mouse/touch and keyboard/gamepad activation should use the same press/release lifecycle so pressed styles, feedback, audio cues, and accessibility activation events stay consistent. Focusable non-button nodes with `role = "button"` and `onClick` should participate in that lifecycle.
 - Fixed viewport backends convert pointer coordinates before hit testing. Pointer events outside the virtual viewport should not hit UI.
 - Spatial navigation should stay layout-agnostic. Use `navGroup` for soft grouping and `navScope`/`navTrap`/`onNavigateExit` for submenus.
 - Use `onLayout` or `onBounds` to capture node geometry for drag/drop, tooltips, popovers, overlays, and contextual menus. Do not mutate app geometry state from custom draw callbacks unless the state is strictly draw-local.
@@ -168,7 +168,7 @@ Poor core API examples:
 ## Feedback Rules
 
 - Feedback lives in `glyph/feedback.lua` and is exposed as `ui.feedback`.
-- Keep feedback modular: `animate`, `audio`, `emit`, and `callback` steps compose into named sequences.
+- Keep feedback modular: `animate`, `audio`, `emit`, `callback`, and Feel composition steps such as `wait`, `parallel`, `repeat`, `random`, and `play` compose into named sequences.
 - Feedback animation is visual-only and must not alter layout, hit testing, focus, navigation geometry, or accessibility snapshots.
 - Use `"feedback"` events for app-owned particles, camera shake, haptics, splats, shader systems, and other FX. Core should not own cameras, particle systems, sound packs, or branded button widgets.
 - Blob shapes are a generic primitive. Splat/star/sticker/ink shape packs should start in examples unless they prove broadly reusable.
