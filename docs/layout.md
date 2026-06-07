@@ -4,6 +4,10 @@ icon: lucide/layout-grid
 
 # Layout
 
+<!-- glyph:feature-gif layout -->
+![Animated GIF showing Glyph rows, columns, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif)
+<!-- /glyph:feature-gif layout -->
+
 Glyph uses a small pure-Lua layout engine. The model is explicit and game-friendly, not CSS.
 
 ## Flow Layout

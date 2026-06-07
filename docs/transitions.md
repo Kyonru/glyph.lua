@@ -4,6 +4,10 @@ icon: lucide/sparkles
 
 # Transitions
 
+<!-- glyph:feature-gif transitions -->
+![Animated GIF showing Glyph fade, slide, shader-style, and animated layer transitions.](assets/feature-gifs/transitions.gif)
+<!-- /glyph:feature-gif transitions -->
+
 Glyph transitions are used by scenes and modals. They control how a layer is drawn while entering or exiting.
 
 ## Built-In Transitions

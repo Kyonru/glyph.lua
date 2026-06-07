@@ -194,6 +194,8 @@ Glyph is for debug panels and game UI, so avoid needless rebuilds and layout chu
 - Add `---@param`, `---@return`, and `---@class` annotations when adding/changing public APIs or substantial internal helpers.
 - New docs pages need `lucide/*` frontmatter and `zensical.toml` nav entries.
 - Use GitHub callouts (`> [!NOTE]`) rather than `!!! note`.
+- Docs-facing visual behavior should have a matching target in `scripts/doc_gifs/manifest.lua`.
+  Regenerate managed previews with `make docs-gifs` or `make docs-gifs FEATURE=<id>`.
 - When introducing a new subsystem, public workflow, reusable example pattern, or recurring implementation rule, update `AGENTS.md` and the relevant `skills/*/SKILL.md`.
 - Create a new local skill only when the workflow is distinct enough that future agents should load it separately; otherwise update `glyph-development` or `glyph-ui-building`.
 
@@ -208,10 +210,11 @@ Run:
 For syntax checks:
 
 ```sh
-luac -p glyph.lua glyph/*.lua examples/*/main.lua spec/*_spec.lua
+luac -p glyph.lua glyph/*.lua scripts/*.lua scripts/doc_gifs/*.lua examples/*/main.lua spec/*_spec.lua
 ```
 
 When a Love2D visual behavior changes, update or add an example that makes the behavior obvious.
+When a docs preview changes, run the relevant `make docs-gifs FEATURE=<id>` target.
 
 Documentation is required for public-library work. Update the matching `docs/*.md` page before finishing.
 

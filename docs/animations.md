@@ -4,6 +4,10 @@ icon: lucide/sparkles
 
 # Animations
 
+<!-- glyph:feature-gif animations -->
+![Animated GIF showing Glyph enter, exit, meter, and movement animations.](assets/feature-gifs/animations.gif)
+<!-- /glyph:feature-gif animations -->
+
 Glyph includes a small first-class animation layer powered by a vendored copy
 of `rxi/flux`. Animations are visual-only: layout, hit testing, focus, and
 navigation still use the node's normal bounds.

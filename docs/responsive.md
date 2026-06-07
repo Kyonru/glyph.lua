@@ -4,6 +4,10 @@ icon: lucide/monitor
 
 # Responsive Helpers
 
+<!-- glyph:feature-gif responsive -->
+![Animated GIF showing Glyph responsive breakpoints, columns, and virtual viewport mapping.](assets/feature-gifs/responsive.gif)
+<!-- /glyph:feature-gif responsive -->
+
 Glyph tracks viewport size and breakpoints for resizable Love2D windows.
 
 ## Configure The Window

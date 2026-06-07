@@ -4,6 +4,10 @@ icon: lucide/palette
 
 # Styling And Themes
 
+<!-- glyph:feature-gif styling -->
+![Animated GIF showing Glyph theme colors, variants, and state styles.](assets/feature-gifs/styling.gif)
+<!-- /glyph:feature-gif styling -->
+
 Glyph uses Lua tables for styling, not CSS syntax.
 
 ## Inline Style

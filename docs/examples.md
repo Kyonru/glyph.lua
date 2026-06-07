@@ -27,6 +27,17 @@ love examples/viewport
 love examples/performance
 ```
 
+Generate documentation GIFs from the dedicated capture scenes:
+
+```sh
+make docs-gifs
+make docs-gifs FEATURE=animations
+```
+
+The command requires Love2D and FFmpeg. Set `LOVE_BIN` or `FFMPEG_BIN` when the
+executables are not on `PATH`; on macOS the script also checks
+`/Applications/love.app/Contents/MacOS/love`.
+
 ## Accessibility
 
 Love2D-friendly semantics demo with keyboard/gamepad focus traversal, localized labels, live region events, hidden decoration, semantic snapshots, and a fake TTS/log adapter.
@@ -104,6 +115,30 @@ This demo uses development copies of Push and Shove from `dev/vendor`; Glyph app
 ## Performance
 
 Large dataset workflow with a visible window of mounted rows, static row reuse, and timing display.
+
+
+<!-- glyph:feature-gif-gallery -->
+## Feature GIF Gallery
+
+| Feature | Preview |
+| --- | --- |
+| [Getting Started](getting-started.md) | ![Animated GIF showing a minimal Glyph counter app rendering and updating.](assets/feature-gifs/getting-started.gif) |
+| [Components](components.md) | ![Animated GIF showing Glyph text, image, button, input, meter, tabs, and panel components.](assets/feature-gifs/components.gif) |
+| [Layout](layout.md) | ![Animated GIF showing Glyph rows, columns, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif) |
+| [Styling And Themes](styling.md) | ![Animated GIF showing Glyph theme colors, variants, and state styles.](assets/feature-gifs/styling.gif) |
+| [Runtime, Hooks, And Events](runtime.md) | ![Animated GIF showing Glyph runtime updates, input events, focus, and render callbacks.](assets/feature-gifs/runtime.gif) |
+| [Callback Bus](callback-bus.md) | ![Animated GIF showing Glyph callback bus priority order and event dispatch.](assets/feature-gifs/callback-bus.gif) |
+| [I18n](i18n.md) | ![Animated GIF showing Glyph localized text, labels, placeholders, and cache-aware values.](assets/feature-gifs/i18n.gif) |
+| [Accessibility](accessibility.md) | ![Animated GIF showing Glyph semantic labels, focus events, live announcements, and snapshots.](assets/feature-gifs/accessibility.gif) |
+| [Responsive Helpers](responsive.md) | ![Animated GIF showing Glyph responsive breakpoints, columns, and virtual viewport mapping.](assets/feature-gifs/responsive.gif) |
+| [Custom Draw And Helpers](custom-draw.md) | ![Animated GIF showing Glyph custom draw helpers, shapes, clipping, and stencil-like masks.](assets/feature-gifs/custom-draw.gif) |
+| [Animations](animations.md) | ![Animated GIF showing Glyph enter, exit, meter, and movement animations.](assets/feature-gifs/animations.gif) |
+| [Feedback](feedback.md) | ![Animated GIF showing Glyph feedback sequences, visual animation, audio metadata, and emitted events.](assets/feature-gifs/feedback.gif) |
+| [Scenes And Modals](scenes-and-modals.md) | ![Animated GIF showing Glyph scene layers, overlays, modal blocking, and backdrop behavior.](assets/feature-gifs/scenes-modals.gif) |
+| [Transitions](transitions.md) | ![Animated GIF showing Glyph fade, slide, shader-style, and animated layer transitions.](assets/feature-gifs/transitions.gif) |
+| [Spatial Navigation](navigation.md) | ![Animated GIF showing Glyph spatial navigation focus moving through buttons and scoped groups.](assets/feature-gifs/navigation.gif) |
+| [Performance](performance.md) | ![Animated GIF showing Glyph memoized rows, static nodes, visible windows, and bounded work.](assets/feature-gifs/performance.gif) |
+<!-- /glyph:feature-gif-gallery -->
 
 ## Example Standards
 

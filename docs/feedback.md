@@ -4,6 +4,10 @@ icon: lucide/sparkles
 
 # Feedback
 
+<!-- glyph:feature-gif feedback -->
+![Animated GIF showing Glyph feedback sequences, visual animation, audio metadata, and emitted events.](assets/feature-gifs/feedback.gif)
+<!-- /glyph:feature-gif feedback -->
+
 Glyph feedback sequences are small triggerable stacks for game-feel polish. They can animate a node, emit audio cue metadata, dispatch app-owned FX events, or run a callback.
 
 The API is named `ui.feedback`; “juice” is example language, not a widget namespace. Internally, Glyph delegates this behavior to the standalone `feel.lua` package, which can also be required directly with `local feel = require("feel")`.

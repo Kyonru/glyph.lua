@@ -4,6 +4,10 @@ icon: lucide/map
 
 # Getting Started
 
+<!-- glyph:feature-gif getting-started -->
+![Animated GIF showing a minimal Glyph counter app rendering and updating.](assets/feature-gifs/getting-started.gif)
+<!-- /glyph:feature-gif getting-started -->
+
 Require Glyph from Love2D:
 
 ```lua

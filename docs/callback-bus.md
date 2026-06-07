@@ -4,6 +4,10 @@ icon: lucide/radio
 
 # Callback Bus
 
+<!-- glyph:feature-gif callback-bus -->
+![Animated GIF showing Glyph callback bus priority order and event dispatch.](assets/feature-gifs/callback-bus.gif)
+<!-- /glyph:feature-gif callback-bus -->
+
 Glyph includes a callback bus modeled after Feather-style callback semantics.
 
 ## Runtime API

@@ -4,6 +4,10 @@ icon: lucide/gauge
 
 # Performance
 
+<!-- glyph:feature-gif performance -->
+![Animated GIF showing Glyph memoized rows, static nodes, visible windows, and bounded work.](assets/feature-gifs/performance.gif)
+<!-- /glyph:feature-gif performance -->
+
 Glyph is intended for debugger panels and game UI, so performance matters.
 
 ## Principles

@@ -4,6 +4,10 @@ icon: lucide/cpu
 
 # Runtime, Hooks, And Events
 
+<!-- glyph:feature-gif runtime -->
+![Animated GIF showing Glyph runtime updates, input events, focus, and render callbacks.](assets/feature-gifs/runtime.gif)
+<!-- /glyph:feature-gif runtime -->
+
 Glyph has one shared runtime exposed through `ui.update`, `ui.render`, input forwarding functions, hooks, and helper APIs.
 
 ## Rendering

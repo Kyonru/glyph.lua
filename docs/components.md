@@ -4,6 +4,10 @@ icon: lucide/boxes
 
 # Components
 
+<!-- glyph:feature-gif components -->
+![Animated GIF showing Glyph text, image, button, input, meter, tabs, and panel components.](assets/feature-gifs/components.gif)
+<!-- /glyph:feature-gif components -->
+
 Glyph components return virtual nodes. Components are plain Lua functions; there is no class system.
 
 ## Text

@@ -4,6 +4,10 @@ icon: lucide/pen-tool
 
 # Custom Draw And Helpers
 
+<!-- glyph:feature-gif custom-draw -->
+![Animated GIF showing Glyph custom draw helpers, shapes, clipping, and stencil-like masks.](assets/feature-gifs/custom-draw.gif)
+<!-- /glyph:feature-gif custom-draw -->
+
 Glyph supports custom drawing on any node through `props.draw`.
 
 ## Custom Draw Signature

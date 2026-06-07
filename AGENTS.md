@@ -220,6 +220,8 @@ At minimum:
 - Feedback behavior: update `docs/feedback.md`, `docs/runtime.md`, and related style/custom-draw docs.
 - Performance pattern: update `docs/performance.md`.
 - New example: update `docs/examples.md`.
+- Docs-facing visual behavior: update the matching target in `scripts/doc_gifs/manifest.lua`
+  and run `make docs-gifs` or `make docs-gifs FEATURE=<id>` so managed GIF blocks stay current.
 
 If a change needs tests, it probably needs documentation too.
 If a change introduces a new subsystem, public workflow, reusable example pattern,
