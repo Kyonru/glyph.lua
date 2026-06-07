@@ -186,6 +186,50 @@ identity changes. Reported bounds are rectangular layout geometry; they do not
 include visual-only animation, feedback, shape, clip, stencil, or custom
 transition transforms.
 
+## Pointer Drag Helper
+
+Use `ui.drag` when app code needs a captured pointer lifecycle without wiring a
+global `ui.on("event")` listener. Glyph owns the pointer start/move/drop/cancel
+callbacks; your app still owns target lookup, validation, swapping, placement,
+and previews.
+
+```lua
+local startDrag = ui.drag({
+  onStart = function(ctx)
+    dragging = ctx.data
+  end,
+  onMove = function(ctx)
+    pointer = { x = ctx.x, y = ctx.y }
+  end,
+  onDrop = function(ctx)
+    dropItem(ctx.data, ctx.x, ctx.y)
+  end,
+  onCancel = function(ctx)
+    dragging = nil
+  end,
+})
+
+ui.button({
+  label = "Potion",
+  onMousePressed = function(x, y, button, node)
+    if button == 1 then
+      startDrag(x, y, button, node, { itemId = "potion" })
+    end
+  end,
+})
+```
+
+`ctx` includes `x`, `y`, `startX`, `startY`, `previousX`, `previousY`, `dx`,
+`dy`, `totalDx`, `totalDy`, `button`, `sourceNode`, `sourcePath`,
+`targetNode`, `targetPath`, `data`, `runtime`, `reason`, and
+`cancel(reason)`.
+
+Set `minDistance` to delay `onStart` until the pointer moves far enough.
+Releasing before the threshold preserves normal button activation. Once a drag
+has started, release calls `onDrop` and suppresses the source button’s normal
+`onClick`. Active drags cancel on Escape, viewport exit, focus loss, or when a
+new drag starts.
+
 ## Audio Cue Events
 
 Glyph emits `audio` callbacks when configured cues resolve for interaction

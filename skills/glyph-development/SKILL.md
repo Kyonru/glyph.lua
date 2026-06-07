@@ -83,6 +83,7 @@ The runtime in `glyph/runtime.lua` owns:
 Draw order and hit order must match. If `zIndex` or stack order changes drawing, hit testing must follow the same order in reverse.
 Local `zIndex` orders siblings. `position = "absolute", zScope = "root"` promotes floating UI above normal content in the current render root and must keep draw and hit-test order matched.
 Use `onLayout` or `onBounds` for app-owned geometry capture such as drag/drop targets, tooltips, popovers, overlays, and contextual menus. Avoid mutating app geometry state from custom draw callbacks unless the state is strictly draw-local.
+Use `ui.drag` for generic pointer drag lifecycles. Keep app-specific swapping, collision, placement, validation, and drag previews outside core.
 
 For input changes, add runtime tests that press and release controls, not just geometry assertions.
 

@@ -308,6 +308,7 @@ function Runtime.new()
     focusNode = nil,
     mouseDownNode = nil,
     mouseDownPath = nil,
+    activeDrag = nil,
     keyDownNode = nil,
     keyDownPath = nil,
     keyDownKey = nil,
@@ -1105,8 +1106,177 @@ function Runtime:cursorKey(node)
   return node and node.path or nil
 end
 
+local function dragDistance(state, x, y)
+  local dx = x - (state.startX or x)
+  local dy = y - (state.startY or y)
+  return math.sqrt(dx * dx + dy * dy)
+end
+
+---@param state table
+---@param x number
+---@param y number
+---@param previousX number
+---@param previousY number
+---@param targetNode? GlyphNode
+---@param reason? string
+---@return GlyphDragContext
+function Runtime:dragContext(state, x, y, previousX, previousY, targetNode, reason)
+  local ctx = {
+    x = x,
+    y = y,
+    startX = state.startX,
+    startY = state.startY,
+    previousX = previousX,
+    previousY = previousY,
+    dx = x - previousX,
+    dy = y - previousY,
+    totalDx = x - state.startX,
+    totalDy = y - state.startY,
+    button = state.button,
+    sourceNode = state.sourceNode,
+    sourcePath = state.sourcePath,
+    targetNode = targetNode,
+    targetPath = targetNode and targetNode.path or nil,
+    data = state.data,
+    runtime = self,
+    reason = reason,
+  }
+  ctx.cancel = function(cancelReason)
+    self:cancelDrag(cancelReason or reason or "cancel")
+  end
+  return ctx
+end
+
+function Runtime:emitDrag(kind, state, ctx)
+  local callback = state and state.opts and state.opts[kind]
+  if type(callback) == "function" then
+    callback(ctx)
+  end
+  self:markDirty()
+end
+
+function Runtime:beginDrag(state, x, y, previousX, previousY, targetNode)
+  if not state or state.started then
+    return false
+  end
+  state.started = true
+  state.pending = false
+  state.suppressClick = true
+  local ctx = self:dragContext(state, x, y, previousX, previousY, targetNode, "start")
+  self:emitDrag("onStart", state, ctx)
+  return self.activeDrag == state
+end
+
+---@param opts GlyphDragProps
+---@return GlyphDragStart
+function Runtime:drag(opts)
+  opts = opts or {}
+  local minDistance = math.max(0, tonumber(opts.minDistance) or 0)
+  return function(x, y, button, node, data)
+    if self.activeDrag then
+      self:cancelDrag("replaced")
+    end
+
+    local targetNode = node or self:hitTest(x, y)
+    local state = {
+      opts = opts,
+      startX = x,
+      startY = y,
+      x = x,
+      y = y,
+      previousX = x,
+      previousY = y,
+      button = button,
+      sourceNode = node,
+      sourcePath = node and node.path or nil,
+      targetNode = targetNode,
+      targetPath = targetNode and targetNode.path or nil,
+      data = data,
+      minDistance = minDistance,
+      pending = minDistance > 0,
+      started = false,
+      suppressClick = false,
+    }
+
+    self.activeDrag = state
+    if minDistance <= 0 then
+      self:beginDrag(state, x, y, x, y, targetNode)
+    else
+      self:markDirty()
+    end
+  end
+end
+
+function Runtime:handleDragMove(x, y, targetNode)
+  local state = self.activeDrag
+  if not state then
+    return false
+  end
+
+  local previousX = state.x
+  local previousY = state.y
+  state.previousX = previousX
+  state.previousY = previousY
+  state.x = x
+  state.y = y
+  state.targetNode = targetNode
+  state.targetPath = targetNode and targetNode.path or nil
+
+  if not state.started then
+    if dragDistance(state, x, y) < (state.minDistance or 0) then
+      return true
+    end
+    if not self:beginDrag(state, x, y, previousX, previousY, targetNode) then
+      return true
+    end
+  end
+
+  if self.activeDrag == state then
+    local ctx = self:dragContext(state, x, y, previousX, previousY, targetNode, "move")
+    self:emitDrag("onMove", state, ctx)
+  end
+  return true
+end
+
+function Runtime:finishDrag(x, y, button, targetNode)
+  local state = self.activeDrag
+  if not state or state.button ~= button then
+    return false
+  end
+
+  self.activeDrag = nil
+  if not state.started then
+    self:markDirty()
+    return false
+  end
+
+  local previousX = state.x
+  local previousY = state.y
+  state.x = x
+  state.y = y
+  state.targetNode = targetNode
+  state.targetPath = targetNode and targetNode.path or nil
+  local ctx = self:dragContext(state, x, y, previousX, previousY, targetNode, "drop")
+  self:emitDrag("onDrop", state, ctx)
+  return state.suppressClick == true
+end
+
+function Runtime:cancelDrag(reason)
+  local state = self.activeDrag
+  if not state then
+    return false
+  end
+
+  self.activeDrag = nil
+  local targetNode = state.targetNode
+  local ctx = self:dragContext(state, state.x, state.y, state.previousX or state.x, state.previousY or state.y, targetNode, reason or "cancel")
+  self:emitDrag("onCancel", state, ctx)
+  return true
+end
+
 function Runtime:mousemoved(x, y)
   local node = self:hitTest(x, y)
+  self:handleDragMove(x, y, node)
   self:setHover(node)
   self.bus:dispatch("event", "mousemoved", x, y, node)
 end
@@ -1158,6 +1328,7 @@ function Runtime:mousereleased(x, y, button)
   local node = self:hitTest(x, y)
   local down = self.mouseDownNode
   local downPath = self.mouseDownPath
+  local suppressClick = self:finishDrag(x, y, button, node)
   self.mouseDownNode = nil
   self.mouseDownPath = nil
 
@@ -1165,7 +1336,7 @@ function Runtime:mousereleased(x, y, button)
     Feedback.trigger(self, down, "release")
   end
 
-  if node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
+  if not suppressClick and node and (node == down or node.path == downPath) and node.type == "button" and node.props and not node.props.disabled and type(node.props.onClick) == "function" then
     self:emitAudio("activate", node)
     Feedback.trigger(self, node, "activate")
     Accessibility.emit(self, "activate", node)
@@ -1213,6 +1384,12 @@ end
 
 function Runtime:keypressed(key)
   local node = self.focusNode
+
+  if key == "escape" and self:cancelDrag("escape") then
+    self.bus:dispatch("event", "keypressed", key, node)
+    self:markDirty()
+    return
+  end
 
   if key == "escape" and self.scene and self.scene:closeTopEscapable() then
     self.bus:dispatch("event", "keypressed", key, node)

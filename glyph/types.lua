@@ -307,6 +307,38 @@ local GlyphPadding = {}
 ---@field onNavigateExit? fun(direction: GlyphNavDirection, origin: GlyphNode, scope: GlyphNode|GlyphLayer, candidates: GlyphNavCandidate[]): GlyphNode|false|nil
 local GlyphProps = {}
 
+---@class GlyphDragContext
+---@field x number
+---@field y number
+---@field startX number
+---@field startY number
+---@field previousX number
+---@field previousY number
+---@field dx number
+---@field dy number
+---@field totalDx number
+---@field totalDy number
+---@field button number
+---@field sourceNode? GlyphNode
+---@field sourcePath? string
+---@field targetNode? GlyphNode
+---@field targetPath? string
+---@field data? any
+---@field runtime table
+---@field reason? string
+---@field cancel fun(reason?: string)
+local GlyphDragContext = {}
+
+---@class GlyphDragProps
+---@field minDistance? number
+---@field onStart? fun(ctx: GlyphDragContext)
+---@field onMove? fun(ctx: GlyphDragContext)
+---@field onDrop? fun(ctx: GlyphDragContext)
+---@field onCancel? fun(ctx: GlyphDragContext)
+local GlyphDragProps = {}
+
+---@alias GlyphDragStart fun(x: number, y: number, button: number, node?: GlyphNode, data?: any)
+
 ---@class GlyphTextProps : GlyphProps
 ---@field textKey? string
 ---@field textParams? table

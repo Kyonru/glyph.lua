@@ -57,7 +57,6 @@ local potionSheet = nil
 local potionSprites = nil
 local potionPreviewAnimation = nil
 local assetError = nil
-local eventOff = nil
 
 local activeTab = 1
 local currentPage = 1
@@ -73,6 +72,7 @@ local caseEntries = {}
 local satchelBounds = {}
 local pageBounds = {}
 local caseBoardBounds = nil
+local inventoryDragStart = nil
 
 local catalog = {
 	{ id = "minor_health", name = "Minor Health", quad = 1, rarity = "common", count = 9 },
@@ -520,7 +520,15 @@ local function markDirty()
 	end
 end
 
-local function startUniformDrag(kind, sourceIndex, itemId, x, y)
+local function updateDragPointer(ctx)
+	pointerX = ctx.x or pointerX
+	pointerY = ctx.y or pointerY
+	if drag then
+		markDirty()
+	end
+end
+
+local function startUniformDrag(kind, sourceIndex, itemId, x, y, button, node)
 	local item = itemFor(itemId)
 	if not item then
 		return
@@ -536,6 +544,9 @@ local function startUniformDrag(kind, sourceIndex, itemId, x, y)
 	pointerX = x
 	pointerY = y
 	setStatus("Drop " .. item.name .. " onto another slot.", "hint")
+	if inventoryDragStart then
+		inventoryDragStart(x, y, button or 1, node, drag)
+	end
 	markDirty()
 end
 
@@ -607,7 +618,7 @@ local function caseCandidate()
 	}
 end
 
-local function startCaseDrag(entry, x, y)
+local function startCaseDrag(entry, x, y, button, node)
 	local item = itemFor(entry.itemId)
 	if not item then
 		return
@@ -636,6 +647,9 @@ local function startCaseDrag(entry, x, y)
 	pointerX = x
 	pointerY = y
 	setStatus("Find a legal space for " .. item.name .. ".", "hint")
+	if inventoryDragStart then
+		inventoryDragStart(x, y, button or 1, node, drag)
+	end
 	markDirty()
 end
 
@@ -674,6 +688,23 @@ local function finishDrag()
 	drag = nil
 	markDirty()
 end
+
+inventoryDragStart = ui.drag({
+	onStart = updateDragPointer,
+	onMove = updateDragPointer,
+	onDrop = function(ctx)
+		updateDragPointer(ctx)
+		finishDrag()
+	end,
+	onCancel = function(ctx)
+		updateDragPointer(ctx)
+		if drag then
+			setStatus("Drag cancelled.", "neutral")
+		end
+		drag = nil
+		markDirty()
+	end,
+})
 
 local function slotDraw(store, index, itemId)
 	return function(node, x, y, width, height, loveModule, _, ctx)
@@ -745,9 +776,9 @@ local function slotNode(kind, store, slots, index, size)
 		key = kind .. "-slot-" .. index,
 		width = size,
 		height = size,
-		onMousePressed = function(x, y, button)
+		onMousePressed = function(x, y, button, node)
 			if button == 1 and itemId then
-				startUniformDrag(kind, index, itemId, x, y)
+				startUniformDrag(kind, index, itemId, x, y, button, node)
 			end
 		end,
 		onLayout = function(bounds)
@@ -1115,9 +1146,9 @@ local function caseItemNode(entry)
 		width = width,
 		height = height,
 		zIndex = isDragging and 30 or 5,
-		onMousePressed = function(x, y, button)
+		onMousePressed = function(x, y, button, node)
 			if button == 1 then
-				startCaseDrag(entry, x, y)
+				startCaseDrag(entry, x, y, button, node)
 			end
 		end,
 		role = "button",
@@ -1412,24 +1443,6 @@ local function setup()
 	ui.setTheme(exampleTheme)
 	loadPotionSheet()
 	resetArrangements()
-
-	if eventOff then
-		eventOff()
-	end
-
-	eventOff = ui.on("event", function(kind, x, y, button)
-		if kind == "mousemoved" or kind == "mousepressed" or kind == "mousereleased" then
-			pointerX = x or pointerX
-			pointerY = y or pointerY
-			if drag then
-				markDirty()
-			end
-		end
-
-		if kind == "mousereleased" and drag and button == 1 then
-			finishDrag()
-		end
-	end)
 end
 
 local function update(dt)
@@ -1440,10 +1453,6 @@ local function update(dt)
 end
 
 local function teardown()
-	if eventOff then
-		eventOff()
-		eventOff = nil
-	end
 	drag = nil
 	satchelBounds = {}
 	pageBounds = {}

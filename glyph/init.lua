@@ -56,6 +56,7 @@ local runtime = Runtime.new()
 ---@field transitions GlyphTransitionApi
 ---@field scene GlyphSceneApi
 ---@field modal GlyphModalApi
+---@field drag fun(opts: GlyphDragProps): GlyphDragStart
 ---@field setFocus fun(node?: GlyphNode)
 ---@field navigate fun(direction: "up"|"down"|"left"|"right"): GlyphNode|nil
 ---@field keypressed fun(key: string)
@@ -214,6 +215,12 @@ end
 ---@return GlyphNode
 function ui.memo(component, deps)
   return runtime:memo(component, deps)
+end
+
+---@param opts GlyphDragProps
+---@return GlyphDragStart
+function ui.drag(opts)
+  return runtime:drag(opts)
 end
 
 ---@param key string
@@ -515,6 +522,7 @@ end
 function ui.mousemoved(x, y, dx, dy)
   local inside, viewX, viewY = viewportPoint(x, y)
   if not inside then
+    runtime:cancelDrag("viewport")
     clearPointerTarget(false)
     return nil
   end
@@ -527,6 +535,7 @@ end
 function ui.mousepressed(x, y, button)
   local inside, viewX, viewY = viewportPoint(x, y)
   if not inside then
+    runtime:cancelDrag("viewport")
     clearPointerTarget(true)
     return nil
   end
@@ -539,6 +548,7 @@ end
 function ui.mousereleased(x, y, button)
   local inside, viewX, viewY = viewportPoint(x, y)
   if not inside then
+    runtime:cancelDrag("viewport")
     clearPointerTarget(false)
     return nil
   end
@@ -703,9 +713,15 @@ local autoCallbacks = {
     ui.keyreleased(key, scancode)
   end,
   mousefocus = function(focused)
+    if focused == false then
+      runtime:cancelDrag("mousefocus")
+    end
     ui.dispatch("event", "mousefocus", focused)
   end,
   focus = function(focused)
+    if focused == false then
+      runtime:cancelDrag("focus")
+    end
     ui.dispatch("event", "focus", focused)
   end,
   visible = function(visible)
