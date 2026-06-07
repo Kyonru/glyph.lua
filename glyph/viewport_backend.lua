@@ -96,6 +96,28 @@ function ViewportBackend.new()
   }, ViewportBackend)
 end
 
+---@param backend? table
+---@param name string
+---@param ... any
+---@return any
+function ViewportBackend.call(backend, name, ...)
+  if not backend then
+    return nil
+  end
+
+  local fn = backend[name]
+  if type(fn) ~= "function" then
+    return nil
+  end
+
+  local ok, a, b, c, d, e = pcall(fn, ...)
+  if ok then
+    return a, b, c, d, e
+  end
+
+  return fn(backend, ...)
+end
+
 ---@return nil
 function ViewportBackend:disable()
   self.enabled = false

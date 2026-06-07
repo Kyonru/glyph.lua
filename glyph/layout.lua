@@ -65,6 +65,14 @@ local function numericSize(value)
   return nil
 end
 
+local function richTextUsesBackendMetrics(node, props)
+  return node
+    and node.type == "text"
+    and Typography.isRich(props)
+    and node.richText ~= nil
+    and node.richText.fallback ~= true
+end
+
 local function imageNaturalSize(props)
   props = props or {}
 
@@ -610,7 +618,11 @@ function Layout.compute(root, context)
       local measuredWidth, measuredHeight = Layout.measureNode(node, context)
       local resolvedWidth = resolveSize(props.width, availableWidth)
       local resolvedHeight = resolveSize(props.height, availableHeight)
-      node.layout.width = clamp(node.layout.assignedWidth or resolvedWidth or numericSize(props.width) or measuredWidth, props.minWidth, props.maxWidth)
+      local preferredWidth = node.layout.assignedWidth or resolvedWidth or numericSize(props.width) or measuredWidth
+      if richTextUsesBackendMetrics(node, props) then
+        preferredWidth = node.layout.assignedWidth or measuredWidth
+      end
+      node.layout.width = clamp(preferredWidth, props.minWidth, props.maxWidth)
       node.layout.height = clamp(node.layout.assignedHeight or resolvedHeight or numericSize(props.height) or measuredHeight, props.minHeight, props.maxHeight)
       node.layout.contentWidth = math.max(0, node.layout.width - pad.left - pad.right)
       node.layout.contentHeight = math.max(0, node.layout.height - pad.top - pad.bottom)

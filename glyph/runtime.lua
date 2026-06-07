@@ -792,7 +792,7 @@ local viewportSize
 function Runtime:render(component)
   self.bus:dispatch("beforeRender")
   local root = self.root
-  local wrapped = self.viewportBackend and self.viewportBackend:isManaged() and self.viewportBackend:beginDraw()
+  local wrapped = ViewportBackend.call(self.viewportBackend, "isManaged") and ViewportBackend.call(self.viewportBackend, "beginDraw")
 
   local ok, err = xpcall(function()
     local hasSceneRoot = self.scene and #self.scene.layers > 0 and component == nil
@@ -815,7 +815,7 @@ function Runtime:render(component)
   end, debug.traceback)
 
   if wrapped then
-    self.viewportBackend:endDraw()
+    ViewportBackend.call(self.viewportBackend, "endDraw")
   end
 
   if not ok then
@@ -851,8 +851,8 @@ local function graphicsPushAll(graphics)
 end
 
 function viewportSize(runtime, loveModule)
-  if runtime and runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
-    local width, height = runtime.viewportBackend:dimensions()
+  if runtime and ViewportBackend.call(runtime.viewportBackend, "isEnabled") then
+    local width, height = ViewportBackend.call(runtime.viewportBackend, "dimensions")
     if width and height then
       return width, height
     end
@@ -1785,7 +1785,7 @@ local function drawImage(runtime, node, x, y, width, height, love, style, opacit
 
   local props = node.props or {}
   local tint = props.tint or style.color or { 1, 1, 1, 1 }
-  local imageOpacity = (props.opacity ~= nil and props.opacity or 1) * (opacity or 1)
+  local imageOpacity = opacity or 1
   local previousColor
   if graphics.getColor then
     previousColor = { graphics.getColor() }
@@ -2105,9 +2105,9 @@ end
 ---@param bounds GlyphBounds
 ---@return GlyphBounds
 local function viewportScissorBounds(runtime, bounds)
-  if runtime and runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
-    local x1, y1 = runtime.viewportBackend:viewportToScreen(bounds.x, bounds.y)
-    local x2, y2 = runtime.viewportBackend:viewportToScreen(bounds.x + bounds.width, bounds.y + bounds.height)
+  if runtime and ViewportBackend.call(runtime.viewportBackend, "isEnabled") then
+    local x1, y1 = ViewportBackend.call(runtime.viewportBackend, "viewportToScreen", bounds.x, bounds.y)
+    local x2, y2 = ViewportBackend.call(runtime.viewportBackend, "viewportToScreen", bounds.x + bounds.width, bounds.y + bounds.height)
     local left = math.min(x1, x2)
     local top = math.min(y1, y2)
     return {

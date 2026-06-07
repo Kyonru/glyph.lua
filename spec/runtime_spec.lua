@@ -1491,7 +1491,7 @@ describe("runtime", function()
     local clicked = false
 
     local function App()
-      return Components.box({
+      return Components.stack({
         width = 100,
         height = 60,
         clip = { kind = "circle" },

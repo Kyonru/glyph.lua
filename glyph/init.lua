@@ -20,6 +20,7 @@ local Runtime = require(prefix .. ".runtime")
 local SpriteSheet = require(prefix .. ".sprite_sheet")
 local Style = require(prefix .. ".style")
 local Transitions = require(prefix .. ".transitions")
+local ViewportBackend = require(prefix .. ".viewport_backend")
 local theme = require(prefix .. ".theme")
 
 local runtime = Runtime.new()
@@ -307,9 +308,9 @@ end
 ---@param width number
 ---@param height number
 function ui.resize(width, height)
-  if runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
-    runtime.viewportBackend:resize(width, height)
-    local viewportWidth, viewportHeight = runtime.viewportBackend:dimensions()
+  if ViewportBackend.call(runtime.viewportBackend, "isEnabled") then
+    ViewportBackend.call(runtime.viewportBackend, "resize", width, height)
+    local viewportWidth, viewportHeight = ViewportBackend.call(runtime.viewportBackend, "dimensions")
     Responsive.resize(runtime.responsive, viewportWidth, viewportHeight)
   else
     Responsive.resize(runtime.responsive, width, height)
@@ -320,10 +321,10 @@ end
 ---@return GlyphViewport
 function ui.viewport()
   local viewport = Responsive.viewport(runtime.responsive)
-  if runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
-    viewport.backend = runtime.viewportBackend:backend()
+  if ViewportBackend.call(runtime.viewportBackend, "isEnabled") then
+    viewport.backend = ViewportBackend.call(runtime.viewportBackend, "backend")
     viewport.virtual = true
-    viewport.screen = runtime.viewportBackend:getViewport()
+    viewport.screen = ViewportBackend.call(runtime.viewportBackend, "getViewport")
   end
   return viewport
 end
@@ -657,8 +658,8 @@ end
 ---@return number|false
 ---@return number|false
 function viewportPoint(x, y)
-  if runtime.viewportBackend and runtime.viewportBackend:isEnabled() then
-    return runtime.viewportBackend:screenToViewport(x, y)
+  if ViewportBackend.call(runtime.viewportBackend, "isEnabled") then
+    return ViewportBackend.call(runtime.viewportBackend, "screenToViewport", x, y)
   end
   return true, x, y
 end
@@ -681,11 +682,11 @@ end
 ui.viewportBackend = {
   ---@return boolean
   isEnabled = function()
-    return runtime.viewportBackend and runtime.viewportBackend:isEnabled() or false
+    return ViewportBackend.call(runtime.viewportBackend, "isEnabled") or false
   end,
   ---@return "push"|"shove"|nil
   backend = function()
-    return runtime.viewportBackend and runtime.viewportBackend:backend() or nil
+    return ViewportBackend.call(runtime.viewportBackend, "backend")
   end,
   ---@param x number
   ---@param y number
@@ -701,21 +702,21 @@ ui.viewportBackend = {
   ---@return number
   viewportToScreen = function(x, y)
     if runtime.viewportBackend then
-      return runtime.viewportBackend:viewportToScreen(x, y)
+      return ViewportBackend.call(runtime.viewportBackend, "viewportToScreen", x, y)
     end
     return x, y
   end,
   ---@return boolean
   beginDraw = function()
-    return runtime.viewportBackend and runtime.viewportBackend:beginDraw() or false
+    return ViewportBackend.call(runtime.viewportBackend, "beginDraw") or false
   end,
   ---@return boolean
   endDraw = function()
-    return runtime.viewportBackend and runtime.viewportBackend:endDraw() or false
+    return ViewportBackend.call(runtime.viewportBackend, "endDraw") or false
   end,
   ---@return table|nil
   raw = function()
-    return runtime.viewportBackend and runtime.viewportBackend:raw() or nil
+    return ViewportBackend.call(runtime.viewportBackend, "raw")
   end,
 }
 
