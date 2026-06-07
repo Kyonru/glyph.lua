@@ -328,6 +328,44 @@ local GlyphTextProps = {}
 ---@field opacity? number
 local GlyphImageProps = {}
 
+---@class GlyphSpriteSheetProps
+---@field frameWidth number
+---@field frameHeight number
+---@field imageWidth? number
+---@field imageHeight? number
+---@field left? number
+---@field top? number
+---@field border? number
+---@field anim8? table
+local GlyphSpriteSheetProps = {}
+
+---@class GlyphSpriteSheet
+---@field image any
+---@field frameWidth number
+---@field frameHeight number
+---@field imageWidth number
+---@field imageHeight number
+---@field left number
+---@field top number
+---@field border number
+---@field columns number
+---@field rows number
+---@field quad fun(self: GlyphSpriteSheet, index: number): any
+---@field quadAt fun(self: GlyphSpriteSheet, column: number, row: number): any
+---@field frames fun(self: GlyphSpriteSheet, ...: any): any[]
+---@field animation fun(self: GlyphSpriteSheet, frameArgs: any[], durations: number|table, onLoop?: function): any
+---@field currentQuad fun(self: GlyphSpriteSheet, animation: any): any
+local GlyphSpriteSheet = {}
+
+---@class GlyphSpriteSheetBackendConfig
+---@field anim8? table
+local GlyphSpriteSheetBackendConfig = {}
+
+---@class GlyphSpriteSheetBackendApi
+---@field configure fun(opts?: GlyphSpriteSheetBackendConfig)
+---@field clear fun()
+local GlyphSpriteSheetBackendApi = {}
+
 ---@class GlyphButtonProps : GlyphProps
 ---@field label? string
 ---@field labelKey? string

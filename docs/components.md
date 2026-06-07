@@ -122,6 +122,44 @@ ui.image({
 })
 ```
 
+Use `ui.spriteSheet` when the atlas is a uniform grid:
+
+```lua
+local sheet = ui.spriteSheet(atlas, {
+  frameWidth = 16,
+  frameHeight = 24,
+})
+
+ui.image({
+  source = atlas,
+  quad = sheet:quad(12),
+  width = 32,
+  height = 48,
+  fit = "contain",
+})
+```
+
+For animated sprite-backed UI, pass anim8 explicitly per sheet or configure it
+once through `ui.spriteSheetBackend`:
+
+```lua
+local sheet = ui.spriteSheet(atlas, {
+  frameWidth = 16,
+  frameHeight = 24,
+  anim8 = anim8,
+})
+local glow = sheet:animation({ "1-4", 1 }, 0.12)
+
+glow:update(dt)
+
+ui.image({
+  source = atlas,
+  quad = sheet:currentQuad(glow),
+  width = 32,
+  height = 48,
+})
+```
+
 If no explicit size is provided, image nodes measure from the quad viewport or
 from `source:getWidth()` / `source:getHeight()`. Missing sources draw nothing
 and measure as explicit size or `0x0`.

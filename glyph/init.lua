@@ -16,6 +16,7 @@ local Navigate = require(prefix .. ".navigate")
 local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Responsive = require(prefix .. ".responsive")
 local Runtime = require(prefix .. ".runtime")
+local SpriteSheet = require(prefix .. ".sprite_sheet")
 local Style = require(prefix .. ".style")
 local Transitions = require(prefix .. ".transitions")
 local theme = require(prefix .. ".theme")
@@ -48,6 +49,8 @@ local runtime = Runtime.new()
 ---@field feedback GlyphFeedbackApi
 ---@field i18n GlyphI18nApi
 ---@field richTextBackend GlyphRichTextBackendApi
+---@field spriteSheet fun(image: any, opts: GlyphSpriteSheetProps): GlyphSpriteSheet
+---@field spriteSheetBackend GlyphSpriteSheetBackendApi
 ---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
 ---@field viewportBackend GlyphViewportBackendApi
 ---@field transitions GlyphTransitionApi
@@ -66,6 +69,7 @@ local ui = {
   feedback = nil,
   i18n = I18n,
   richTextBackend = nil,
+  spriteSheetBackend = nil,
   Navigate = Navigate,
   Responsive = Responsive,
   Style = Style,
@@ -140,6 +144,25 @@ ui.richTextBackend = {
     runtime:markDirty()
   end,
 }
+
+ui.spriteSheetBackend = {
+  ---@param opts? GlyphSpriteSheetBackendConfig
+  ---@return nil
+  configure = function(opts)
+    SpriteSheet.configure(opts)
+  end,
+  ---@return nil
+  clear = function()
+    SpriteSheet.clear()
+  end,
+}
+
+---@param image any
+---@param opts GlyphSpriteSheetProps
+---@return GlyphSpriteSheet
+function ui.spriteSheet(image, opts)
+  return SpriteSheet.new(image, opts)
+end
 
 for name, fn in pairs(Components) do
   ui[name] = fn

@@ -63,7 +63,7 @@ Glyph should provide primitives and reusable systems:
 - Scene systems: scene stack, overlays, modals, layer transitions, input blocking/pass-through.
 - Adapter systems: backend-agnostic i18n, accessibility semantics/events, optional Push/Shove fixed viewport support.
 - Animation systems: first-class visual-only enter/exit animation powered by vendored Flux.
-- Generic helpers for building custom game UI, such as draw context helpers and color/math helpers.
+- Generic helpers for building custom game UI, such as draw context helpers, sprite sheet quad helpers, and color/math helpers.
 
 Keep game-specific widgets out of core. Examples may include things like HUD buttons, meters, blob transitions, particle backgrounds, animated menus, or game-themed controls, but core should expose the primitives that make those easy.
 
@@ -249,4 +249,5 @@ When writing docs:
 - Do not make modal-specific hook logic; use generic scene/layer hook scopes.
 - Do not forget graphics state restoration around shader/stencil/custom transition code.
 - Do not vendor optional libraries like Push/Shove into Glyph core; examples may use `dev/vendor`, apps should provide instances or modules.
+- Do not make Glyph own asset loading, sprite atlases, or sprite-specific widgets. Use `ui.spriteSheet` for uniform-grid quads and keep loading/animation modules app-provided.
 - Do not make i18n or accessibility own app policy. They are adapters and metadata/event surfaces.

@@ -54,7 +54,8 @@ local rarityNames = {
 }
 
 local potionSheet = nil
-local potionQuads = {}
+local potionSprites = nil
+local potionPreviewAnimation = nil
 local assetError = nil
 local eventOff = nil
 
@@ -230,7 +231,7 @@ local function imageFromBytes(data)
 end
 
 local function loadPotionSheet()
-	if potionSheet or assetError then
+	if assetError then
 		return
 	end
 
@@ -239,25 +240,27 @@ local function loadPotionSheet()
 		return
 	end
 
-	local candidates = {
-		"potions.png",
-		"inventory/potions.png",
-		"examples/inventory/potions.png",
-		"../inventory/potions.png",
-	}
+	if not potionSheet then
+		local candidates = {
+			"potions.png",
+			"inventory/potions.png",
+			"examples/inventory/potions.png",
+			"../inventory/potions.png",
+		}
 
-	for _, path in ipairs(candidates) do
-		local ok, image = pcall(loveModule.graphics.newImage, path)
-		if ok and image then
-			potionSheet = image
-			break
-		end
+		for _, path in ipairs(candidates) do
+			local ok, image = pcall(loveModule.graphics.newImage, path)
+			if ok and image then
+				potionSheet = image
+				break
+			end
 
-		local data = readBytes(path)
-		image = imageFromBytes(data)
-		if image then
-			potionSheet = image
-			break
+			local data = readBytes(path)
+			image = imageFromBytes(data)
+			if image then
+				potionSheet = image
+				break
+			end
 		end
 	end
 
@@ -270,20 +273,21 @@ local function loadPotionSheet()
 		potionSheet:setFilter("nearest", "nearest")
 	end
 
-	local sheetColumns = math.floor(potionSheet:getWidth() / SPRITE_WIDTH)
-	local sheetRows = math.floor(potionSheet:getHeight() / SPRITE_HEIGHT)
+	if not potionSprites then
+		local okAnim8, anim8 = pcall(require, "feel.vendor.anim8")
+		potionSprites = ui.spriteSheet(potionSheet, {
+			frameWidth = SPRITE_WIDTH,
+			frameHeight = SPRITE_HEIGHT,
+			anim8 = okAnim8 and anim8 or nil,
+		})
 
-	potionQuads = {}
-	for row = 0, sheetRows - 1 do
-		for column = 0, sheetColumns - 1 do
-			potionQuads[#potionQuads + 1] = loveModule.graphics.newQuad(
-				column * SPRITE_WIDTH,
-				row * SPRITE_HEIGHT,
-				SPRITE_WIDTH,
-				SPRITE_HEIGHT,
-				potionSheet:getWidth(),
-				potionSheet:getHeight()
-			)
+		if okAnim8 then
+			local okAnimation, animation = pcall(function()
+				return potionSprites:animation({ "1-4", 1 }, 0.14)
+			end)
+			if okAnimation then
+				potionPreviewAnimation = animation
+			end
 		end
 	end
 end
@@ -443,7 +447,7 @@ end
 
 local function itemImageNode(item, props)
 	props = props or {}
-	if not potionSheet or not item then
+	if not potionSheet or not potionSprites or not item then
 		return ui.box({
 			position = props.position,
 			left = props.left,
@@ -462,7 +466,7 @@ local function itemImageNode(item, props)
 
 	return ui.image({
 		source = potionSheet,
-		quad = potionQuads[item.quad],
+		quad = potionSprites:quad(item.quad),
 		fit = "contain",
 		tint = props.tint or { 1, 1, 1, props.opacity or 1 },
 		position = props.position,
@@ -801,14 +805,68 @@ local function legend()
 	return ui.column({ gap = 6 }, nodes)
 end
 
+local function previewQuad()
+	if potionSprites and potionPreviewAnimation then
+		local ok, quad = pcall(function()
+			return potionSprites:currentQuad(potionPreviewAnimation)
+		end)
+		if ok and quad then
+			return quad
+		end
+	end
+
+	return potionSprites and potionSprites:quad(1) or nil
+end
+
+local function animatedPotionPreview()
+	local quad = previewQuad()
+	if not potionSheet or not quad then
+		return nil
+	end
+
+	return ui.row({ gap = 10, align = "center", height = 52 }, {
+		ui.stack({
+			width = 48,
+			height = 48,
+			draw = function(_, x, y, width, height, loveModule, _, ctx)
+				local g = loveModule.graphics
+				ctx:color({ 0.04, 0.026, 0.018, 0.98 })
+				ctx:rect("fill", x, y, width, height, 5)
+				ctx:color(colors.gold, 0.18)
+				ctx:rect("fill", x + 5, y + 5, width - 10, height - 10, 4)
+				withLineWidth(g, 1.5, function()
+					ctx:color(colors.gold, 0.68)
+					ctx:rect("line", x + 1, y + 1, width - 2, height - 2, 5)
+				end)
+			end,
+		}, {
+			ui.image({
+				source = potionSheet,
+				quad = quad,
+				width = 40,
+				height = 40,
+				position = "absolute",
+				left = 4,
+				top = 4,
+				fit = "contain",
+				interactive = false,
+			}),
+		}),
+		ui.column({ gap = 2, grow = 1 }, {
+			ui.text("Sprite Sheet", {
+				textStyle = "caption",
+				style = { color = colors.gold },
+			}),
+			ui.text("anim8 preview", {
+				textStyle = "caption",
+				style = { color = colors.parchmentDim },
+			}),
+		}),
+	})
+end
+
 local function statusPanel(height)
-	return panel({
-		width = "100%",
-		height = height,
-		padding = 14,
-		display = "column",
-		gap = 10,
-	}, {
+	local children = {
 		ui.text("Quartermaster", {
 			textStyle = "caption",
 			style = { color = colors.gold },
@@ -818,14 +876,26 @@ local function statusPanel(height)
 			wrap = true,
 			style = { color = toneColor(), fontSize = 14, lineHeight = 19 },
 		}),
-		ui.box({
-			width = "100%",
-			height = 1,
-			interactive = false,
-			style = { background = { 0.9, 0.68, 0.34, 0.24 } },
-		}),
-		legend(),
+	}
+	local preview = animatedPotionPreview()
+	if preview then
+		children[#children + 1] = preview
+	end
+	children[#children + 1] = ui.box({
+		width = "100%",
+		height = 1,
+		interactive = false,
+		style = { background = { 0.9, 0.68, 0.34, 0.24 } },
 	})
+	children[#children + 1] = legend()
+
+	return panel({
+		width = "100%",
+		height = height,
+		padding = 14,
+		display = "column",
+		gap = 10,
+	}, children)
 end
 
 local function satchelPanel(m)
@@ -1362,6 +1432,13 @@ local function setup()
 	end)
 end
 
+local function update(dt)
+	if potionPreviewAnimation and type(potionPreviewAnimation.update) == "function" then
+		potionPreviewAnimation:update(dt or 0)
+		markDirty()
+	end
+end
+
 local function teardown()
 	if eventOff then
 		eventOff()
@@ -1377,6 +1454,7 @@ return {
 	id = "inventory",
 	label = "Inventory",
 	setup = setup,
+	update = update,
 	teardown = teardown,
 	window = {
 		width = 1180,
