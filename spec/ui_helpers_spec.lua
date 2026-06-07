@@ -597,6 +597,42 @@ describe("ui helpers", function()
     assert.are.equal(0, runtime.root.children[1].layout.y)
   end)
 
+  it("draws button labels using the same padding used for layout", function()
+    local runtime = Runtime.new()
+    local printed
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function()
+          return 1
+        end,
+        setLineWidth = function() end,
+        getShader = function()
+          return nil
+        end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function() end,
+        print = function(text, x, y)
+          printed = { text = text, x = x, y = y }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return Components.button({
+        label = "Go",
+        width = 80,
+        height = 30,
+        padding = { x = 4, y = 3 },
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ text = "Go", x = 4, y = 3 }, printed)
+  end)
+
   it("passes draw context to custom draw callbacks", function()
     local runtime = Runtime.new()
     local received

@@ -1180,6 +1180,27 @@ local function drawRect(love, mode, x, y, width, height, radius)
   end
 end
 
+---@param value? number|GlyphPadding
+---@return GlyphPadding
+local function spacing(value)
+  if type(value) == "number" then
+    return {
+      top = value,
+      right = value,
+      bottom = value,
+      left = value,
+    }
+  end
+
+  value = value or {}
+  return {
+    top = value.top or value.y or 0,
+    right = value.right or value.x or 0,
+    bottom = value.bottom or value.y or 0,
+    left = value.left or value.x or 0,
+  }
+end
+
 ---@param value any
 ---@param opacity? number
 ---@return any
@@ -2464,7 +2485,8 @@ function Runtime:drawNode(node, x, y, stackContext)
         drawRect(love, "line", absX, absY, width, height, radius)
       end
     end
-    drawPlainText(self, node, props.label or "", absX + 10, absY + 5, width - 20, love, style, opacity, "button")
+    local pad = spacing(props.padding or { x = 10, y = 5 })
+    drawPlainText(self, node, props.label or "", absX + pad.left, absY + pad.top, math.max(0, width - pad.left - pad.right), love, style, opacity, "button")
   elseif node.type == "input" then
     if style.background then
       color(love, withOpacity(style.background, opacity))
