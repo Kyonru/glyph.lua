@@ -15,15 +15,49 @@ local translations = {
 	},
 }
 
+local fontFiles = {
+	body = {
+		"fonts/PixelifySans-VariableFont_wght.ttf",
+		"examples/typography/fonts/PixelifySans-VariableFont_wght.ttf",
+	},
+	heading = {
+		"fonts/BlackOpsOne-Regular.ttf",
+		"examples/typography/fonts/BlackOpsOne-Regular.ttf",
+	},
+	display = {
+		"fonts/RubikBubbles-Regular.ttf",
+		"examples/typography/fonts/RubikBubbles-Regular.ttf",
+	},
+	mono = {
+		"fonts/Inconsolata-VariableFont_wdth,wght.ttf",
+		"examples/typography/fonts/Inconsolata-VariableFont_wdth,wght.ttf",
+	},
+}
+
+local function loadFont(graphics, name, size)
+	local paths = fontFiles[name] or {}
+	if graphics and graphics.newFont then
+		for _, path in ipairs(paths) do
+			local ok, font = pcall(graphics.newFont, path, size)
+			if ok and font then
+				return font
+			end
+		end
+	end
+
+	return graphics and graphics.newFont and graphics.newFont(size) or nil
+end
+
 local function setup()
 	local loveModule = _G.love
 	local graphics = loveModule and loveModule.graphics
 	local fonts = {}
 
 	if graphics and graphics.newFont then
-		fonts.body = graphics.newFont(14)
-		fonts.heading = graphics.newFont(24)
-		fonts.mono = graphics.newFont(13)
+		fonts.body = loadFont(graphics, "body", 14)
+		fonts.heading = loadFont(graphics, "heading", 24)
+		fonts.display = loadFont(graphics, "display", 30)
+		fonts.mono = loadFont(graphics, "mono", 13)
 	end
 
 	local ok, sysl = pcall(require, "sysl_text")
@@ -81,7 +115,7 @@ local function setup()
 		},
 		typography = {
 			text = { font = "body", fontSize = 14, lineHeight = 20 },
-			h1 = { font = "heading", fontSize = 31, lineHeight = 38, color = { 1, 1, 1, 1 } },
+			h1 = { font = "display", fontSize = 31, lineHeight = 38, color = { 1, 1, 1, 1 } },
 			h2 = { font = "heading", fontSize = 22, lineHeight = 29, color = { 0.8, 0.9, 1, 1 } },
 			paragraph = { font = "body", fontSize = 14, lineHeight = 22 },
 			caption = { font = "body", fontSize = 11, lineHeight = 16, color = { 0.55, 0.66, 0.78, 1 } },
