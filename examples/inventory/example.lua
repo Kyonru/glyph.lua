@@ -69,6 +69,7 @@ local activeTab = 1
 local currentPage = 1
 local pointerX = 0
 local pointerY = 0
+local keyboardCarry = nil
 local pendingDrag = nil
 local drag = nil
 local status = "Drag potions to reorganize the active inventory."
@@ -85,6 +86,7 @@ local pageBounds = {}
 local caseBoardBounds = nil
 local feedbackNodes = {}
 local inventoryDragStart = nil
+local validCasePlacement = nil
 
 local catalog = {
 	{ id = "minor_health", name = "Minor Health", quad = 1, rarity = "common", count = 9 },
@@ -345,6 +347,7 @@ local function resetArrangements()
 
 	activeTab = 1
 	currentPage = 1
+	keyboardCarry = nil
 	pendingDrag = nil
 	drag = nil
 	satchelBounds = {}
@@ -557,6 +560,12 @@ local function boundsCenter(bounds)
 	return bounds.x + bounds.width / 2, bounds.y + bounds.height / 2
 end
 
+local function pointToBoundsCenter(bounds)
+	if bounds then
+		pointerX, pointerY = boundsCenter(bounds)
+	end
+end
+
 local function boundsForNode(node)
 	local key = node and node.props and node.props.key or nil
 	return key and feedbackBounds[key] or nil
@@ -698,7 +707,7 @@ local function playNodeFeedback(name, node, trigger)
 end
 
 local function previewDrag()
-	return drag or pendingDrag
+	return drag or pendingDrag or keyboardCarry
 end
 
 local function defineInventoryFeedback()
@@ -800,6 +809,67 @@ local function updateDragPointer(ctx)
 	end
 end
 
+local function focusedBounds()
+	local node = ui.runtime and ui.runtime.focusNode or nil
+	return boundsForNode(node)
+end
+
+local function carryBounds(carry)
+	if not carry then
+		return nil
+	end
+	if carry.kind == "case" and caseBoardBounds then
+		local stride = CASE_CELL + CASE_GAP
+		local width = carry.entry.w * CASE_CELL + (carry.entry.w - 1) * CASE_GAP
+		local height = carry.entry.h * CASE_CELL + (carry.entry.h - 1) * CASE_GAP
+		return {
+			x = caseBoardBounds.x + ((carry.candidateCol or carry.entry.col) - 1) * stride,
+			y = caseBoardBounds.y + ((carry.candidateRow or carry.entry.row) - 1) * stride,
+			width = width,
+			height = height,
+		}
+	end
+	return focusedBounds() or boundsForNode(carry.sourceNode) or carry.sourceBounds
+end
+
+local function cancelKeyboardCarry()
+	if not keyboardCarry then
+		return false
+	end
+	setStatus("Placement cancelled.", "neutral")
+	keyboardCarry = nil
+	markDirty()
+	return true
+end
+
+local function moveCaseCarry(direction)
+	if not keyboardCarry or keyboardCarry.kind ~= "case" then
+		return false
+	end
+
+	local dx, dy = 0, 0
+	if direction == "left" then
+		dx = -1
+	elseif direction == "right" then
+		dx = 1
+	elseif direction == "up" then
+		dy = -1
+	elseif direction == "down" then
+		dy = 1
+	else
+		return false
+	end
+
+	local maxCol = CASE_COLUMNS - keyboardCarry.entry.w + 1
+	local maxRow = CASE_ROWS - keyboardCarry.entry.h + 1
+	keyboardCarry.candidateCol = math.max(1, math.min(maxCol, (keyboardCarry.candidateCol or keyboardCarry.entry.col) + dx))
+	keyboardCarry.candidateRow = math.max(1, math.min(maxRow, (keyboardCarry.candidateRow or keyboardCarry.entry.row) + dy))
+	local valid = validCasePlacement(keyboardCarry.entry, keyboardCarry.candidateCol, keyboardCarry.candidateRow)
+	setStatus(valid and "Space is open. Press Enter or A to place." or "That space collides. Move to a clear area.", valid and "hint" or "bad")
+	markDirty()
+	return true
+end
+
 local function startUniformDrag(kind, sourceIndex, itemId, x, y, button, node)
 	local item = itemFor(itemId)
 	if not item then
@@ -814,6 +884,7 @@ local function startUniformDrag(kind, sourceIndex, itemId, x, y, button, node)
 		size = kind == "page" and PAGE_SLOT_SIZE or SATCHEL_SLOT_SIZE,
 		sourceNode = node,
 	}
+	keyboardCarry = nil
 	pendingDrag = data
 	pointerX = x
 	pointerY = y
@@ -830,7 +901,7 @@ local function rectsOverlap(a, b)
 		and b.row < a.row + a.h
 end
 
-local function validCasePlacement(entry, col, row)
+function validCasePlacement(entry, col, row)
 	if not entry or not col or not row then
 		return false
 	end
@@ -861,6 +932,17 @@ local function pointerCell()
 end
 
 local function caseCandidate()
+	if keyboardCarry and keyboardCarry.kind == "case" then
+		local col = keyboardCarry.candidateCol or keyboardCarry.entry.col
+		local row = keyboardCarry.candidateRow or keyboardCarry.entry.row
+		return {
+			entry = keyboardCarry.entry,
+			col = col,
+			row = row,
+			valid = validCasePlacement(keyboardCarry.entry, col, row),
+		}
+	end
+
 	if not drag or drag.kind ~= "case" then
 		return nil
 	end
@@ -913,6 +995,7 @@ local function startCaseDrag(entry, x, y, button, node)
 		anchorRow = anchorRow,
 		sourceNode = node,
 	}
+	keyboardCarry = nil
 	pendingDrag = data
 	pointerX = x
 	pointerY = y
@@ -1051,11 +1134,47 @@ local function countBadge(item, size)
 	})
 end
 
-local function activateSlot(kind, index, itemId)
+local function activateSlot(kind, slots, index, itemId, node)
 	pendingDrag = nil
+	if keyboardCarry then
+		if keyboardCarry.kind ~= kind then
+			setStatus("That item belongs to another inventory model.", "bad")
+			playNodeFeedback("inventory.drop.bad", node or keyboardCarry.sourceNode, "error")
+			markDirty()
+			return
+		end
+		if kind == "page" and keyboardCarry.page ~= currentPage then
+			setStatus("Turn back to the carried item's page.", "bad")
+			playNodeFeedback("inventory.drop.bad", node or keyboardCarry.sourceNode, "error")
+			markDirty()
+			return
+		end
+
+		swapSlots(slots, keyboardCarry.sourceIndex, index)
+		setStatus(string.format("%s placed.", keyboardCarry.item.name), "good")
+		pointToBoundsCenter(boundsForNode(node))
+		playNodeFeedback("inventory.drop.good", node or keyboardCarry.sourceNode, "drop")
+		keyboardCarry = nil
+		markDirty()
+		return
+	end
+
 	local item = itemFor(itemId)
 	if item then
-		setStatus(string.format("%s selected from %s slot %d.", item.name, kind, index), "good")
+		keyboardCarry = {
+			keyboard = true,
+			kind = kind,
+			sourceIndex = index,
+			itemId = itemId,
+			item = item,
+			page = currentPage,
+			slots = slots,
+			size = kind == "page" and PAGE_SLOT_SIZE or SATCHEL_SLOT_SIZE,
+			sourceNode = node,
+			sourceBounds = boundsForNode(node),
+		}
+		setStatus(string.format("Picked up %s. Move focus, then press Enter or A to place.", item.name), "hint")
+		playNodeFeedback("inventory.drag.start", node, "drag")
 	else
 		setStatus(string.format("%s slot %d is empty.", kind:gsub("^%l", string.upper), index), "neutral")
 	end
@@ -1095,8 +1214,8 @@ local function slotNode(kind, store, slots, index, size)
 			release = "inventory.slot.release",
 			activate = item and "inventory.slot.activate" or "inventory.empty.activate",
 		},
-		onClick = function()
-			activateSlot(kind, index, itemId)
+		onClick = function(node)
+			activateSlot(kind, slots, index, itemId, node)
 		end,
 		onMousePressed = function(x, y, button, node)
 			if button == 1 and itemId then
@@ -1351,6 +1470,7 @@ local function pagesPanel(m)
 				ui.row({ gap = 8, align = "center" }, {
 					pageButton("<", currentPage > 1, function()
 						currentPage = math.max(1, currentPage - 1)
+						keyboardCarry = nil
 						pendingDrag = nil
 						drag = nil
 						setStatus("Turned to the previous inventory page.", "neutral")
@@ -1362,6 +1482,7 @@ local function pagesPanel(m)
 					}),
 					pageButton(">", currentPage < pageCount, function()
 						currentPage = math.min(pageCount, currentPage + 1)
+						keyboardCarry = nil
 						pendingDrag = nil
 						drag = nil
 						setStatus("Turned to the next inventory page.", "neutral")
@@ -1437,11 +1558,50 @@ local function drawCaseBoard(_, x, y, width, height, loveModule, _, ctx)
 	end
 end
 
-local function activateCaseEntry(entry)
+local function activateCaseEntry(entry, node)
 	pendingDrag = nil
+	if keyboardCarry then
+		if keyboardCarry.kind ~= "case" then
+			setStatus("That item cannot be placed inside the case.", "bad")
+			playNodeFeedback("inventory.drop.bad", node or keyboardCarry.sourceNode, "error")
+			markDirty()
+			return
+		end
+
+		local col = keyboardCarry.candidateCol or keyboardCarry.entry.col
+		local row = keyboardCarry.candidateRow or keyboardCarry.entry.row
+		if validCasePlacement(keyboardCarry.entry, col, row) then
+			keyboardCarry.entry.col = col
+			keyboardCarry.entry.row = row
+			setStatus(string.format("%s placed inside the case.", keyboardCarry.item.name), "good")
+			pointToBoundsCenter(carryBounds(keyboardCarry))
+			playNodeFeedback("inventory.drop.good", node or keyboardCarry.sourceNode, "drop")
+			keyboardCarry = nil
+		else
+			setStatus("That space is blocked or outside the case.", "bad")
+			playNodeFeedback("inventory.drop.bad", node or keyboardCarry.sourceNode, "error")
+		end
+		markDirty()
+		return
+	end
+
 	local item = itemFor(entry and entry.itemId)
 	if item then
-		setStatus(string.format("%s occupies %dx%d cells at %d,%d.", item.name, entry.w, entry.h, entry.col, entry.row), "good")
+		keyboardCarry = {
+			keyboard = true,
+			kind = "case",
+			entryId = entry.id,
+			entry = entry,
+			itemId = entry.itemId,
+			item = item,
+			size = math.min(92, CASE_CELL * math.max(entry.w, entry.h)),
+			candidateCol = entry.col,
+			candidateRow = entry.row,
+			sourceNode = node,
+			sourceBounds = boundsForNode(node),
+		}
+		setStatus(string.format("Picked up %s. Move with arrows or d-pad, then press Enter or A to place.", item.name), "hint")
+		playNodeFeedback("inventory.drag.start", node, "drag")
 	end
 	markDirty()
 end
@@ -1500,8 +1660,8 @@ local function caseItemNode(entry)
 			release = "inventory.slot.release",
 			activate = "inventory.slot.activate",
 		},
-		onClick = function()
-			activateCaseEntry(entry)
+		onClick = function(node)
+			activateCaseEntry(entry, node)
 		end,
 		onMousePressed = function(x, y, button, node)
 			if button == 1 then
@@ -1633,10 +1793,13 @@ local function dragPreview()
 	local size = math.max(64, math.min(96, visibleDrag.size or 72))
 	local item = visibleDrag.item
 	local accent = rarityColors[item.rarity] or rarityColors.common
+	local previewBounds = visibleDrag.keyboard and carryBounds(visibleDrag) or nil
+	local previewX = previewBounds and (previewBounds.x + previewBounds.width / 2) or pointerX
+	local previewY = previewBounds and (previewBounds.y + previewBounds.height / 2) or pointerY
 
 	return ui.portal({
-		left = pointerX - size / 2,
-		top = pointerY - size / 2,
+		left = previewX - size / 2,
+		top = previewY - size / 2,
 		width = size,
 		height = size,
 		zIndex = 500,
@@ -1741,6 +1904,7 @@ local function tabs(m)
 		active = activeTab,
 		onChange = function(index)
 			activeTab = index
+			keyboardCarry = nil
 			pendingDrag = nil
 			drag = nil
 			setStatus("Switched inventory model.", "neutral")
@@ -1784,8 +1948,6 @@ end
 local function App(mode)
 	loadPotionSheet()
 	local m = metrics(mode)
-	feedbackBounds = {}
-	feedbackNodes = {}
 	local children = {
 		ui.box({ position = "absolute", inset = 0, interactive = false, draw = drawBackdrop }),
 		ui.column({
@@ -1838,6 +2000,7 @@ local function update(dt)
 end
 
 local function teardown()
+	keyboardCarry = nil
 	pendingDrag = nil
 	drag = nil
 	satchelBounds = {}
@@ -1857,6 +2020,7 @@ local function switchActiveTab(delta)
 	local nextTab = math.max(1, math.min(3, activeTab + delta))
 	if nextTab ~= activeTab then
 		activeTab = nextTab
+		keyboardCarry = nil
 		pendingDrag = nil
 		drag = nil
 		setStatus("Switched inventory model.", "neutral")
@@ -1874,6 +2038,7 @@ local function turnPage(delta)
 	local nextPage = math.max(1, math.min(pageCount, currentPage + delta))
 	if nextPage ~= currentPage then
 		currentPage = nextPage
+		keyboardCarry = nil
 		pendingDrag = nil
 		drag = nil
 		setStatus(string.format("Turned to inventory page %d.", currentPage), "neutral")
@@ -1893,7 +2058,13 @@ local function keypressed(key)
 		left = "left",
 		right = "right",
 	}
+	if key == "escape" and cancelKeyboardCarry() then
+		return true
+	end
 	if directions[key] then
+		if moveCaseCarry(directions[key]) then
+			return true
+		end
 		ui.navigate(directions[key])
 		return true
 	elseif key == "tab" then
@@ -1908,16 +2079,56 @@ local function keypressed(key)
 	end
 end
 
+local function gamepadpressed(_, button)
+	local directions = {
+		dpup = "up",
+		dpdown = "down",
+		dpleft = "left",
+		dpright = "right",
+	}
+	local direction = directions[button]
+	if direction then
+		if moveCaseCarry(direction) then
+			return true
+		end
+		ui.navigate(direction)
+		return true
+	elseif button == "a" then
+		ui.keypressed("return")
+		return true
+	elseif button == "b" then
+		if cancelKeyboardCarry() then
+			return true
+		end
+		ui.keypressed("escape")
+		return true
+	end
+	return nil
+end
+
+local function gamepadreleased(_, button)
+	if button == "a" then
+		ui.keyreleased("return")
+		return true
+	elseif button == "b" then
+		ui.keyreleased("escape")
+		return true
+	end
+	return nil
+end
+
 return {
 	id = "inventory",
 	label = "Inventory",
 	install = {
-		gamepad = true,
+		gamepad = false,
 	},
 	setup = setup,
 	update = update,
 	teardown = teardown,
 	keypressed = keypressed,
+	gamepadpressed = gamepadpressed,
+	gamepadreleased = gamepadreleased,
 	window = {
 		width = 1180,
 		height = 720,
