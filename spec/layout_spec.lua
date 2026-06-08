@@ -293,6 +293,22 @@ describe("layout", function()
     assert.are.equal(70, tree.children[3].layout.y)
   end)
 
+  it("does not shrink grid flow size below its cells", function()
+    local tree = ui.column({ height = 70, gap = 5 }, {
+      ui.grid({ columns = 1, cellWidth = 40, cellHeight = 30 }, {
+        ui.box({}),
+        ui.box({}),
+        ui.box({}),
+      }),
+      ui.box({ width = 10, height = 10 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(90, tree.children[1].layout.height)
+    assert.are.equal(95, tree.children[2].layout.y)
+  end)
+
   it("maps pointer coordinates into fixed grid cells", function()
     local bounds = { x = 10, y = 20, width = 81, height = 43 }
     local props = {

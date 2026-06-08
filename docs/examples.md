@@ -21,8 +21,6 @@ love examples/modal
 love examples/navigate
 love examples/path-feedback
 love examples/scene
-love examples/showcase
-love examples/styles
 love examples/themes
 love examples/typography
 love examples/viewport
@@ -54,7 +52,8 @@ Theme and variant driven interaction cue events with app-owned Love2D tone playb
 
 ## Basic
 
-Minimal component, state, button, input, and scroll usage.
+Starter app with state, responsive grid layout, buttons, controlled input, tabs,
+scrollable activity, meters, custom draw, and keyboard/gamepad navigation.
 
 ## Dashboard
 
@@ -100,12 +99,6 @@ Scene-backed modals, moving background, shader transitions, stencil/blob transit
 
 Scene replacement, non-blocking debug overlays, blocking pause modal, modal-driven pause behavior, and scene-local motion.
 
-## Showcase
-
-A combined runnable app that keeps the standalone examples unchanged while
-mounting their shared example modules into one scene-driven app. Use it to resize
-one window and compare how the real demos adapt.
-
 ## Styles
 
 Theme switching, variants, state styles, transitions, custom draw, and shader-backed styling.
@@ -128,7 +121,6 @@ This demo uses development copies of Push and Shove from `dev/vendor`; Glyph app
 
 Large dataset workflow with a visible window of mounted rows, static row reuse, and timing display.
 
-
 <!-- glyph:feature-gif-gallery -->
 ## Feature GIF Gallery
 
@@ -136,7 +128,7 @@ Large dataset workflow with a visible window of mounted rows, static row reuse, 
 | --- | --- |
 | [Getting Started](getting-started.md) | ![Animated GIF showing a minimal Glyph counter app rendering and updating.](assets/feature-gifs/getting-started.gif) |
 | [Components](components.md) | ![Animated GIF showing Glyph text, image, button, input, meter, tabs, and panel components.](assets/feature-gifs/components.gif) |
-| [Layout](layout.md) | ![Animated GIF showing Glyph rows, columns, grids, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif) |
+| [Layout](layout.md) | ![Animated GIF showing Glyph rows, columns, responsive grids, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif) |
 | [Styling And Themes](styling.md) | ![Animated GIF showing Glyph theme colors, variants, and state styles.](assets/feature-gifs/styling.gif) |
 | [Runtime, Hooks, And Events](runtime.md) | ![Animated GIF showing Glyph runtime updates, input events, focus, and render callbacks.](assets/feature-gifs/runtime.gif) |
 | [Callback Bus](callback-bus.md) | ![Animated GIF showing Glyph callback bus priority order and event dispatch.](assets/feature-gifs/callback-bus.gif) |

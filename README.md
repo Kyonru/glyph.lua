@@ -238,7 +238,6 @@ love examples/dashboard
 love examples/hud-menu
 love examples/modal
 love examples/scene
-love examples/showcase
 love examples/styles
 love examples/performance
 ```
@@ -254,5 +253,3 @@ The HUD menu example shows animated custom-drawn game buttons, hover/press
 transitions, and colorful command-panel styling.
 The modal and scene examples show the native scene/layer stack, modal wrappers,
 blocking and non-blocking overlays, and custom shader/stencil transitions.
-The showcase example keeps the standalone demos intact while mounting their
-shared example modules into one scene-driven app.

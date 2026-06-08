@@ -121,8 +121,21 @@ function GridMath.resolve(props, availableWidth, availableHeight, assignedWidth,
   local rows = flowCount > 0 and math.ceil(flowCount / columns) or 0
   local gridWidth = columns * cellWidth + math.max(0, columns - 1) * gap
   local gridHeight = rows > 0 and (rows * cellHeight + (rows - 1) * gap) or 0
-  local width = GridMath.clamp(assignedWidth or resolvedWidth or (gridWidth + pad.left + pad.right), props.minWidth, props.maxWidth)
-  local height = GridMath.clamp(assignedHeight or resolvedHeight or (gridHeight + pad.top + pad.bottom), props.minHeight, props.maxHeight)
+  local naturalWidth = gridWidth + pad.left + pad.right
+  local naturalHeight = gridHeight + pad.top + pad.bottom
+  local widthCandidate = resolvedWidth or naturalWidth
+  local heightCandidate = resolvedHeight or naturalHeight
+
+  if assignedWidth then
+    widthCandidate = resolvedWidth or math.max(assignedWidth, naturalWidth)
+  end
+
+  if assignedHeight then
+    heightCandidate = resolvedHeight or math.max(assignedHeight, naturalHeight)
+  end
+
+  local width = GridMath.clamp(widthCandidate, props.minWidth, props.maxWidth)
+  local height = GridMath.clamp(heightCandidate, props.minHeight, props.maxHeight)
   local contentWidth = math.max(0, width - pad.left - pad.right)
   local contentHeight = math.max(0, height - pad.top - pad.bottom)
   local remainingX = math.max(0, contentWidth - gridWidth)

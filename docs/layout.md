@@ -5,7 +5,7 @@ icon: lucide/layout-grid
 # Layout
 
 <!-- glyph:feature-gif layout -->
-![Animated GIF showing Glyph rows, columns, grids, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif)
+![Animated GIF showing Glyph rows, columns, responsive grids, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif)
 <!-- /glyph:feature-gif layout -->
 
 Glyph uses a small pure-Lua layout engine. The model is explicit and game-friendly, not CSS.
@@ -70,6 +70,11 @@ ui.grid({
 Grid children are assigned the resolved cell width and height before measuring.
 `cellHeight` defaults to `cellWidth`. Absolute children are ignored by grid flow
 and use the same absolute positioning rules as other containers.
+
+When a parent flex constraint is smaller than the grid's cells, Glyph keeps the
+grid's flow size large enough to contain those cells. Put the grid inside a
+`scrollView` or give the parent more height when wrapped rows may exceed the
+visible area.
 
 `ui.grid` is intentionally not CSS Grid: it has no spans, templates, masonry, or
 per-child placement in v1.

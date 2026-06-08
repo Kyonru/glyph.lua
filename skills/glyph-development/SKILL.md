@@ -195,6 +195,9 @@ Glyph is for debug panels and game UI, so avoid needless rebuilds and layout chu
 - Avoid selector systems, cascading ancestry scans, string parsing, or global style queries.
 - Prefer stable layer roots and stable subtree identity where possible.
 - Examples should show bounded rendering for large lists.
+- Examples must be responsive within their declared minimum window sizes. Avoid
+  accidental overlap between text, grids, panels, and controls; use wrapping,
+  explicit dimensions, `scrollView`, or clearer breakpoints when content can grow.
 
 ## Types And Docs
 

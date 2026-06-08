@@ -39,7 +39,7 @@ This project uses [LuaLS annotations](https://luals.github.io/wiki/annotations/)
 Run an example:
 
 ```sh
-make <example>   # e.g. make settings, make modal
+make <example>   # e.g. make basic, make modal
 ```
 
 Serve docs locally:
@@ -181,6 +181,10 @@ Poor core API examples:
 
 Examples should demonstrate real workflows, not marketing pages:
 
+- Examples must be responsive within their declared minimum window sizes. Do not
+  allow text, grids, or panels to overlap unless the overlap is an intentional
+  visual effect; use wrapping, explicit dimensions, `scrollView`, or clearer
+  breakpoints when content can grow.
 - `examples/accessibility`: semantic labels, snapshots, live regions, fake adapter log.
 - `examples/animations`: enter/exit, movement, selection, size, and meter animation.
 - `examples/audio-cues`: cue metadata and app-owned sound playback.
