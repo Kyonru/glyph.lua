@@ -225,7 +225,137 @@ local function target(opts)
 	return opts
 end
 
+local inventoryExample = nil
+
+local function loadInventoryExample()
+	if not inventoryExample then
+		inventoryExample = require("examples.inventory.example")
+	end
+	return inventoryExample
+end
+
+local function runtimeBoundsForKey(key)
+	local runtime = ui.runtime
+	local root = runtime and runtime.root or nil
+	if not root then
+		return nil
+	end
+
+	local found = nil
+	local function walk(node, parentX, parentY)
+		local layout = node.layout or {}
+		local x = parentX + (layout.x or 0)
+		local y = parentY + (layout.y or 0)
+		local props = node.props or {}
+
+		if props.key == key then
+			found = {
+				x = x,
+				y = y,
+				width = layout.width or 0,
+				height = layout.height or 0,
+			}
+			return true
+		end
+
+		local childX = x
+		local childY = y
+		if node.type == "scrollView" then
+			childY = y - ((runtime.scrollOffsets and runtime.scrollOffsets[node.path]) or 0)
+		end
+
+		for _, child in ipairs(node.children or {}) do
+			if walk(child, childX, childY) then
+				return true
+			end
+		end
+		return false
+	end
+
+	walk(root, 0, 0)
+	return found
+end
+
+local function moveCapturePointer(ctx, x, y)
+	local previousX = ctx.pointerX or x
+	local previousY = ctx.pointerY or y
+	ui.mousemoved(x, y, x - previousX, y - previousY)
+	ctx.pointerX = x
+	ctx.pointerY = y
+end
+
+local function centerOf(bounds)
+	return bounds.x + bounds.width / 2, bounds.y + bounds.height / 2
+end
+
+local function driveInventoryDrag(ctx, t)
+	local source = runtimeBoundsForKey("satchel-slot-3")
+	local targetSlot = runtimeBoundsForKey("satchel-slot-7")
+	if not source or not targetSlot then
+		return
+	end
+
+	local startX, startY = centerOf(source)
+	local targetX, targetY = centerOf(targetSlot)
+	local startTime = 0.5
+	local releaseTime = 2.05
+
+	if t < startTime then
+		moveCapturePointer(ctx, startX, startY)
+		return
+	end
+
+	if not ctx.inventoryDragStarted then
+		moveCapturePointer(ctx, startX, startY)
+		ui.mousepressed(startX, startY, 1)
+		ctx.inventoryDragStarted = true
+	end
+
+	if not ctx.inventoryDragReleased then
+		local progress = math.min(1, math.max(0, (t - startTime) / (releaseTime - startTime)))
+		local eased = progress * progress * (3 - 2 * progress)
+		local x = lerp(startX, targetX, eased)
+		local y = lerp(startY, targetY, eased) - math.sin(progress * math.pi) * 42
+		moveCapturePointer(ctx, x, y)
+
+		if t >= releaseTime then
+			moveCapturePointer(ctx, targetX, targetY)
+			ui.mousereleased(targetX, targetY, 1)
+			ctx.inventoryDragReleased = true
+		end
+	end
+end
+
 local targets = {
+	target({
+		id = "inventory-drag-drop",
+		title = "Inventory Drag And Drop",
+		docs = { "README.md" },
+		gallery = false,
+		width = 960,
+		height = 540,
+		duration = 3.1,
+		alt = "Animated GIF showing the Glyph inventory example with potion drag and drop.",
+		setup = function(ctx)
+			local example = loadInventoryExample()
+			example.setup()
+			ctx.pointerX = nil
+			ctx.pointerY = nil
+			ctx.inventoryDragStarted = false
+			ctx.inventoryDragReleased = false
+		end,
+		update = function(ctx, t, dt)
+			local example = loadInventoryExample()
+			if type(example.update) == "function" then
+				example.update(dt)
+			end
+			driveInventoryDrag(ctx, t)
+		end,
+		component = function()
+			return loadInventoryExample().component("docs-gif")
+		end,
+	}),
+
 	target({
 		id = "getting-started",
 		title = "Getting Started",

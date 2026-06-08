@@ -99,6 +99,10 @@ local function basename(path)
 end
 
 function Markdown.assetPath(docPath, id)
+  if not tostring(docPath):match("^docs/") then
+    return "docs/assets/feature-gifs/" .. id .. ".gif"
+  end
+
   return string.rep("../", pathDepthFromDocs(docPath)) .. "assets/feature-gifs/" .. id .. ".gif"
 end
 
@@ -139,9 +143,11 @@ function Markdown.galleryBlock(targets, docPath)
   }
 
   for _, target in ipairs(targets) do
-    local link = Markdown.docLinkPath(docPath, target.docs[1])
-    local asset = Markdown.assetPath(docPath, target.id)
-    lines[#lines + 1] = "| [" .. target.title .. "](" .. link .. ") | ![" .. target.alt .. "](" .. asset .. ") |"
+    if target.gallery ~= false then
+      local link = Markdown.docLinkPath(docPath, target.docs[1])
+      local asset = Markdown.assetPath(docPath, target.id)
+      lines[#lines + 1] = "| [" .. target.title .. "](" .. link .. ") | ![" .. target.alt .. "](" .. asset .. ") |"
+    end
   end
 
   lines[#lines + 1] = galleryFinish

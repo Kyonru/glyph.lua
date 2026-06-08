@@ -69,6 +69,34 @@ describe("doc GIF Markdown updater", function()
     assert.is_true(updated:find("%[Animations%]%(animations%.md%)") ~= nil)
   end)
 
+  it("uses docs asset paths for root README blocks", function()
+    local readmeTarget = {
+      id = "inventory-drag-drop",
+      title = "Inventory Drag And Drop",
+      docs = { "README.md" },
+      alt = "Animated GIF showing Glyph inventory drag and drop.",
+    }
+
+    local updated = Markdown.updateFeatureDoc("# glyph.lua\n\nBody\n", readmeTarget, "README.md")
+
+    assert.is_true(updated:find("docs/assets/feature-gifs/inventory-drag-drop.gif", 1, true) ~= nil)
+  end)
+
+  it("skips gallery-disabled targets", function()
+    local readmeTarget = {
+      id = "inventory-drag-drop",
+      title = "Inventory Drag And Drop",
+      docs = { "README.md" },
+      alt = "Animated GIF showing Glyph inventory drag and drop.",
+      gallery = false,
+    }
+
+    local updated = Markdown.updateGalleryDoc("# Examples\n\n## Example Standards\n", { target, readmeTarget }, "docs/examples.md")
+
+    assert.is_true(updated:find("%[Animations%]%(animations%.md%)") ~= nil)
+    assert.is_nil(updated:find("inventory%-drag%-drop"))
+  end)
+
   it("rejects duplicate manifest ids", function()
     assert.has_error(function()
       Markdown.validateTargets({

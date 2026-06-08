@@ -1240,15 +1240,39 @@ local function slotNodes(kind, store, slots, first, count, size)
 	return nodes
 end
 
-local function sectionTitle(title, caption)
-	return ui.column({ gap = 2 }, {
+local function bodyText(text, props)
+	props = props or {}
+	return ui.text(text, {
+		width = props.width or "100%",
+		wrap = true,
+		textStyle = props.textStyle or "caption",
+		style = {
+			color = props.color or colors.parchmentDim,
+			fontSize = props.fontSize,
+			lineHeight = props.lineHeight or 17,
+		},
+	})
+end
+
+local function panelLabel(text)
+	return ui.text(text, {
+		textStyle = "caption",
+		style = { color = colors.gold },
+	})
+end
+
+local function sectionTitle(title, caption, props)
+	props = props or {}
+	return ui.column({ gap = 2, width = props.width or "100%", flex = props.flex }, {
 		ui.text(title, {
 			textStyle = "h2",
 			style = { color = colors.parchment },
 		}),
 		ui.text(caption, {
+			width = "100%",
+			wrap = true,
 			textStyle = "caption",
-			style = { color = colors.parchmentDim },
+			style = { color = colors.parchmentDim, lineHeight = 15 },
 		}),
 	})
 end
@@ -1256,7 +1280,7 @@ end
 local function legend()
 	local nodes = {}
 	for _, rarity in ipairs({ "common", "uncommon", "rare", "epic", "legendary" }) do
-		nodes[#nodes + 1] = ui.row({ gap = 8, align = "center" }, {
+		nodes[#nodes + 1] = ui.row({ width = "100%", gap = 7, align = "center" }, {
 			ui.box({
 				width = 12,
 				height = 12,
@@ -1274,7 +1298,13 @@ local function legend()
 			}),
 		})
 	end
-	return ui.column({ gap = 6 }, nodes)
+	return ui.grid({
+		width = "100%",
+		minCellWidth = 104,
+		maxColumns = 2,
+		cellHeight = 17,
+		gap = 4,
+	}, nodes)
 end
 
 local function previewQuad()
@@ -1296,10 +1326,10 @@ local function animatedPotionPreview()
 		return nil
 	end
 
-	return ui.row({ gap = 10, align = "center", height = 52 }, {
+	return ui.row({ width = "100%", gap = 8, align = "center", height = 46 }, {
 		ui.stack({
-			width = 48,
-			height = 48,
+			width = 42,
+			height = 42,
 			draw = function(_, x, y, width, height, loveModule, _, ctx)
 				local g = loveModule.graphics
 				ctx:color({ 0.04, 0.026, 0.018, 0.98 })
@@ -1315,8 +1345,8 @@ local function animatedPotionPreview()
 			ui.image({
 				source = potionSheet,
 				quad = quad,
-				width = 40,
-				height = 40,
+				width = 34,
+				height = 34,
 				position = "absolute",
 				left = 4,
 				top = 4,
@@ -1325,11 +1355,11 @@ local function animatedPotionPreview()
 			}),
 		}),
 		ui.column({ gap = 2, grow = 1 }, {
-			ui.text("Sprite Sheet", {
+			ui.text("Potion Atlas", {
 				textStyle = "caption",
 				style = { color = colors.gold },
 			}),
-			ui.text("anim8 preview", {
+			ui.text("animated frames", {
 				textStyle = "caption",
 				style = { color = colors.parchmentDim },
 			}),
@@ -1337,16 +1367,13 @@ local function animatedPotionPreview()
 	})
 end
 
-local function statusPanel(height)
+local function statusPanel(height, width)
 	local children = {
-		ui.text("Quartermaster", {
-			textStyle = "caption",
-			style = { color = colors.gold },
-		}),
+		panelLabel("Quartermaster"),
 		ui.text(status, {
 			width = "100%",
 			wrap = true,
-			style = { color = toneColor(), fontSize = 14, lineHeight = 19 },
+			style = { color = toneColor(), fontSize = 13, lineHeight = 17 },
 		}),
 	}
 	local preview = animatedPotionPreview()
@@ -1362,28 +1389,30 @@ local function statusPanel(height)
 	children[#children + 1] = legend()
 
 	return panel({
-		width = "100%",
+		width = width or "100%",
 		height = height,
 		padding = 14,
 		display = "column",
-		gap = 10,
+		gap = 8,
 	}, children)
 end
 
 local function satchelPanel(m)
 	satchelBounds = {}
 	local gridWidth = SATCHEL_COLUMNS * SATCHEL_SLOT_SIZE + (SATCHEL_COLUMNS - 1) * SLOT_GAP
+	local leftWidth = gridWidth + 28
+	local sideWidth = math.max(280, m.contentWidth - leftWidth - 16)
 	local scrollHeight = math.max(260, m.contentHeight - 106)
 
-	return ui.row({ height = m.contentHeight, gap = 16 }, {
+	return ui.row({ width = "100%", height = m.contentHeight, gap = 16 }, {
 		panel({
-			width = gridWidth + 28,
+			width = leftWidth,
 			height = m.contentHeight,
 			padding = 14,
 			display = "column",
 			gap = 12,
 		}, {
-			sectionTitle("Satchel", "scrollable uniform slots with swap or move drops"),
+			sectionTitle("Satchel", "scrollable slots, visible drop targets"),
 			ui.scrollView({
 				key = "inventory-satchel-scroll",
 				width = gridWidth + 12,
@@ -1404,8 +1433,8 @@ local function satchelPanel(m)
 				gap = SLOT_GAP,
 			}, slotNodes("satchel", satchelBounds, satchelSlots, 1, SATCHEL_SLOT_COUNT, SATCHEL_SLOT_SIZE))),
 		}),
-		ui.column({ grow = 1, gap = 14 }, {
-			statusPanel(math.max(196, math.floor(m.contentHeight * 0.46))),
+		ui.column({ width = sideWidth, gap = 14 }, {
+			statusPanel(math.max(222, math.floor(m.contentHeight * 0.52)), sideWidth),
 			panel({
 				width = "100%",
 				grow = 1,
@@ -1413,11 +1442,9 @@ local function satchelPanel(m)
 				display = "column",
 				gap = 10,
 			}, {
-				ui.text("Satchel Notes", { style = { color = colors.gold } }),
-				ui.text("The scrollable tab keeps a large potion list compact. Dropping on an occupied slot swaps; dropping on an empty slot moves.", {
-					width = "100%",
-					wrap = true,
-					style = { color = colors.parchmentDim, lineHeight = 19 },
+				panelLabel("Satchel Notes"),
+				bodyText("Large potion bags stay compact. Drop onto an occupied slot to swap, or onto an empty slot to move.", {
+					lineHeight = 17,
 				}),
 			}),
 		}),
@@ -1455,18 +1482,19 @@ local function pagesPanel(m)
 	local pageCount = math.ceil(PAGE_SLOT_COUNT / PAGE_SIZE)
 	local first = (currentPage - 1) * PAGE_SIZE + 1
 	local gridWidth = PAGE_COLUMNS * PAGE_SLOT_SIZE + (PAGE_COLUMNS - 1) * SLOT_GAP
+	local leftWidth = gridWidth + 28
+	local sideWidth = math.max(280, m.contentWidth - leftWidth - 16)
 
-	return ui.row({ height = m.contentHeight, gap = 16 }, {
+	return ui.row({ width = "100%", height = m.contentHeight, gap = 16 }, {
 		panel({
-			width = gridWidth + 28,
+			width = leftWidth,
 			height = m.contentHeight,
 			padding = 14,
 			display = "column",
 			gap = 12,
 		}, {
 			ui.row({ align = "center", width = "100%" }, {
-				sectionTitle("Pages", "fixed page inventory for predictable controller-style browsing"),
-				ui.box({ grow = 1, interactive = false }),
+				sectionTitle("Pages", "fixed pages for controller browsing", { flex = 1 }),
 				ui.row({ gap = 8, align = "center" }, {
 					pageButton("<", currentPage > 1, function()
 						currentPage = math.max(1, currentPage - 1)
@@ -1496,8 +1524,8 @@ local function pagesPanel(m)
 				gap = SLOT_GAP,
 			}, slotNodes("page", pageBounds, pageSlots, first, PAGE_SIZE, PAGE_SLOT_SIZE)),
 		}),
-		ui.column({ grow = 1, gap = 14 }, {
-			statusPanel(math.max(196, math.floor(m.contentHeight * 0.46))),
+		ui.column({ width = sideWidth, gap = 14 }, {
+			statusPanel(math.max(222, math.floor(m.contentHeight * 0.52)), sideWidth),
 			panel({
 				width = "100%",
 				grow = 1,
@@ -1505,11 +1533,9 @@ local function pagesPanel(m)
 				display = "column",
 				gap = 10,
 			}, {
-				ui.text("Page Model", { style = { color = colors.gold } }),
-				ui.text("Each page has its own visible bounds. Dragging between hidden pages is intentionally rejected so the example stays deterministic.", {
-					width = "100%",
-					wrap = true,
-					style = { color = colors.parchmentDim, lineHeight = 19 },
+				panelLabel("Page Model"),
+				bodyText("Only the current page accepts drops. Hidden pages stay untouched, which keeps controller play predictable.", {
+					lineHeight = 17,
 				}),
 			}),
 		}),
@@ -1723,11 +1749,9 @@ local function caseRulesPanel(props)
 		display = "column",
 		gap = 10,
 	}, {
-		ui.text("Case Rules", { style = { color = colors.gold } }),
-		ui.text("Items keep their rectangular spans. The preview turns green for a valid space and red when the item would collide or leave the case.", {
-			width = "100%",
-			wrap = true,
-			style = { color = colors.parchmentDim, lineHeight = 19 },
+		panelLabel("Case Rules"),
+		bodyText("Items keep rectangular spans. Green previews fit; red previews collide or leave the case.", {
+			lineHeight = 17,
 		}),
 	})
 end
@@ -1735,8 +1759,10 @@ end
 local function casePanel(m)
 	local boardPanelWidth = m.caseBoardWidth + 28
 	local compact = m.contentWidth < boardPanelWidth + 16 + 320
+	local sideWidth = math.max(280, m.contentWidth - boardPanelWidth - 16)
 
 	if compact then
+		local compactPanelWidth = math.max(280, math.min(boardPanelWidth, m.contentWidth - 10))
 		return ui.scrollView({
 			key = "inventory-case-scroll",
 			width = "100%",
@@ -1758,15 +1784,15 @@ local function casePanel(m)
 				display = "column",
 				gap = 12,
 			}, {
-				sectionTitle("Case", "variable-size cells with collision and bounds rejection"),
+				sectionTitle("Case", "variable-size placement with collision checks"),
 				caseBoard(m),
 			}),
-			statusPanel(172),
-			caseRulesPanel({ height = 154 }),
+			statusPanel(214, compactPanelWidth),
+			caseRulesPanel({ width = compactPanelWidth, height = 132 }),
 		})
 	end
 
-	return ui.row({ height = m.contentHeight, gap = 16 }, {
+	return ui.row({ width = "100%", height = m.contentHeight, gap = 16 }, {
 		panel({
 			width = boardPanelWidth,
 			height = m.contentHeight,
@@ -1774,11 +1800,11 @@ local function casePanel(m)
 			display = "column",
 			gap = 12,
 		}, {
-			sectionTitle("Case", "variable-size cells with collision and bounds rejection"),
+			sectionTitle("Case", "variable-size placement with collision checks"),
 			caseBoard(m),
 		}),
-		ui.column({ grow = 1, gap = 14 }, {
-			statusPanel(math.max(196, math.floor(m.contentHeight * 0.46))),
+		ui.column({ width = sideWidth, gap = 14 }, {
+			statusPanel(math.max(222, math.floor(m.contentHeight * 0.52)), sideWidth),
 			caseRulesPanel({ grow = 1 }),
 		}),
 	})
@@ -1842,7 +1868,7 @@ local function header()
 				textStyle = "h1",
 				style = { color = colors.parchment },
 			}),
-			ui.text("medieval MMO inventory patterns built from Glyph primitives", {
+			ui.text("MMO inventory patterns built with Glyph primitives", {
 				textStyle = "caption",
 				style = { color = colors.parchmentDim },
 			}),
