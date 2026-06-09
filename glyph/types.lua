@@ -1004,6 +1004,146 @@ local GlyphSceneApi = {}
 local GlyphModalApi = {}
 
 -- ---------------------------------------------------------------------------
+-- Offscreen Surfaces / Menori Adapter
+-- ---------------------------------------------------------------------------
+
+---@class GlyphSurfaceOptions
+---@field width number
+---@field height number
+---@field component fun(ui: glyph, ctx: GlyphSurfaceContext): GlyphNode
+---@field theme? GlyphTheme
+---@field love? table
+---@field clearColor? GlyphColor
+---@field canvasOptions? table
+---@field stencil? boolean
+---@field canvas? any
+local GlyphSurfaceOptions = {}
+
+---@class GlyphSurfaceContext
+---@field surface GlyphSurface
+---@field runtime table
+---@field width number
+---@field height number
+local GlyphSurfaceContext = {}
+
+---@class GlyphSurface
+---@field ui glyph
+---@field runtime table
+---@field canvas any
+---@field width number
+---@field height number
+---@field update fun(self: GlyphSurface, dt?: number): GlyphSurface
+---@field render fun(self: GlyphSurface, component?: fun(ui: glyph, ctx: GlyphSurfaceContext): GlyphNode): any
+---@field resize fun(self: GlyphSurface, width: number, height: number): GlyphSurface
+---@field markDirty fun(self: GlyphSurface): GlyphSurface
+---@field mousemoved fun(self: GlyphSurface, x: number, y: number)
+---@field mousepressed fun(self: GlyphSurface, x: number, y: number, button: number)
+---@field mousereleased fun(self: GlyphSurface, x: number, y: number, button: number)
+---@field keypressed fun(self: GlyphSurface, key: string)
+---@field keyreleased fun(self: GlyphSurface, key: string)
+---@field destroy fun(self: GlyphSurface): GlyphSurface
+local GlyphSurface = {}
+
+---@class GlyphSurfaceApi
+---@field new fun(opts: GlyphSurfaceOptions): GlyphSurface
+local GlyphSurfaceApi = {}
+
+---@class GlyphMenoriOptions
+---@field menori table
+---@field love? table
+---@field feel? table
+---@field feelMenori? table
+---@field updateFeel? boolean
+---@field camera? table
+---@field environment? table
+local GlyphMenoriOptions = {}
+
+---@class GlyphMenoriSceneSpec
+---@field scene table
+---@field root table
+---@field environment table
+---@field renderStates? table
+---@field filter? fun(node: table, scene: table, environment: table)
+---@field update? fun(spec: GlyphMenoriSceneSpec, layer: GlyphLayer, dt: number, adapter: GlyphMenoriAdapter)
+---@field overlay? GlyphNode[]|GlyphNode|fun(adapter: GlyphMenoriAdapter, spec: GlyphMenoriSceneSpec): GlyphNode[]|GlyphNode
+---@field clearColor? GlyphColor
+---@field autoUpdate? boolean
+---@field canvasOptions? table
+local GlyphMenoriSceneSpec = {}
+
+---@class GlyphMenoriLoadingHandle
+---@field layer GlyphLayer
+---@field state table
+---@field update fun(self: GlyphMenoriLoadingHandle, state: table)
+---@field close fun()
+local GlyphMenoriLoadingHandle = {}
+
+---@class GlyphMenoriBillboardOptions
+---@field width number
+---@field height number
+---@field worldWidth? number
+---@field worldHeight? number
+---@field component fun(ui: glyph, ctx: GlyphSurfaceContext): GlyphNode
+---@field parent? table
+---@field camera? table
+---@field environment? table
+---@field x? number
+---@field y? number
+---@field z? number
+---@field billboard? "full"|"yaw"|false
+---@field interactive? boolean
+---@field inputPriority? "behind-ui"|"always"
+---@field theme? GlyphTheme
+---@field love? table
+---@field clearColor? GlyphColor
+---@field material? table
+---@field mesh? table
+---@field node? table
+local GlyphMenoriBillboardOptions = {}
+
+---@class GlyphMenoriBillboard
+---@field surface GlyphSurface
+---@field node table
+---@field material table
+---@field mesh table
+---@field update fun(self: GlyphMenoriBillboard, dt?: number): GlyphMenoriBillboard
+---@field destroy fun(self: GlyphMenoriBillboard): GlyphMenoriBillboard
+local GlyphMenoriBillboard = {}
+
+---@class GlyphMenoriTransitions
+---@field fade fun(opts?: table): GlyphTransition
+---@field crossfade fun(opts?: table): GlyphTransition
+---@field loadingFade fun(opts?: table): GlyphTransition
+local GlyphMenoriTransitions = {}
+
+---@class GlyphMenoriSceneApi
+---@field set fun(id: string|number, spec: GlyphMenoriSceneSpec|fun(): GlyphMenoriSceneSpec, opts?: GlyphLayerOpts): GlyphLayer
+---@field push fun(id: string|number, spec: GlyphMenoriSceneSpec|fun(): GlyphMenoriSceneSpec, opts?: GlyphLayerOpts): GlyphLayer
+---@field replace fun(id: string|number, spec: GlyphMenoriSceneSpec|fun(): GlyphMenoriSceneSpec, opts?: GlyphLayerOpts): GlyphLayer
+local GlyphMenoriSceneApi = {}
+
+---@class GlyphMenoriLoadingApi
+---@field open fun(id: string|number, opts?: table): GlyphMenoriLoadingHandle
+local GlyphMenoriLoadingApi = {}
+
+---@class GlyphMenoriAdapter
+---@field menori table
+---@field capabilities table
+---@field transitions GlyphMenoriTransitions
+---@field scene GlyphMenoriSceneApi
+---@field loading GlyphMenoriLoadingApi
+---@field view fun(self: GlyphMenoriAdapter, props: GlyphMenoriSceneSpec|table, overlayChildren?: GlyphNode[]|GlyphNode): GlyphNode
+---@field billboard fun(self: GlyphMenoriAdapter, opts: GlyphMenoriBillboardOptions): GlyphMenoriBillboard
+---@field feelAdapter fun(self: GlyphMenoriAdapter, opts?: table): table|nil
+---@field update fun(self: GlyphMenoriAdapter, dt?: number): GlyphMenoriAdapter
+---@field destroy fun(self: GlyphMenoriAdapter)
+local GlyphMenoriAdapter = {}
+
+---@class GlyphMenoriApi
+---@field new fun(opts: GlyphMenoriOptions): GlyphMenoriAdapter
+local GlyphMenoriApi = {}
+
+-- ---------------------------------------------------------------------------
 -- Navigation
 -- ---------------------------------------------------------------------------
 

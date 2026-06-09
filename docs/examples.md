@@ -17,6 +17,7 @@ love examples/hud-primitives
 love examples/i18n
 love examples/inventory
 love examples/juice
+love examples/menori
 love examples/modal
 love examples/navigate
 love examples/path-feedback
@@ -78,6 +79,10 @@ Medieval/MMO inventory demo using `ui.grid`, `ui.grid.pointToCell`, `ui.portal`,
 ## Juice
 
 Pattern-repeat mini game built from normal Glyph buttons, with press/release/activate feedback, click-position particles, ripples, screen shake, generated audio tones, keyboard and d-pad navigation, progress meters, and a scoped pause menu.
+
+## Menori
+
+Optional Menori adapter demo with a vendored example-local Menori snapshot, distinct procedural Menori scenes, screen-space Glyph HUD, Menori-aware crossfade transitions, interactive world-space Glyph billboards, and a loading overlay that builds a dense "Signal Swarm" scene in chunks before handing off.
 
 ## Navigate
 
@@ -141,6 +146,7 @@ Large dataset workflow with a visible window of mounted rows, static row reuse, 
 | [Scenes And Modals](scenes-and-modals.md) | ![Animated GIF showing Glyph scene layers, overlays, modal blocking, and backdrop behavior.](assets/feature-gifs/scenes-modals.gif) |
 | [Transitions](transitions.md) | ![Animated GIF showing Glyph fade, slide, shader-style, and animated layer transitions.](assets/feature-gifs/transitions.gif) |
 | [Spatial Navigation](navigation.md) | ![Animated GIF showing Glyph spatial navigation focus moving through buttons and scoped groups.](assets/feature-gifs/navigation.gif) |
+| [Menori Adapter](menori.md) | ![Animated GIF showing Glyph Menori scene transitions, loading overlay, HUD, and world-space billboard UI.](assets/feature-gifs/menori.gif) |
 | [Performance](performance.md) | ![Animated GIF showing Glyph memoized rows, static nodes, visible windows, and bounded work.](assets/feature-gifs/performance.gif) |
 <!-- /glyph:feature-gif-gallery -->
 

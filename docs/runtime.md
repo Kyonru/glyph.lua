@@ -231,6 +231,33 @@ preserves normal button activation. Once a drag has started, release calls
 `onDrop` and suppresses the source button’s normal `onClick`. Active drags
 cancel on Escape, viewport exit, focus loss, or when a new drag starts.
 
+## Offscreen Surfaces
+
+Use `ui.surface.new` when a Glyph tree should render into its own canvas and
+runtime. Surfaces are useful for render-to-texture UI, minimap labels, and
+Menori world billboards.
+
+```lua
+local surface = ui.surface.new({
+  width = 320,
+  height = 180,
+  component = function(surfaceUi)
+    return surfaceUi.button({ label = "World Button" })
+  end,
+})
+
+surface:update(dt)
+surface:render()
+surface:mousepressed(24, 32, 1)
+```
+
+The `surfaceUi` argument is scoped to the surface runtime, so hooks, focus,
+feedback, `ui.drag`, and pointer state do not leak into the main screen runtime.
+Surfaces render with Love canvas stencil support enabled by default, so clipped
+controls, meters, masks, and stencil-based custom draw can render safely
+offscreen. Pass `canvasOptions = { stencil = false }` only when the surface does
+not need stencil-backed UI drawing.
+
 ## Audio Cue Events
 
 Glyph emits `audio` callbacks when configured cues resolve for interaction

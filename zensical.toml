@@ -8,6 +8,9 @@
 
 [project]
 
+repo_url = "https://github.com/Kyonru/glyph.lua"
+repo_name = "Kyonru/glyph.lua"
+
 # The site_name is shown in the page header and the browser window title
 #
 # Read more: https://zensical.org/docs/setup/basics/#site_name
@@ -64,6 +67,7 @@ nav = [
   { "Scenes" = [
     { "Scenes And Modals" = "scenes-and-modals.md" },
     { "Transitions" = "transitions.md" },
+    { "Menori Adapter" = "menori.md" },
   ] },
   { "Guides" = [
     { "Navigation" = "navigation.md" },

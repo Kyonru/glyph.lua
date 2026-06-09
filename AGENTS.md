@@ -55,13 +55,13 @@ Glyph should provide primitives and reusable systems:
 - Core components: `text`, `image`, `path`, `box`, `stack`, `row`, `column`, `grid`, `portal`, `button`, `input`, `scrollView`, `tabs`, `panel`.
 - Generic visual primitives: `meter`, vector path drawing, shape descriptors, clipping/stencil masks, nine-slice drawing, and draw context helpers.
 - Layout primitives: flex row/column, uniform grid layout, stack/absolute layout, percent sizing, padding/gap, grow/flex, text wrapping.
-- Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus.
+- Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus, and offscreen Glyph surfaces.
 - Input systems: pointer/touch, keyboard activation, spatial navigation, and opt-in digital gamepad mapping.
 - Style systems: themes, variants, state styles, transitions, shaders, custom draw context, and audio cue metadata.
 - Typography systems: theme font registry, text-style presets, text scaling, and optional SYSL-backed rich text.
 - Feedback systems: triggerable visual-only animation, audio metadata, callback, and app-owned FX event sequences.
 - Scene systems: scene stack, overlays, modals, layer transitions, input blocking/pass-through.
-- Adapter systems: backend-agnostic i18n, accessibility semantics/events, optional Push/Shove fixed viewport support.
+- Adapter systems: backend-agnostic i18n, accessibility semantics/events, optional Push/Shove fixed viewport support, and optional Menori scene/world-UI support.
 - Animation systems: first-class visual-only enter/exit animation powered by vendored Flux.
 - Generic helpers for building custom game UI, such as draw context helpers, sprite sheet quad helpers, and color/math helpers.
 
@@ -84,6 +84,8 @@ Good core API examples:
 - `ui.richText`
 - `ui.i18n.configure`
 - `ui.accessibility.snapshot`
+- `ui.surface.new`
+- `ui.menori.new`
 - `style.shader`
 
 Poor core API examples:
@@ -106,7 +108,7 @@ Poor core API examples:
 - Make static UI cheap: support `ui.memo`, `ui.static`, dirty flags, and stable layer roots.
 - Prefer reusable draw/event/layout primitives over one-off components.
 - Custom draw, shaders, stencil, and transitions are first-class because Glyph is for games.
-- Avoid adding dependencies unless the abstraction boundary is clear. Flux is vendored for animation; Push/Shove are optional user-provided viewport backends. Yoga may be an optional backend later, but pure Lua remains the default.
+- Avoid adding dependencies unless the abstraction boundary is clear. Flux is vendored for animation; Push/Shove and Menori are optional user-provided adapters. Yoga may be an optional backend later, but pure Lua remains the default.
 - Public API changes require LuaLS annotations in `glyph/types.lua` and on touched functions in `glyph/`.
 
 ## Layout Rules
@@ -133,6 +135,7 @@ Poor core API examples:
 - Use `onLayout` or `onBounds` to capture node geometry for drag/drop, tooltips, popovers, overlays, and contextual menus. Do not mutate app geometry state from custom draw callbacks unless the state is strictly draw-local.
 - Use `ui.drag` for generic pointer drag lifecycles. Keep app-specific swapping, collision, placement, validation, and drag previews outside core.
 - Use `ui.grid.pointToCell` with `onLayout` bounds for uniform grid pointer mapping. Keep variable-size placement, collision, and inventory rules app-owned.
+- Use `ui.surface.new` when a Glyph tree needs its own canvas/runtime, such as a texture-backed UI panel, tooltip render target, or Menori billboard. Surface components receive a scoped UI API; do not use the root singleton for surface-owned hooks or drag state.
 - Scene layers route input top-down. Blocking layers stop input from reaching lower layers; non-blocking overlays pass through.
 - Modals are scene layers with `kind = "modal"`, not a separate runtime.
 - Escape should close the top eligible scene/modal layer unless `escapeToClose = false`.
@@ -145,6 +148,7 @@ Poor core API examples:
 - Accessibility events are adapter-owned: apps decide whether to log, speak via TTS, bridge to native APIs, or expose DOM live regions in Love.js.
 - Semantic props should resolve through i18n key props before snapshots, focus/activate events, and live-region announcements use them.
 - Viewport support belongs in `glyph/viewport_backend.lua` behind `ui.viewportBackend`; do not add primary `ui.push` or `ui.shove` APIs.
+- Menori support belongs in `glyph/menori.lua` as an optional adapter for scene layers, loading overlays, transitions, screen-space overlays, and interactive world-space billboard UI. Menori stays app-provided; Glyph must not own Menori asset loading, glTF policy, physics picking, world occlusion, or renderer replacement. `examples/menori` may vendor a Menori snapshot to stay runnable, but core must keep requiring app-provided modules.
 
 ## Styling Rules
 
@@ -198,6 +202,7 @@ Examples should demonstrate real workflows, not marketing pages:
 - `examples/hud-menu`: custom draw and animated game UI.
 - `examples/modal`: scene-backed modals, custom shader/stencil transitions, moving background.
 - `examples/navigate`: spatial navigation, nav scopes, submenu patterns.
+- `examples/menori`: optional Menori adapter demo with scene layers, loading overlays, transitions, screen-space HUD, and interactive world-space Glyph billboards.
 - `examples/path-feedback`: app-owned Feel targets driving vector path reveal, morphing, pulse rings, and particles.
 - `examples/scene`: scene replacement, overlays, pause modal, paused/unpaused motion.
 - `examples/themes`: complex theme presets and token tweaks.
@@ -230,6 +235,7 @@ At minimum:
 - Style/theme change: update `docs/styling.md`.
 - Runtime, hooks, or input behavior: update `docs/runtime.md`.
 - Scene/modal/transition behavior: update `docs/scenes-and-modals.md` or `docs/transitions.md`.
+- Menori adapter behavior: update `docs/menori.md`, `docs/scenes-and-modals.md`, and `docs/runtime.md` when surface/input behavior changes.
 - Navigation/focus behavior: update `docs/navigation.md`.
 - I18n behavior: update `docs/i18n.md`.
 - Accessibility behavior: update `docs/accessibility.md`.
@@ -263,4 +269,6 @@ When writing docs:
 - Do not forget graphics state restoration around shader/stencil/custom transition code.
 - Do not vendor optional libraries like Push/Shove into Glyph core; examples may use `dev/vendor`, apps should provide instances or modules.
 - Do not make Glyph own asset loading, sprite atlases, or sprite-specific widgets. Use `ui.spriteSheet` for uniform-grid quads and keep loading/animation modules app-provided.
+- Do not require Menori globally from core or examples that can show a graceful missing-dependency screen; apps pass Menori modules into `ui.menori.new`.
+- Do not route Menori billboard input ahead of screen-space Glyph UI unless the billboard explicitly uses `inputPriority = "always"`.
 - Do not make i18n or accessibility own app policy. They are adapters and metadata/event surfaces.

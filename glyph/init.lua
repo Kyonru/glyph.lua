@@ -14,10 +14,12 @@ local GridMath = require(prefix .. ".grid_math")
 local I18n = require(prefix .. ".i18n")
 local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
+local Menori = require(prefix .. ".menori")
 local Path = require(prefix .. ".path")
 local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Responsive = require(prefix .. ".responsive")
 local Runtime = require(prefix .. ".runtime")
+local Surface = require(prefix .. ".surface")
 local SpriteSheet = require(prefix .. ".sprite_sheet")
 local Style = require(prefix .. ".style")
 local Transitions = require(prefix .. ".transitions")
@@ -56,6 +58,8 @@ local runtime = Runtime.new()
 ---@field richTextBackend GlyphRichTextBackendApi
 ---@field spriteSheet fun(image: any, opts: GlyphSpriteSheetProps): GlyphSpriteSheet
 ---@field spriteSheetBackend GlyphSpriteSheetBackendApi
+---@field surface GlyphSurfaceApi
+---@field menori GlyphMenoriApi
 ---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
 ---@field viewportBackend GlyphViewportBackendApi
 ---@field transitions GlyphTransitionApi
@@ -75,6 +79,8 @@ local ui = {
   feedback = nil,
   i18n = I18n,
   richTextBackend = nil,
+  surface = nil,
+  menori = nil,
   spriteSheetBackend = nil,
   Navigate = Navigate,
   Responsive = Responsive,
@@ -170,6 +176,22 @@ ui.richTextBackend = {
   clear = function()
     RichTextBackend.clear()
     runtime:markDirty()
+  end,
+}
+
+ui.surface = {
+  ---@param opts GlyphSurfaceOptions
+  ---@return GlyphSurface
+  new = function(opts)
+    return Surface.new(opts)
+  end,
+}
+
+ui.menori = {
+  ---@param opts GlyphMenoriOptions
+  ---@return GlyphMenoriAdapter
+  new = function(opts)
+    return Menori.new(ui, opts)
   end,
 }
 
@@ -572,7 +594,13 @@ function ui.mousemoved(x, y, dx, dy)
     clearPointerTarget(false)
     return nil
   end
-  return runtime:mousemoved(viewX, viewY, dx, dy)
+  local routedActive = Menori.routePointer("mousemoved", viewX, viewY, nil, { priority = "active" })
+  local screenHit = runtime:hitTest(viewX, viewY) ~= nil
+  local result = runtime:mousemoved(viewX, viewY, dx, dy)
+  if not routedActive then
+    Menori.routePointer("mousemoved", viewX, viewY, nil, { priority = screenHit and "always" or "behind-ui" })
+  end
+  return result
 end
 
 ---@param x number
@@ -585,7 +613,10 @@ function ui.mousepressed(x, y, button)
     clearPointerTarget(true)
     return nil
   end
-  return runtime:mousepressed(viewX, viewY, button)
+  local screenHit = runtime:hitTest(viewX, viewY) ~= nil
+  local result = runtime:mousepressed(viewX, viewY, button)
+  Menori.routePointer("mousepressed", viewX, viewY, button, { priority = screenHit and "always" or "behind-ui" })
+  return result
 end
 
 ---@param x number
@@ -598,7 +629,13 @@ function ui.mousereleased(x, y, button)
     clearPointerTarget(false)
     return nil
   end
-  return runtime:mousereleased(viewX, viewY, button)
+  local routedActive = Menori.routePointer("mousereleased", viewX, viewY, button, { priority = "active" })
+  local screenHit = runtime:hitTest(viewX, viewY) ~= nil
+  local result = runtime:mousereleased(viewX, viewY, button)
+  if not routedActive then
+    Menori.routePointer("mousereleased", viewX, viewY, button, { priority = screenHit and "always" or "behind-ui" })
+  end
+  return result
 end
 
 ---@param dx number
@@ -614,12 +651,16 @@ end
 
 ---@param key string
 function ui.keypressed(key)
-  return runtime:keypressed(key)
+  local result = runtime:keypressed(key)
+  Menori.routeKey("keypressed", key)
+  return result
 end
 
 ---@param key string
 function ui.keyreleased(key)
-  return runtime:keyreleased(key)
+  local result = runtime:keyreleased(key)
+  Menori.routeKey("keyreleased", key)
+  return result
 end
 
 ---@param joystick any

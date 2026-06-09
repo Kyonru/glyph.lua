@@ -31,6 +31,8 @@ Add to core:
 - Spatial navigation primitives and opt-in gamepad mapping.
 - Backend-agnostic i18n and accessibility adapter surfaces.
 - Backend-agnostic fixed viewport adapter hooks.
+- Offscreen Glyph surfaces with scoped runtimes for canvas-backed UI.
+- Optional Menori adapter surfaces for scene layers, loading overlays, transitions, and interactive world-space billboards.
 - Visual-only animation primitives.
 - Modular feedback primitives for node animation, audio cue metadata, callbacks, and app-owned FX events.
 
@@ -46,6 +48,7 @@ Keep out of core:
 - Full app-owned dialogue/textbox policy, sound/image assets, or branded text effects.
 - Filesystem image loading, sprite-specific widgets, atlas management policy, or asset lifetime ownership. Core may expose uniform-grid sprite sheet quad helpers, with animation modules supplied by apps.
 - Full SVG document rendering, CSS styling, gradients, masks, transform stacks, holes, winding-rule policy, or icon packs. Core path support should stay focused on SVG `d` data and Lua path commands.
+- Menori asset loading, glTF pipeline policy, physics picking, 3D occlusion, grass/instancing renderers, or full renderer replacement. Glyph owns the optional adapter and UI surfaces only.
 
 If a feature feels specific, implement it as an example using existing primitives. If that example reveals missing primitives, add the primitive instead.
 
@@ -86,6 +89,7 @@ Local `zIndex` orders siblings. Prefer `ui.portal` for floating UI that must esc
 Use `onLayout` or `onBounds` for app-owned geometry capture such as drag/drop targets, tooltips, popovers, overlays, and contextual menus. Avoid mutating app geometry state from custom draw callbacks unless the state is strictly draw-local.
 Use `ui.drag` for generic pointer drag lifecycles. Keep app-specific swapping, collision, placement, validation, and drag previews outside core.
 Use `ui.grid.pointToCell` with `onLayout` bounds for uniform grid pointer mapping. Keep variable-size placement, collision, and inventory rules app-owned.
+Use `ui.surface.new` for texture-backed Glyph UI with its own runtime, such as Menori billboards or offscreen HUD panels. Surface component callbacks receive a scoped UI API; use that scoped API for hooks, tabs, feedback, drag helpers, and input state.
 
 For input changes, add runtime tests that press and release controls, not just geometry assertions.
 
@@ -185,6 +189,15 @@ Viewport support lives in `glyph/viewport_backend.lua`.
 - Keep Push/Shove optional and user-provided. Development examples may use `dev/vendor`.
 - Public API is `ui.viewportBackend`; backend-specific escape hatch is `raw()`.
 - Managed mode may configure backend/window; attached mode must not mutate app-owned setup.
+
+Menori support lives in `glyph/menori.lua`.
+
+- Keep Menori optional and app-provided through `ui.menori.new({ menori = menori })`. `examples/menori` may vendor Menori locally for runnable demos, but core must not depend on it.
+- Use `ui.surface` for billboard and texture-backed UI; do not share root hook state with world-space surfaces.
+- Screen-space Glyph UI wins billboard input by default. Only route billboard input ahead of screen UI for explicit `inputPriority = "always"`.
+- Loading helpers provide UI/layer patterns and progress state only. Apps still own asset loading and scene construction.
+- Feel Menori support is optional. Use passed modules or detected adapters when available, but never block the Menori adapter on a vendored Feel update.
+- Test with fake Menori/Love objects; do not require Menori globally in specs.
 
 ## Performance Work
 

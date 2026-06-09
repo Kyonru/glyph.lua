@@ -193,6 +193,75 @@ local function updateGallery(targets)
   end
 end
 
+local function docGifEnv(target, frameDir, totalFrames, width, height, fps)
+  local values = {
+    GLYPH_DOC_GIF_TARGET = target.id,
+    GLYPH_DOC_GIF_FRAMES = frameDir,
+    GLYPH_DOC_GIF_TOTAL = tostring(totalFrames),
+    GLYPH_DOC_GIF_WIDTH = tostring(width),
+    GLYPH_DOC_GIF_HEIGHT = tostring(height),
+    GLYPH_DOC_GIF_FPS = tostring(fps),
+  }
+  local defaultKeys = {
+    "GLYPH_DOC_GIF_TARGET",
+    "GLYPH_DOC_GIF_FRAMES",
+    "GLYPH_DOC_GIF_TOTAL",
+    "GLYPH_DOC_GIF_WIDTH",
+    "GLYPH_DOC_GIF_HEIGHT",
+    "GLYPH_DOC_GIF_FPS",
+  }
+  local keys = {}
+
+  for _, key in ipairs(defaultKeys) do
+    keys[#keys + 1] = key
+  end
+
+  for key, value in pairs(target.env or {}) do
+    values[key] = tostring(value)
+    local isDefault = false
+    for _, defaultKey in ipairs(defaultKeys) do
+      if key == defaultKey then
+        isDefault = true
+        break
+      end
+    end
+    if not isDefault then
+      keys[#keys + 1] = key
+    end
+  end
+
+  local parts = {}
+  for _, key in ipairs(keys) do
+    parts[#parts + 1] = key .. "=" .. shellQuote(values[key])
+  end
+  return table.concat(parts, " ")
+end
+
+local function loveCaptureCommand(target, frameDir, totalFrames, width, height, fps, tools)
+  if target.exampleApp then
+    return table.concat({
+      docGifEnv(target, frameDir, totalFrames, width, height, fps),
+      shellQuote(tools.love),
+      shellQuote(target.exampleApp),
+    }, " ")
+  end
+
+  return table.concat({
+    shellQuote(tools.love),
+    shellQuote("scripts/doc_gifs/capture_app"),
+    "--target",
+    shellQuote(target.id),
+    "--frames",
+    shellQuote(frameDir),
+    "--width",
+    tostring(width),
+    "--height",
+    tostring(height),
+    "--fps",
+    tostring(fps),
+  }, " ")
+end
+
 local function captureTarget(target, opts, tools)
   local fps = target.fps or opts.fps
   local width = target.width or opts.width
@@ -208,21 +277,7 @@ local function captureTarget(target, opts, tools)
   cleanFrames(frameDir, math.max(totalFrames + 12, 720))
   os.remove(tempOutputPath)
 
-  local loveCommand = table.concat({
-    shellQuote(tools.love),
-    shellQuote("scripts/doc_gifs/capture_app"),
-    "--target",
-    shellQuote(target.id),
-    "--frames",
-    shellQuote(frameDir),
-    "--width",
-    tostring(width),
-    "--height",
-    tostring(height),
-    "--fps",
-    tostring(fps),
-  }, " ")
-  run(loveCommand)
+  run(loveCaptureCommand(target, frameDir, totalFrames, width, height, fps, tools))
 
   if not fileExists(framePath(frameDir, 1)) or not fileExists(framePath(frameDir, totalFrames)) then
     error("capture did not produce expected frames for " .. target.id, 2)

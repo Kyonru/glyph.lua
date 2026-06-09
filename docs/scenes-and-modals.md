@@ -102,3 +102,24 @@ ui.modal.isOpen("settings")
 ## Hook Isolation
 
 Each scene layer has its own hook scope. `useState` inside a modal does not mutate state in the main scene or another modal.
+
+## Menori Scenes
+
+`ui.menori.new({ menori = menori })` adds optional Menori-aware scene helpers for
+3D scene layers, loading overlays, crossfades, and interactive world-space
+billboards. Menori remains app-provided.
+
+```lua
+local adapter = ui.menori.new({ menori = menori, environment = environment })
+
+adapter.scene.set("world", {
+  scene = scene,
+  root = rootNode,
+  environment = environment,
+  overlay = function()
+    return ui.button({ label = "Pause" })
+  end,
+})
+```
+
+See [Menori Adapter](menori.md) for the full adapter API.

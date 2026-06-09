@@ -154,6 +154,11 @@ feel.play("button.pop", target, {
 feel.update(dt)
 ```
 
+When Menori is available, `ui.menori.new` can use the optional `feel.menori`
+adapter for 3D node, camera, animation, and uniform feedback. Glyph still owns
+the UI layer; Menori and Feel remain app-provided optional systems. See
+[Menori Adapter](menori.md).
+
 ## Core Boundary
 
 Glyph runs the sequence and emits metadata. It does not own particles, camera shake, haptics, sound loading, or game-specific widgets.
