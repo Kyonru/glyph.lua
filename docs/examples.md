@@ -124,7 +124,7 @@ This demo uses development copies of Push and Shove from `dev/vendor`; Glyph app
 
 ## Performance
 
-Large dataset workflow with a visible window of mounted rows, static row reuse, and timing display.
+Large dataset workflow with a visible window of mounted rows, static row reuse, and live FPS/timing display. The docs preview is fixed at 18 FPS for deterministic GIF capture; the runnable example reports real Love2D FPS.
 
 <!-- glyph:feature-gif-gallery -->
 ## Feature GIF Gallery
@@ -147,7 +147,7 @@ Large dataset workflow with a visible window of mounted rows, static row reuse, 
 | [Transitions](transitions.md) | ![Animated GIF showing Glyph fade, slide, shader-style, and animated layer transitions.](assets/feature-gifs/transitions.gif) |
 | [Spatial Navigation](navigation.md) | ![Animated GIF showing Glyph spatial navigation focus moving through buttons and scoped groups.](assets/feature-gifs/navigation.gif) |
 | [Menori Adapter](menori.md) | ![Animated GIF showing Glyph Menori scene transitions, loading overlay, HUD, and world-space billboard UI.](assets/feature-gifs/menori.gif) |
-| [Performance](performance.md) | ![Animated GIF showing Glyph memoized rows, static nodes, visible windows, and bounded work.](assets/feature-gifs/performance.gif) |
+| [Performance](performance.md) | ![Animated GIF showing Glyph memoized rows, static nodes, visible windows, FPS, and bounded work.](assets/feature-gifs/performance.gif) |
 <!-- /glyph:feature-gif-gallery -->
 
 ## Example Standards

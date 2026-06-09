@@ -5,8 +5,12 @@ icon: lucide/gauge
 # Performance
 
 <!-- glyph:feature-gif performance -->
-![Animated GIF showing Glyph memoized rows, static nodes, visible windows, and bounded work.](assets/feature-gifs/performance.gif)
+![Animated GIF showing Glyph memoized rows, static nodes, visible windows, FPS, and bounded work.](assets/feature-gifs/performance.gif)
 <!-- /glyph:feature-gif performance -->
+
+> [!NOTE]
+> The docs GIF is captured at a fixed 18 FPS for deterministic encoding. The
+> runnable `examples/performance` demo reports the live Love2D FPS on your machine.
 
 Glyph is intended for debugger panels and game UI, so performance matters.
 
@@ -95,6 +99,8 @@ For large log/table views:
 - Mount a visible window of rows.
 - Reuse stable row components where possible.
 - Use `scrollView` bounds and scroll offsets to clamp work.
+- Show coarse live counters such as FPS, render time, layout passes, and mounted
+  row counts so performance examples explain their budget at a glance.
 
 See `examples/performance`.
 

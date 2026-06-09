@@ -2240,7 +2240,7 @@ local targets = {
 		id = "performance",
 		title = "Performance",
 		docs = { "docs/performance.md" },
-		alt = "Animated GIF showing Glyph memoized rows, static nodes, visible windows, and bounded work.",
+		alt = "Animated GIF showing Glyph memoized rows, static nodes, visible windows, FPS, and bounded work.",
 		setup = function(ctx)
 			ctx.offset = 1
 		end,
@@ -2280,6 +2280,7 @@ local targets = {
 				ui.row({ gap = 14, width = "100%", align = "stretch" }, {
 					panel("visible rows", { flex = 1, height = 310 }, rows),
 					panel("work budget", { width = 318, height = 310 }, {
+						metric("fps", tostring(ctx.fps or 18), palette.blue),
 						metric("mounted rows", "8 / 10k", palette.teal),
 						metric("memo hits", tostring(80 + math.floor(wave(ctx, 4.5) * 18)) .. "%", palette.gold),
 						metric("layout pass", wave(ctx, 7) > 0.5 and "dirty" or "clean", palette.coral),
