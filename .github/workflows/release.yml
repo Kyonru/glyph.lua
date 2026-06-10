@@ -46,7 +46,7 @@ jobs:
           echo "archive_path=${archive_path}" >> "$GITHUB_OUTPUT"
 
       - name: Upload archive to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ steps.package.outputs.archive_path }}
           fail_on_unmatched_files: true
