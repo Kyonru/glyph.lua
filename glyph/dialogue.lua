@@ -127,6 +127,35 @@ local function drawCaret(love, x, y, width, height, color, opacity, time)
   graphics.pop()
 end
 
+-- Draws a character portrait (a love Image + optional quad) scaled to `size`,
+-- mirrored when flipH. Mirrors Love-Dialogue's LoveCharacter:drawPortrait.
+local function drawPortraitImage(love, portrait, x, y, size, opacity)
+  if not portrait or not portrait.texture then
+    return
+  end
+  local graphics = love.graphics
+  local sx, sy = size, size
+  if portrait.width and portrait.width > 0 then
+    sx = size / portrait.width
+  end
+  if portrait.height and portrait.height > 0 then
+    sy = size / portrait.height
+  end
+  local ox = 0
+  if portrait.flipH then
+    sx = -sx
+    ox = portrait.width or 0
+  end
+  graphics.push("all")
+  graphics.setColor(1, 1, 1, (portrait.alpha or 1) * (opacity or 1))
+  if portrait.quad then
+    graphics.draw(portrait.texture, portrait.quad, x, y, 0, sx, sy, ox, 0)
+  else
+    graphics.draw(portrait.texture, x, y, 0, sx, sy, ox, 0)
+  end
+  graphics.pop()
+end
+
 local function mergeInto(base, extra)
   if extra then
     for key, value in pairs(extra) do
@@ -147,11 +176,32 @@ local function buildModel(instance)
   if not s then
     return nil
   end
+  local config = instance.config or {}
   local char = s.characters and s.characters[s.currentCharacter]
   local choices = {}
   for i, c in ipairs(s.activeChoices or {}) do
     choices[i] = { text = c.parsedText or c.text, target = c.target, effects = c.effects }
   end
+
+  -- Current portrait (texture + quad) for the active character/expression.
+  local portrait = nil
+  if config.portraitEnabled ~= false and char and char.expressions then
+    local expr = char.expressions[s.currentExpression] or char.expressions.Default
+    if expr and expr.texture then
+      portrait = {
+        texture = expr.texture,
+        quad = expr.quad,
+        width = expr.w,
+        height = expr.h,
+        size = config.portraitSize or 100,
+        flipH = config.portraitFlipH or false,
+        offsetX = char.x or 0,
+        offsetY = char.y or 0,
+        alpha = char.alpha,
+      }
+    end
+  end
+
   return {
     active = s.isActive,
     status = s.status,
@@ -159,6 +209,7 @@ local function buildModel(instance)
     speaker = { name = s.currentCharacter, color = char and char.nameColor },
     text = { full = s.fullText, shown = s.displayedText, waiting = s.waitingForInput },
     effects = s.effects,
+    portrait = portrait,
     choiceMode = s.choiceMode,
     selectedChoice = s.selectedChoice,
     choices = choices,
@@ -324,16 +375,16 @@ function Adapter:component(props)
   }, props.style)
   boxStyle.opacity = opacity
 
-  local children = {}
+  local content = {}
 
   if model.speaker and model.speaker.name and model.speaker.name ~= "" then
-    children[#children + 1] = Components.text(model.speaker.name, {
+    content[#content + 1] = Components.text(model.speaker.name, {
       textStyle = "h2",
       style = { color = model.speaker.color or textColor, opacity = opacity },
     })
   end
 
-  children[#children + 1] = Components.box({
+  content[#content + 1] = Components.box({
     width = "100%",
     flex = 1,
     interactive = false,
@@ -371,7 +422,28 @@ function Adapter:component(props)
         end,
       })
     end
-    children[#children + 1] = Components.column({ width = "100%", gap = 4 }, choiceNodes)
+    content[#content + 1] = Components.column({ width = "100%", gap = 4 }, choiceNodes)
+  end
+
+  -- Lay the portrait (if any) beside the text; otherwise the content fills.
+  local inner
+  if model.portrait then
+    local pSize = model.portrait.size or 100
+    inner = Components.row({ width = "100%", height = "100%", gap = props.gap or 14 }, {
+      Components.box({
+        width = pSize,
+        height = "100%",
+        interactive = false,
+        accessibilityHidden = true,
+        draw = function(_, x, y, _, height, love)
+          local p = model.portrait
+          drawPortraitImage(love, p, x + (p.offsetX or 0), y + height - pSize + (p.offsetY or 0), pSize, opacity)
+        end,
+      }),
+      Components.column({ flex = 1, height = "100%", gap = props.gap or 8 }, content),
+    })
+  else
+    inner = Components.column({ width = "100%", height = "100%", gap = props.gap or 8 }, content)
   end
 
   local layout = {
@@ -381,11 +453,10 @@ function Adapter:component(props)
     bottom = props.margin or 24,
     height = props.height or 200,
     padding = props.padding or 18,
-    gap = props.gap or 10,
     style = boxStyle,
   }
   mergeInto(layout, props.layout)
-  return Components.column(layout, children)
+  return Components.column(layout, { inner })
 end
 
 ---@param rootUi glyph

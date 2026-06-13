@@ -221,4 +221,61 @@ describe("dialogue adapter", function()
     assert.are.equal("space", instance.calls.key)
     assert.is_true(adapter.elapsed >= 0.5)
   end)
+
+  it("builds the portrait from the active character/expression", function()
+    local instance = {
+      config = { portraitEnabled = true, portraitSize = 120, portraitFlipH = true },
+      state = {
+        isActive = true,
+        currentCharacter = "Hero",
+        currentExpression = "Happy", -- not defined -> falls back to Default
+        characters = {
+          Hero = { expressions = { Default = { texture = "TEX", quad = "Q", w = 100, h = 108 } }, alpha = 1 },
+        },
+        activeChoices = {},
+      },
+    }
+    local model = Dialogue.new(fakeUi, { instance = instance }):model()
+    assert.is_not_nil(model.portrait)
+    assert.are.equal("TEX", model.portrait.texture)
+    assert.are.equal("Q", model.portrait.quad)
+    assert.are.equal(120, model.portrait.size)
+    assert.are.equal(100, model.portrait.width)
+    assert.is_true(model.portrait.flipH)
+  end)
+
+  it("omits the portrait when portraits are disabled", function()
+    local instance = {
+      config = { portraitEnabled = false, portraitSize = 120 },
+      state = {
+        isActive = true,
+        currentCharacter = "Hero",
+        currentExpression = "Default",
+        characters = { Hero = { expressions = { Default = { texture = "TEX", w = 100, h = 108 } } } },
+        activeChoices = {},
+      },
+    }
+    assert.is_nil(Dialogue.new(fakeUi, { instance = instance }):model().portrait)
+  end)
+
+  it("places content in a row beside the portrait when present", function()
+    local withPortrait = {
+      renderModel = function()
+        return {
+          active = true,
+          speaker = { name = "Hero" },
+          text = { shown = "Hi", full = "Hi", waiting = false },
+          choices = {},
+          portrait = { texture = "TEX", quad = "Q", width = 100, height = 108, size = 120, flipH = false },
+        }
+      end,
+    }
+    local withoutPortrait = {
+      renderModel = function()
+        return { active = true, speaker = { name = "Hero" }, text = { shown = "Hi" }, choices = {} }
+      end,
+    }
+    assert.are.equal(1, #collect(Dialogue.new(fakeUi, { instance = withPortrait }):component(), "row"))
+    assert.are.equal(0, #collect(Dialogue.new(fakeUi, { instance = withoutPortrait }):component(), "row"))
+  end)
 end)

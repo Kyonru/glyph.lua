@@ -1065,6 +1065,18 @@ local GlyphDialogueRenderModelText = {}
 ---@field effects? table
 local GlyphDialogueChoice = {}
 
+---@class GlyphDialoguePortrait
+---@field texture any love Image
+---@field quad? any love Quad (region within the texture)
+---@field width? number native quad width
+---@field height? number native quad height
+---@field size? number target display size
+---@field flipH? boolean
+---@field offsetX? number
+---@field offsetY? number
+---@field alpha? number
+local GlyphDialoguePortrait = {}
+
 ---@class GlyphDialogueRenderModel
 ---@field active boolean
 ---@field status? string
@@ -1072,6 +1084,7 @@ local GlyphDialogueChoice = {}
 ---@field speaker GlyphDialogueRenderModelSpeaker
 ---@field text GlyphDialogueRenderModelText
 ---@field effects? table
+---@field portrait? GlyphDialoguePortrait
 ---@field choiceMode? boolean
 ---@field selectedChoice? number
 ---@field choices GlyphDialogueChoice[]

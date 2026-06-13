@@ -71,6 +71,7 @@ The adapter prefers a `renderModel()` method on the instance and otherwise reads
   speaker = { name, color },
   text = { full, shown, waiting }, -- shown is the typewriter-revealed prefix
   effects,                          -- parsed inline effect spans
+  portrait,                         -- current character portrait, or nil
   choiceMode, selectedChoice,
   choices = { { text, target, effects } },
 }
@@ -78,6 +79,16 @@ The adapter prefers a `renderModel()` method on the instance and otherwise reads
 
 Read it directly with `dialogue:model()` if you want to render a fully custom
 box instead of using `component`.
+
+## Portraits
+
+When the active character has a portrait (defined with `@atlas`/`@rect`,
+`@sheet`/`@frame`, or `@portrait` in the script) and `portraitEnabled` is not
+`false`, `model.portrait` carries the love `Image`, the `quad` region, the native
+size, the configured `portraitSize`, and `flipH`. `component` draws it bottom-left
+of the box and lays the text out beside it (the same place Love-Dialogue's own
+renderer puts it). The expression follows `currentExpression`, falling back to
+`Default`.
 
 ## Inline text effects
 
