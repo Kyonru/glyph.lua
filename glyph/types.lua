@@ -1048,6 +1048,72 @@ local GlyphSurface = {}
 ---@field new fun(opts: GlyphSurfaceOptions): GlyphSurface
 local GlyphSurfaceApi = {}
 
+---@class GlyphDialogueRenderModelSpeaker
+---@field name string
+---@field color? GlyphColor
+local GlyphDialogueRenderModelSpeaker = {}
+
+---@class GlyphDialogueRenderModelText
+---@field full? string
+---@field shown? string
+---@field waiting? boolean
+local GlyphDialogueRenderModelText = {}
+
+---@class GlyphDialogueChoice
+---@field text string
+---@field target? string
+---@field effects? table
+local GlyphDialogueChoice = {}
+
+---@class GlyphDialogueRenderModel
+---@field active boolean
+---@field status? string
+---@field opacity? number
+---@field speaker GlyphDialogueRenderModelSpeaker
+---@field text GlyphDialogueRenderModelText
+---@field effects? table
+---@field choiceMode? boolean
+---@field selectedChoice? number
+---@field choices GlyphDialogueChoice[]
+local GlyphDialogueRenderModel = {}
+
+---@class GlyphDialogueComponentProps
+---@field margin? number
+---@field height? number
+---@field padding? number
+---@field gap? number
+---@field style? GlyphStyle
+---@field layout? table
+---@field textColor? GlyphColor
+---@field accent? GlyphColor
+---@field font? any
+local GlyphDialogueComponentProps = {}
+
+---@class GlyphDialogueOptions
+---@field library? table the Love-Dialogue module (required to use :play)
+---@field instance? table an existing Love-Dialogue instance to wrap
+---@field onSignal? fun(name: string, args: any)
+---@field font? any
+local GlyphDialogueOptions = {}
+
+---@class GlyphDialogueAdapter
+---@field wrap fun(self: GlyphDialogueAdapter, instance: table): GlyphDialogueAdapter
+---@field play fun(self: GlyphDialogueAdapter, scriptPath: string, config?: table): GlyphDialogueAdapter
+---@field setOnSignal fun(self: GlyphDialogueAdapter, fn: fun(name: string, args: any)): GlyphDialogueAdapter
+---@field update fun(self: GlyphDialogueAdapter, dt: number)
+---@field keypressed fun(self: GlyphDialogueAdapter, key: string)
+---@field select fun(self: GlyphDialogueAdapter, index: number)
+---@field advance fun(self: GlyphDialogueAdapter)
+---@field isActive fun(self: GlyphDialogueAdapter): boolean
+---@field isFinished fun(self: GlyphDialogueAdapter): boolean
+---@field model fun(self: GlyphDialogueAdapter): GlyphDialogueRenderModel|nil
+---@field component fun(self: GlyphDialogueAdapter, props?: GlyphDialogueComponentProps): GlyphNode|nil
+local GlyphDialogueAdapter = {}
+
+---@class GlyphDialogueApi
+---@field new fun(opts?: GlyphDialogueOptions): GlyphDialogueAdapter
+local GlyphDialogueApi = {}
+
 ---@class GlyphMenoriOptions
 ---@field menori table
 ---@field love? table

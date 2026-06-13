@@ -17,3 +17,8 @@ or `luarocks`) rather than relying on this snapshot.
 The upstream repository does not ship a standalone `LICENSE` file; the MIT grant
 is stated in its `README.md`. To refresh this snapshot, clone the upstream repo
 and copy its `LoveDialogue/` directory here.
+
+This snapshot is **unmodified** — byte-for-byte upstream. Glyph's `ui.dialogue`
+adapter adds the methods it needs (`renderModel`, `selectChoice`, `isFinished`,
+and a renderless-aware `draw`) to each instance at runtime, so the vendored
+library does not need to be edited.

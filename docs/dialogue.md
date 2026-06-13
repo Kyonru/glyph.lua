@@ -1,0 +1,114 @@
+---
+icon: lucide/messages-square
+---
+
+# Dialogue Adapter
+
+`ui.dialogue` is an optional adapter for the
+[Miisan-png/Love-Dialogue](https://github.com/Miisan-png/Love-Dialogue) dialogue
+engine. Love-Dialogue stays app-provided and keeps doing what it is good at —
+parsing `.ld` scripts, running logic/choices/variables, audio, and save/load.
+The adapter is a thin **render + input bridge**: it reads a normalized model
+from a Love-Dialogue instance and draws the dialogue box, typewriter text,
+inline effects, and choices with Glyph primitives, so the dialogue becomes
+themeable, responsive, and mouse/keyboard interactive.
+
+Glyph does not own dialogue parsing, branching, audio, or save state. The
+adapter renders; the library remains the source of truth.
+
+## Setup
+
+```lua
+local ui = require("glyph")
+local LoveDialogue = require("LoveDialogue") -- app-provided
+
+local dialogue = ui.dialogue.new({ library = LoveDialogue })
+dialogue:play("scripts/intro.ld")            -- starts a renderless instance
+```
+
+`new` accepts `{ library, instance?, onSignal?, font? }`. Use `:play(path,
+config)` to start a new instance (the adapter forces `config.renderless = true`
+so the library skips its own drawing), or `:wrap(instance)` to attach an
+instance you created yourself.
+
+## Game loop
+
+```lua
+function love.update(dt)
+  dialogue:update(dt) -- forwards to the instance and advances the effect clock
+  ui.update(dt)
+end
+
+function love.keypressed(key)
+  dialogue:keypressed(key) -- next / choose / skip flow through the library
+end
+```
+
+Render the box as part of your Glyph tree. `component` returns a positioned node
+(or `nil` when no line is active):
+
+```lua
+ui.render(function()
+  return ui.stack({ width = "100%", height = "100%" }, {
+    -- ... your scene ...
+    dialogue:component({ height = 220, margin = 28 }),
+  })
+end)
+```
+
+Choices are real Glyph buttons: clicking one calls `select` + `advance`, while
+keyboard up/down/enter still flow through `keypressed`, so the highlighted
+choice stays consistent across mouse and keyboard per Glyph's input rules.
+
+## The render model
+
+The adapter prefers a `renderModel()` method on the instance and otherwise reads
+`dialogue.state`, so it works against a stock upstream copy too. The model:
+
+```lua
+{
+  active, status, opacity,
+  speaker = { name, color },
+  text = { full, shown, waiting }, -- shown is the typewriter-revealed prefix
+  effects,                          -- parsed inline effect spans
+  choiceMode, selectedChoice,
+  choices = { { text, target, effects } },
+}
+```
+
+Read it directly with `dialogue:model()` if you want to render a fully custom
+box instead of using `component`.
+
+## Inline text effects
+
+`component` custom-draws `text.shown` per glyph and applies Love-Dialogue's
+inline effects (`{wave}`, `{shake}`, `{jiggle}`, `{color:RRGGBB}`, `{italic}`)
+using offsets equivalent to the library's own `TextEffects`. The effect math
+lives in the adapter, so it needs no access to the library's internal modules.
+
+> [!NOTE]
+> The adapter renders `{bold}` as plain text. Use `{wave}`/`{shake}`/`{color}`
+> for emphasis, or render a custom box from `dialogue:model()` if you need
+> different styling.
+
+## Runtime augmentation
+
+The adapter does not require any changes to Love-Dialogue. When you `wrap` (or
+`play`) an instance, the adapter adds the methods it needs **to that instance at
+runtime**, leaving the library source untouched:
+
+- `instance:renderModel()` — the normalized model above (added if missing).
+- `instance:selectChoice(index)` — clamp and set the highlighted choice.
+- `instance:isFinished()` — `not state.isActive`.
+- A renderless-aware `draw` wrapper — when `instance.config.renderless` is set,
+  the library's own `:draw()` becomes a no-op so the adapter owns drawing.
+
+Each method is only added when absent, so an upstream copy that already provides
+its own keeps it. The vendored `examples/dialogue` snapshot is therefore
+byte-for-byte upstream (see `vendor/LOVE_DIALOGUE_NOTICE.md`).
+
+## Example
+
+`examples/dialogue` runs the faithful upstream Love-Dialogue demo and adds a `G`
+key that toggles between **library-drawn** (Love-Dialogue's own box) and
+**glyph-drawn** (`ui.dialogue`) rendering of the same running conversation.

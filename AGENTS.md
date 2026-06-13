@@ -149,6 +149,7 @@ Poor core API examples:
 - Semantic props should resolve through i18n key props before snapshots, focus/activate events, and live-region announcements use them.
 - Viewport support belongs in `glyph/viewport_backend.lua` behind `ui.viewportBackend`; do not add primary `ui.push` or `ui.shove` APIs.
 - Menori support belongs in `glyph/menori.lua` as an optional adapter for scene layers, loading overlays, transitions, screen-space overlays, and interactive world-space billboard UI. Menori stays app-provided; Glyph must not own Menori asset loading, glTF policy, physics picking, world occlusion, or renderer replacement. `examples/menori` may vendor a Menori snapshot to stay runnable, but core must keep requiring app-provided modules.
+- Dialogue support belongs in `glyph/dialogue.lua` as an optional `ui.dialogue` adapter for the app-provided Love-Dialogue engine. The adapter is a render + input bridge only: it reads a normalized render model and draws the box, typewriter text, per-glyph inline effects, and clickable choices with Glyph primitives. Glyph must not own dialogue parsing, branching, variables, audio, or save/load — those stay in the library. Effect math is self-contained in the adapter (no requiring the library's internal modules). The adapter must not edit the vendored library: it augments each wrapped instance at runtime (adding `renderModel`/`selectChoice`/`isFinished` and a renderless-aware `draw` only when missing) and otherwise builds the model from `dialogue.state`, so it works against a byte-for-byte upstream snapshot.
 
 ## Styling Rules
 
@@ -196,7 +197,7 @@ Examples should demonstrate real workflows, not marketing pages:
 - `examples/performance`: large data, memo/static, bounded work.
 - `examples/styles`: themes, variants, transitions, shader styling.
 - `examples/dashboard`: dense debugger/admin UI.
-- `examples/dialogue`: faithful port of the upstream Love-Dialogue demo; the app-provided library draws the dialogue box/portraits/choices while Glyph only hosts and composites the demo's gradient, box, and controls hint (no extra Glyph UI). Vendors the library under `vendor/` and the demo assets/scripts under `demo/`, with signal-driven script switching and a graceful missing-dependency fallback.
+- `examples/dialogue`: faithful port of the upstream Love-Dialogue demo plus the `ui.dialogue` adapter. The app-provided library draws the box/portraits/choices by default; a `G` key toggles to `ui.dialogue`, which renders the same running conversation with Glyph primitives (themed box, per-glyph effects, clickable choices). Vendors the library under `vendor/` and the demo assets/scripts under `demo/`, with signal-driven script switching and a graceful missing-dependency fallback.
 - `examples/hud-primitives`: meters, images, shapes, clipping, stencil, dynamic HUD panels.
 - `examples/i18n`: backend-agnostic translation, cache keys, memoization.
 - `examples/juice`: feedback sequences, blob buttons, app-owned particles/shake, and audio metadata.
@@ -237,6 +238,7 @@ At minimum:
 - Runtime, hooks, or input behavior: update `docs/runtime.md`.
 - Scene/modal/transition behavior: update `docs/scenes-and-modals.md` or `docs/transitions.md`.
 - Menori adapter behavior: update `docs/menori.md`, `docs/scenes-and-modals.md`, and `docs/runtime.md` when surface/input behavior changes.
+- Dialogue adapter behavior: update `docs/dialogue.md` (and `docs/examples.md` for the `examples/dialogue` toggle) when `ui.dialogue`, the render model, or effect rendering changes.
 - Navigation/focus behavior: update `docs/navigation.md`.
 - I18n behavior: update `docs/i18n.md`.
 - Accessibility behavior: update `docs/accessibility.md`.

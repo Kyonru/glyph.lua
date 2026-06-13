@@ -385,6 +385,17 @@ If an app uses Push or Shove, configure Glyph through `window.viewport` or attac
 
 Do not expose Push/Shove-specific assumptions in examples unless the example is specifically about viewport backends.
 
+## Dialogue UI
+
+For conversation/dialogue UI backed by the Love-Dialogue engine, prefer the
+`ui.dialogue` adapter over hand-rolling a box. Create it with
+`ui.dialogue.new({ library = LoveDialogue })`, drive it with `:update(dt)` and
+`:keypressed(key)`, and render it in your tree with `:component({ ... })` (it
+returns a positioned node or `nil`). The adapter draws the typewriter text,
+inline `{wave}/{shake}/{color}` effects, and clickable choices, and reads a
+normalized model so it works against a stock upstream copy. Keep parsing,
+branching, audio, and save/load in the library, not in your UI code.
+
 ## Performance Patterns
 
 - Use `ui.memo(component, deps)` for stable repeated subtrees.

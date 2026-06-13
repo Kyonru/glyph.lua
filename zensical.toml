@@ -68,6 +68,7 @@ nav = [
     { "Scenes And Modals" = "scenes-and-modals.md" },
     { "Transitions" = "transitions.md" },
     { "Menori Adapter" = "menori.md" },
+    { "Dialogue Adapter" = "dialogue.md" },
   ] },
   { "Guides" = [
     { "Navigation" = "navigation.md" },

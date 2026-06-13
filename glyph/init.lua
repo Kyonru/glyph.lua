@@ -15,6 +15,7 @@ local I18n = require(prefix .. ".i18n")
 local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
 local Menori = require(prefix .. ".menori")
+local Dialogue = require(prefix .. ".dialogue")
 local Path = require(prefix .. ".path")
 local RichTextBackend = require(prefix .. ".rich_text_backend")
 local Responsive = require(prefix .. ".responsive")
@@ -60,6 +61,7 @@ local runtime = Runtime.new()
 ---@field spriteSheetBackend GlyphSpriteSheetBackendApi
 ---@field surface GlyphSurfaceApi
 ---@field menori GlyphMenoriApi
+---@field dialogue GlyphDialogueApi
 ---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
 ---@field viewportBackend GlyphViewportBackendApi
 ---@field transitions GlyphTransitionApi
@@ -81,6 +83,7 @@ local ui = {
   richTextBackend = nil,
   surface = nil,
   menori = nil,
+  dialogue = nil,
   spriteSheetBackend = nil,
   Navigate = Navigate,
   Responsive = Responsive,
@@ -192,6 +195,14 @@ ui.menori = {
   ---@return GlyphMenoriAdapter
   new = function(opts)
     return Menori.new(ui, opts)
+  end,
+}
+
+ui.dialogue = {
+  ---@param opts? GlyphDialogueOptions
+  ---@return GlyphDialogueAdapter
+  new = function(opts)
+    return Dialogue.new(ui, opts)
   end,
 }
 

@@ -33,6 +33,7 @@ Add to core:
 - Backend-agnostic fixed viewport adapter hooks.
 - Offscreen Glyph surfaces with scoped runtimes for canvas-backed UI.
 - Optional Menori adapter surfaces for scene layers, loading overlays, transitions, and interactive world-space billboards.
+- Optional Love-Dialogue adapter (`ui.dialogue`) that renders an app-provided dialogue engine with Glyph primitives.
 - Visual-only animation primitives.
 - Modular feedback primitives for node animation, audio cue metadata, callbacks, and app-owned FX events.
 
@@ -198,6 +199,13 @@ Menori support lives in `glyph/menori.lua`.
 - Loading helpers provide UI/layer patterns and progress state only. Apps still own asset loading and scene construction.
 - Feel Menori support is optional. Use passed modules or detected adapters when available, but never block the Menori adapter on a vendored Feel update.
 - Test with fake Menori/Love objects; do not require Menori globally in specs.
+
+Dialogue support lives in `glyph/dialogue.lua`.
+
+- Keep Love-Dialogue optional and app-provided through `ui.dialogue.new({ library = LoveDialogue })`. `examples/dialogue` may vendor a snapshot, but core must not depend on it.
+- The adapter only renders + bridges input. It augments each wrapped instance at runtime (adding `renderModel`/`selectChoice`/`isFinished` and a renderless-aware `draw` when missing) and otherwise builds the model from `dialogue.state`. Never edit the vendored library — keep the snapshot byte-for-byte upstream.
+- Do not move parsing, branching, variables, audio, or save/load into Glyph. Keep inline-effect math self-contained in the adapter (never require the library's internal modules).
+- Test with a stub instance covering both the `renderModel()` path and the `.state` fallback; do not require the vendored library in specs.
 
 ## Performance Work
 

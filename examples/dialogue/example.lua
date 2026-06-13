@@ -24,13 +24,16 @@ local PluginManager = okDialogue and require("LoveDialogue.PluginManager") or ni
 local DebugPlugin = okDialogue and require("LoveDialogue.plugins.DebugPlugin") or nil
 
 local myDialogue = nil
+local adapter = nil -- ui.dialogue adapter wrapping the current instance
+local renderMode = "library" -- "library" (Love-Dialogue draws) | "glyph" (ui.dialogue draws)
 local savedState = nil
 local config = nil
 local nextScriptPath = nil
 local hintFont = nil
+local bodyFont = nil
 local bgColor = { 0.1, 0.1, 0.2, 1 }
 
-local CONTROLS = "Controls: Space/Enter (Next)  |  F (Skip)  |  S (Save)  |  L (Load)  |  Esc (Quit)"
+local CONTROLS = "Space/Enter (Next)  |  F (Skip)  |  S (Save)  |  L (Load)  |  Esc (Quit)"
 
 local function onSignal(name, args)
 	if name == "ChangeBG" then
@@ -53,6 +56,17 @@ end
 local function startDialogue(path)
 	myDialogue = LoveDialogue.play(path, config)
 	myDialogue.onSignal = onSignal
+	-- adapter:wrap augments the instance (renderModel/selectChoice/isFinished)
+	-- without touching the vendored library.
+	if adapter then
+		adapter:wrap(myDialogue)
+	end
+end
+
+-- Switch which renderer draws the dialogue. The same Love-Dialogue instance is
+-- shared; only drawing changes (drawDialogue / the adapter component gate on it).
+local function toggleRenderer()
+	renderMode = (renderMode == "library") and "glyph" or "library"
 end
 
 -- Vertical gradient background, matching the upstream demo's love.draw.
@@ -69,6 +83,9 @@ end
 -- The dialogue box / portraits / indicator, drawn by Love-Dialogue itself.
 -- Wrapped in push/pop so its color/font/transform state never leaks into Glyph.
 local function drawDialogue(_, _, _, _, _, love)
+	if renderMode ~= "library" then
+		return
+	end
 	if not (myDialogue and myDialogue.state.isActive) then
 		return
 	end
@@ -83,16 +100,25 @@ local function drawControls(_, x, y, width, height, love)
 		love.graphics.setFont(hintFont)
 	end
 	love.graphics.setColor(1, 1, 1, 0.6)
-	love.graphics.print(CONTROLS, x + 20, y + height - 30)
+	love.graphics.print(CONTROLS .. "  |  G (Renderer: " .. renderMode .. ")", x + 20, y + height - 30)
 	love.graphics.pop()
 end
 
 local function Demo()
-	return ui.stack({ width = "100%", height = "100%" }, {
+	local children = {
 		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, draw = drawBackground }),
 		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, zIndex = 10, draw = drawDialogue }),
-		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, zIndex = 20, draw = drawControls }),
-	})
+	}
+	-- In glyph mode, ui.dialogue renders the box from the shared instance's state.
+	if renderMode == "glyph" and adapter then
+		local box = adapter:component({ height = 220, margin = 30, font = bodyFont, layout = { zIndex = 12 } })
+		if box then
+			children[#children + 1] = box
+		end
+	end
+	children[#children + 1] =
+		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, zIndex = 20, draw = drawControls })
+	return ui.stack({ width = "100%", height = "100%" }, children)
 end
 
 local function MissingDialogue()
@@ -133,6 +159,8 @@ return {
 		end
 		love.graphics.setDefaultFilter("nearest", "nearest")
 		hintFont = love.graphics.newFont(14)
+		bodyFont = love.graphics.newFont(20)
+		adapter = ui.dialogue.new({ library = LoveDialogue, font = bodyFont })
 
 		PluginManager:register(DebugPlugin)
 
@@ -179,7 +207,7 @@ return {
 			nextScriptPath = nil
 			return
 		end
-		myDialogue:update(dt)
+		adapter:update(dt)
 	end,
 	component = function()
 		if not LoveDialogue then
@@ -204,7 +232,10 @@ return {
 				print("Loading Save...", savedState.line)
 				myDialogue:loadState(savedState)
 			end
+		elseif key == "g" then
+			toggleRenderer()
+			return
 		end
-		myDialogue:keypressed(key)
+		adapter:keypressed(key)
 	end,
 }
