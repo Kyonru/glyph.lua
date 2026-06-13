@@ -12,6 +12,7 @@ love examples/animations
 love examples/audio-cues
 love examples/basic
 love examples/dashboard
+love examples/dialogue
 love examples/hud-menu
 love examples/hud-primitives
 love examples/i18n
@@ -59,6 +60,10 @@ scrollable activity, meters, custom draw, and keyboard/gamepad navigation.
 ## Dashboard
 
 A dense shadcn-inspired dashboard translated into Glyph primitives. Useful for panels, metric cards, chart drawing, filters, tabs-style controls, and scrollable tables.
+
+## Dialogue
+
+A faithful port of the upstream [Love-Dialogue](https://github.com/Miisan-png/Love-Dialogue) demo (MIT). Love-Dialogue parses the `.ld` scripts, runs the launcher/story/tech conversations, and draws the dialogue box, portraits, and choice indicator itself; Glyph only hosts the example, compositing the demo's vertical gradient, the library-drawn dialogue box, and a one-line controls hint through non-interactive custom-draw nodes. There is intentionally no extra Glyph UI. Script switching is signal-driven (`LoadScript`, `QuitGame`, `PlaySound`, `ChangeBG`) and `S`/`L` save and restore state. The library is vendored under `examples/dialogue/vendor` and the demo assets/scripts under `examples/dialogue/demo` (minus the unused TTF font); a minimal fallback message appears if the vendored copy is missing.
 
 ## HUD Menu
 

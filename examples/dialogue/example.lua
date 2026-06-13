@@ -1,0 +1,210 @@
+local ui = require("glyph")
+
+-- Faithful port of the upstream Love-Dialogue demo (demo/main.lua):
+--   https://github.com/Miisan-png/Love-Dialogue/tree/main/demo
+--
+-- Love-Dialogue parses the .ld scripts, runs the conversation, and draws the
+-- dialogue box, portraits, and choice indicator itself. Glyph only hosts the
+-- example: it owns the window/runner and composites the demo's own drawing
+-- (a vertical gradient, the dialogue box, and a one-line controls hint) through
+-- non-interactive custom-draw nodes. There is intentionally no extra Glyph UI.
+--
+-- The vendored library lives under vendor/ and the demo assets/scripts under
+-- demo/ (a snapshot of the upstream demo folder, minus the unused TTF font).
+
+local okDialogue, LoveDialogue = pcall(require, "LoveDialogue")
+local dialogueLoadError = nil
+if not okDialogue then
+	dialogueLoadError = LoveDialogue
+	LoveDialogue = nil
+end
+
+local ResourceManager = okDialogue and require("LoveDialogue.ResourceManager") or nil
+local PluginManager = okDialogue and require("LoveDialogue.PluginManager") or nil
+local DebugPlugin = okDialogue and require("LoveDialogue.plugins.DebugPlugin") or nil
+
+local myDialogue = nil
+local savedState = nil
+local config = nil
+local nextScriptPath = nil
+local hintFont = nil
+local bgColor = { 0.1, 0.1, 0.2, 1 }
+
+local CONTROLS = "Controls: Space/Enter (Next)  |  F (Skip)  |  S (Save)  |  L (Load)  |  Esc (Quit)"
+
+local function onSignal(name, args)
+	if name == "ChangeBG" then
+		local r, g, b = tostring(args):match("(%S+)%s+(%S+)%s+(%S+)")
+		if r and g and b then
+			bgColor = { tonumber(r), tonumber(g), tonumber(b), 1 }
+		end
+	elseif name == "LoadScript" then
+		nextScriptPath = args
+	elseif name == "QuitGame" then
+		if love.event then
+			love.event.quit()
+		end
+	elseif name == "PlaySound" then
+		local source = love.audio.newSource(args, "static")
+		source:play()
+	end
+end
+
+local function startDialogue(path)
+	myDialogue = LoveDialogue.play(path, config)
+	myDialogue.onSignal = onSignal
+end
+
+-- Vertical gradient background, matching the upstream demo's love.draw.
+local function drawBackground(_, x, y, width, height, love)
+	love.graphics.push("all")
+	for i = 0, height do
+		local shade = (i / height) * 0.1
+		love.graphics.setColor(bgColor[1] + shade, bgColor[2] + shade, bgColor[3] + shade, 1)
+		love.graphics.line(x, y + i, x + width, y + i)
+	end
+	love.graphics.pop()
+end
+
+-- The dialogue box / portraits / indicator, drawn by Love-Dialogue itself.
+-- Wrapped in push/pop so its color/font/transform state never leaks into Glyph.
+local function drawDialogue(_, _, _, _, _, love)
+	if not (myDialogue and myDialogue.state.isActive) then
+		return
+	end
+	love.graphics.push("all")
+	myDialogue:draw()
+	love.graphics.pop()
+end
+
+local function drawControls(_, x, y, width, height, love)
+	love.graphics.push("all")
+	if hintFont then
+		love.graphics.setFont(hintFont)
+	end
+	love.graphics.setColor(1, 1, 1, 0.6)
+	love.graphics.print(CONTROLS, x + 20, y + height - 30)
+	love.graphics.pop()
+end
+
+local function Demo()
+	return ui.stack({ width = "100%", height = "100%" }, {
+		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, draw = drawBackground }),
+		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, zIndex = 10, draw = drawDialogue }),
+		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, zIndex = 20, draw = drawControls }),
+	})
+end
+
+local function MissingDialogue()
+	return ui.column({
+		width = "100%",
+		height = "100%",
+		padding = 30,
+		gap = 12,
+		justify = "center",
+		style = { background = { 0.1, 0.1, 0.2, 1 } },
+	}, {
+		ui.text("Love-Dialogue demo", { textStyle = "h1", style = { color = { 1, 1, 1, 1 } } }),
+		ui.text(
+			"The vendored Love-Dialogue copy under examples/dialogue/vendor could not be loaded.",
+			{ wrap = true, width = 640, style = { color = { 0.8, 0.8, 0.85, 1 } } }
+		),
+		ui.text(tostring(dialogueLoadError or ""), {
+			wrap = true,
+			width = 640,
+			textStyle = "caption",
+			style = { color = { 1, 0.5, 0.5, 1 } },
+		}),
+	})
+end
+
+return {
+	id = "dialogue",
+	label = "Dialogue",
+	window = {
+		width = 1024,
+		height = 768,
+		resizable = true,
+		title = "LoveDialogue Engine Demo",
+	},
+	setup = function()
+		if not LoveDialogue then
+			return
+		end
+		love.graphics.setDefaultFilter("nearest", "nearest")
+		hintFont = love.graphics.newFont(14)
+
+		PluginManager:register(DebugPlugin)
+
+		config = {
+			boxHeight = 220,
+			boxWidth = 1200,
+			centerBox = true,
+			portraitEnabled = true,
+			boxColor = { 0, 0, 0, 1 },
+			borderColor = { 1, 1, 1, 1 },
+			borderWidth = 4,
+			textColor = { 1, 1, 1, 1 },
+			nameColor = { 1, 1, 1, 1 },
+			typingSpeed = 0.04,
+			padding = 20,
+			autoLayoutEnabled = true,
+			skipKey = "f",
+			character_type = 0,
+			portraitSize = 140,
+			portraitFlipH = true,
+			textSpeeds = { slow = 0.08, normal = 0.04, fast = 0.02 },
+			initialSpeedSetting = "normal",
+			autoAdvance = false,
+			autoAdvanceDelay = 2.0,
+			useNinePatch = false,
+			ninePatchPath = "demo/assets/ui/9patch.png",
+			ninePatchScale = 1.5,
+			edgeWidth = 12,
+			edgeHeight = 12,
+			indicatorPath = "demo/assets/ui/indicator.png",
+			plugins = { "Debug" },
+			pluginData = { Debug = { enabled = false } },
+		}
+
+		startDialogue("demo/launcher.ld")
+	end,
+	update = function(dt)
+		if not myDialogue then
+			return
+		end
+		if nextScriptPath then
+			myDialogue:destroy()
+			startDialogue(nextScriptPath)
+			nextScriptPath = nil
+			return
+		end
+		myDialogue:update(dt)
+	end,
+	component = function()
+		if not LoveDialogue then
+			return MissingDialogue()
+		end
+		return Demo()
+	end,
+	keypressed = function(key)
+		if not myDialogue then
+			return
+		end
+		if key == "escape" then
+			if love.event then
+				love.event.quit()
+			end
+			return
+		elseif key == "s" then
+			savedState = myDialogue:saveState()
+			print("Game Saved!", savedState.line)
+		elseif key == "l" then
+			if savedState then
+				print("Loading Save...", savedState.line)
+				myDialogue:loadState(savedState)
+			end
+		end
+		myDialogue:keypressed(key)
+	end,
+}

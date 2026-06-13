@@ -196,6 +196,7 @@ Examples should demonstrate real workflows, not marketing pages:
 - `examples/performance`: large data, memo/static, bounded work.
 - `examples/styles`: themes, variants, transitions, shader styling.
 - `examples/dashboard`: dense debugger/admin UI.
+- `examples/dialogue`: faithful port of the upstream Love-Dialogue demo; the app-provided library draws the dialogue box/portraits/choices while Glyph only hosts and composites the demo's gradient, box, and controls hint (no extra Glyph UI). Vendors the library under `vendor/` and the demo assets/scripts under `demo/`, with signal-driven script switching and a graceful missing-dependency fallback.
 - `examples/hud-primitives`: meters, images, shapes, clipping, stencil, dynamic HUD panels.
 - `examples/i18n`: backend-agnostic translation, cache keys, memoization.
 - `examples/juice`: feedback sequences, blob buttons, app-owned particles/shake, and audio metadata.

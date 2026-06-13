@@ -1,0 +1,64 @@
+local ThemeParser = {}
+
+local PROPERTY_MAP = {
+    box_color = "boxColor",
+    border_color = "borderColor",
+    border_width = "borderWidth",
+    text_color = "textColor",
+    name_color = "nameColor",
+    font_size = "fontSize",
+    name_font_size = "nameFontSize",
+    box_height = "boxHeight",
+    box_width = "boxWidth",
+    padding = "padding",
+    nine_patch_scale = "ninePatchScale",
+    typing_speed = "typingSpeed",
+    fade_in = "fadeInDuration",
+    fade_out = "fadeOutDuration",
+    portrait_size = "portraitSize",
+    use_nine_patch = "useNinePatch",
+    center_box = "centerBox"
+}
+
+function ThemeParser.parseColor(str)
+    local r, g, b, a = str:match("(%d+)%s*,%s*(%d+)%s*,%s*(%d+)%s*,%s*(%d+)")
+    return r and {tonumber(r)/255, tonumber(g)/255, tonumber(b)/255, tonumber(a)/255} or nil
+end
+
+function ThemeParser.parseTheme(path)
+    local theme, section = {}, nil
+    local content = love.filesystem.read(path)
+    if not content then return nil end
+
+    for line in content:gmatch("[^\r\n]+") do
+        if line:match("^%[theme%]") then section = "theme"
+        elseif line:match("^%[") then section = nil
+        elseif section == "theme" then
+            local k, v = line:match("^%s*([%w_]+)%s*:%s*(.+)%s*$")
+            if k and v then
+                local mapK = PROPERTY_MAP[k] or k
+                if k:match("color$") then
+                    theme[mapK] = ThemeParser.parseColor(v)
+                elseif v == "true" then
+                    theme[mapK] = true
+                elseif v == "false" then
+                    theme[mapK] = false
+                else
+                    theme[mapK] = tonumber(v)
+                end
+            end
+        end
+    end
+    return theme
+end
+
+function ThemeParser.applyTheme(dialogue, theme)
+    for k, v in pairs(theme) do
+        dialogue.config[k] = v
+    end
+    if theme.fontSize or theme.nameFontSize or theme.boxHeight or theme.padding then
+        if dialogue.adjustLayout then dialogue:adjustLayout() end
+    end
+end
+
+return ThemeParser
