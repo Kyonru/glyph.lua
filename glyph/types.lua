@@ -1072,6 +1072,8 @@ local GlyphDialogueChoice = {}
 ---@field height? number native quad height
 ---@field size? number target display size
 ---@field flipH? boolean
+---@field scale? number character transform scale (animatable)
+---@field rotation? number character transform rotation in radians
 ---@field offsetX? number
 ---@field offsetY? number
 ---@field alpha? number
@@ -1082,6 +1084,7 @@ local GlyphDialoguePortrait = {}
 ---@field status? string
 ---@field opacity? number
 ---@field speaker GlyphDialogueRenderModelSpeaker
+---@field expression? string
 ---@field text GlyphDialogueRenderModelText
 ---@field effects? table
 ---@field portrait? GlyphDialoguePortrait
@@ -1107,6 +1110,7 @@ local GlyphDialogueComponentProps = {}
 ---@field instance? table an existing Love-Dialogue instance to wrap
 ---@field onSignal? fun(name: string, args: any)
 ---@field font? any
+---@field portraitPop? boolean|{ duration?: number, from?: number } portrait scale-pop on change (default on); false disables
 local GlyphDialogueOptions = {}
 
 ---@class GlyphDialogueAdapter

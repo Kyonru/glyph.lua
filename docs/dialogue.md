@@ -85,10 +85,33 @@ box instead of using `component`.
 When the active character has a portrait (defined with `@atlas`/`@rect`,
 `@sheet`/`@frame`, or `@portrait` in the script) and `portraitEnabled` is not
 `false`, `model.portrait` carries the love `Image`, the `quad` region, the native
-size, the configured `portraitSize`, and `flipH`. `component` draws it bottom-left
-of the box and lays the text out beside it (the same place Love-Dialogue's own
+size, the configured `portraitSize`, `flipH`, and the character transform
+(`scale`, `rotation`, `offsetX`, `offsetY`). `component` draws it bottom-left of
+the box and lays the text out beside it (the same place Love-Dialogue's own
 renderer puts it). The expression follows `currentExpression`, falling back to
 `Default`.
+
+### Animated size
+
+The drawn size is `portraitSize × scale × pop`:
+
+- **Character transform** — the portrait honors `char.scale` (and `rotation`,
+  `x`/`y`), so any animation Love-Dialogue tweens onto the character, or that your
+  code sets, animates the portrait.
+- **Pop on change** — when the speaker or expression changes, `component` scales
+  the portrait up from a smaller value with an ease-out-back overshoot, around its
+  bottom-center. It is on by default; tune or disable it with the `portraitPop`
+  option:
+
+```lua
+local dialogue = ui.dialogue.new({
+  library = LoveDialogue,
+  portraitPop = { duration = 0.22, from = 0.8 }, -- or false to disable
+})
+```
+
+The pop is driven by the adapter's clock, so call `dialogue:update(dt)` each
+frame.
 
 ## Inline text effects
 

@@ -128,8 +128,9 @@ local function drawCaret(love, x, y, width, height, color, opacity, time)
 end
 
 -- Draws a character portrait (a love Image + optional quad) scaled to `size`,
--- mirrored when flipH. Mirrors Love-Dialogue's LoveCharacter:drawPortrait.
-local function drawPortraitImage(love, portrait, x, y, size, opacity)
+-- mirrored when flipH and rotated around its center. Mirrors Love-Dialogue's
+-- LoveCharacter:drawPortrait, plus optional rotation.
+local function drawPortraitImage(love, portrait, x, y, size, opacity, rotation)
   if not portrait or not portrait.texture then
     return
   end
@@ -148,12 +149,25 @@ local function drawPortraitImage(love, portrait, x, y, size, opacity)
   end
   graphics.push("all")
   graphics.setColor(1, 1, 1, (portrait.alpha or 1) * (opacity or 1))
+  if rotation and rotation ~= 0 then
+    local cx, cy = x + size / 2, y + size / 2
+    graphics.translate(cx, cy)
+    graphics.rotate(rotation)
+    graphics.translate(-cx, -cy)
+  end
   if portrait.quad then
     graphics.draw(portrait.texture, portrait.quad, x, y, 0, sx, sy, ox, 0)
   else
     graphics.draw(portrait.texture, x, y, 0, sx, sy, ox, 0)
   end
   graphics.pop()
+end
+
+-- Ease-out-back: overshoots slightly past 1.0 then settles, giving a "pop".
+local function easeOutBack(p)
+  local c1 = 1.70158
+  local c3 = c1 + 1
+  return 1 + c3 * (p - 1) ^ 3 + c1 * (p - 1) ^ 2
 end
 
 local function mergeInto(base, extra)
@@ -195,6 +209,10 @@ local function buildModel(instance)
         height = expr.h,
         size = config.portraitSize or 100,
         flipH = config.portraitFlipH or false,
+        -- character transform: honored by the renderer so app/library tweens
+        -- (scale/position/rotation) animate the portrait.
+        scale = char.scale or 1,
+        rotation = char.rotation or 0,
         offsetX = char.x or 0,
         offsetY = char.y or 0,
         alpha = char.alpha,
@@ -207,6 +225,7 @@ local function buildModel(instance)
     status = s.status,
     opacity = s.boxOpacity,
     speaker = { name = s.currentCharacter, color = char and char.nameColor },
+    expression = s.currentExpression,
     text = { full = s.fullText, shown = s.displayedText, waiting = s.waitingForInput },
     effects = s.effects,
     portrait = portrait,
@@ -296,6 +315,38 @@ function Adapter:update(dt)
   if self.instance then
     self.instance:update(dt)
   end
+  self:trackPortrait()
+end
+
+-- Detect when the visible portrait (speaker or expression) changes so the pop
+-- animation can restart from that moment.
+function Adapter:trackPortrait()
+  local model = self:model()
+  local key = nil
+  if model and model.portrait then
+    key = (model.speaker and model.speaker.name or "") .. "|" .. tostring(model.expression)
+  end
+  if key ~= self.portraitKey then
+    self.portraitKey = key
+    self.portraitChangeAt = key and self.elapsed or nil
+  end
+end
+
+-- Scale multiplier for the portrait "pop" since the last change. Returns 1 when
+-- disabled (opts.portraitPop == false) or once the animation completes. Pass
+-- `portraitPop = { duration = ..., from = ... }` to tune it.
+function Adapter:portraitPopScale()
+  local pop = self.opts.portraitPop
+  if pop == false or not self.portraitChangeAt then
+    return 1
+  end
+  local duration = (type(pop) == "table" and pop.duration) or 0.22
+  local from = (type(pop) == "table" and pop.from) or 0.8
+  local t = self.elapsed - self.portraitChangeAt
+  if t >= duration then
+    return 1
+  end
+  return from + (1 - from) * easeOutBack(t / duration)
 end
 
 function Adapter:keypressed(key)
@@ -437,7 +488,12 @@ function Adapter:component(props)
         accessibilityHidden = true,
         draw = function(_, x, y, _, height, love)
           local p = model.portrait
-          drawPortraitImage(love, p, x + (p.offsetX or 0), y + height - pSize + (p.offsetY or 0), pSize, opacity)
+          -- Honor the character transform (scale) and the built-in pop, scaling
+          -- around the portrait's bottom-center so it grows from the floor.
+          local scaled = pSize * (p.scale or 1) * self:portraitPopScale()
+          local dx = x + (pSize - scaled) / 2 + (p.offsetX or 0)
+          local dy = y + height - scaled + (p.offsetY or 0)
+          drawPortraitImage(love, p, dx, dy, scaled, opacity, p.rotation)
         end,
       }),
       Components.column({ flex = 1, height = "100%", gap = props.gap or 8 }, content),
@@ -470,6 +526,8 @@ function Dialogue.new(rootUi, opts)
     instance = nil,
     onSignal = opts.onSignal,
     elapsed = 0,
+    portraitKey = nil,
+    portraitChangeAt = nil,
   }, Adapter)
   if opts.instance then
     adapter:wrap(opts.instance)

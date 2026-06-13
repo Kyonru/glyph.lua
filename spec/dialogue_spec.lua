@@ -242,6 +242,7 @@ describe("dialogue adapter", function()
     assert.are.equal(120, model.portrait.size)
     assert.are.equal(100, model.portrait.width)
     assert.is_true(model.portrait.flipH)
+    assert.are.equal(1, model.portrait.scale)
   end)
 
   it("omits the portrait when portraits are disabled", function()
@@ -277,5 +278,49 @@ describe("dialogue adapter", function()
     }
     assert.are.equal(1, #collect(Dialogue.new(fakeUi, { instance = withPortrait }):component(), "row"))
     assert.are.equal(0, #collect(Dialogue.new(fakeUi, { instance = withoutPortrait }):component(), "row"))
+  end)
+
+  local function portraitStub(getExpression)
+    return {
+      update = function() end,
+      renderModel = function()
+        return {
+          active = true,
+          speaker = { name = "Hero" },
+          expression = getExpression(),
+          text = { shown = "" },
+          choices = {},
+          portrait = { texture = "T", width = 100, height = 100, size = 100, scale = 1 },
+        }
+      end,
+    }
+  end
+
+  it("pops the portrait scale on speaker/expression change", function()
+    local expr = "A"
+    local adapter = Dialogue.new(fakeUi, { instance = portraitStub(function()
+      return expr
+    end) })
+
+    adapter:update(0) -- first appearance: pop starts
+    assert.is_true(adapter:portraitPopScale() < 1)
+
+    adapter:update(1.0) -- past the pop duration: settled
+    assert.are.equal(1, adapter:portraitPopScale())
+
+    expr = "B" -- expression changes
+    adapter:update(0) -- detect change: pop restarts
+    assert.is_true(adapter:portraitPopScale() < 1)
+  end)
+
+  it("portraitPop = false disables the pop", function()
+    local adapter = Dialogue.new(fakeUi, {
+      instance = portraitStub(function()
+        return "A"
+      end),
+      portraitPop = false,
+    })
+    adapter:update(0)
+    assert.are.equal(1, adapter:portraitPopScale())
   end)
 end)
