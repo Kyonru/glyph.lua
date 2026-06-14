@@ -174,4 +174,5 @@ end
 
 - [Getting Started](getting-started.md) — hooks, state, and effects
 - [Components](components.md) — full component reference
+- [Game UI Patterns](game-ui-patterns.md) — shops, HUDs, overlays, and debug panels
 - [Scenes & Modals](scenes-and-modals.md) — layered UI and transitions

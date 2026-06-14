@@ -19,6 +19,11 @@ Build with declarative components where useful, and use custom draw for game-spe
 
 Core owns primitives. Game-specific look belongs in examples/app code.
 
+Game UI is more than menus. For shop/combat loops, compose fixed virtual
+viewports, dense cards, HUD state, tooltips, controller focus, feedback hooks,
+and optional debug overlays from primitives rather than inventing app-named
+widgets.
+
 ## Choosing Layout
 
 Use:
@@ -384,6 +389,27 @@ Use `ui.transitions.animate({ enter = ..., exit = ... })` when a scene/modal tra
 If an app uses Push or Shove, configure Glyph through `window.viewport` or attach an existing backend instance. Keep the UI in virtual coordinates and compare with `ui.viewport()`.
 
 Do not expose Push/Shove-specific assumptions in examples unless the example is specifically about viewport backends.
+
+## Shop, HUD, And Debug Loops
+
+For shop cards, passive cards, and class icons, use compact `ui.button`,
+`ui.grid`, `ui.row`, `ui.image`, sprite-sheet quads, and custom draw. Keep buy
+rules, reroll rules, class math, and passive effects in app state. Attach
+`feedback` for hover/focus/press/activate, and call `ui.feedback.play` manually
+for purchase, denied, reroll, and level-up events.
+
+For combat HUDs, use a root `ui.stack`, pinned absolute rows/columns, `ui.meter`
+for gauges, and non-interactive decoration with `interactive = false` and
+`accessibilityHidden = true`.
+
+For tooltips, collect `onLayout` bounds from the hovered/focused node and render
+the floating detail with `ui.portal`. Use `ui.richText` with an app-provided
+backend for inline stat color/effects; translate game-specific tags in app code.
+
+For live tuning and debug panels, use non-blocking scene overlays. Set
+`input = false` for read-only telemetry, or `input = true` with
+`blocking = false` when the panel should be clickable but let missed input pass
+through to the game.
 
 ## Dialogue UI
 

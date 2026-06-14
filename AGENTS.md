@@ -2,6 +2,13 @@
 
 This repository is `glyph.lua`: a declarative UI runtime for Love2D 11.x, shaped for game tools, debugger panels, and in-game HUDs. Treat it as a small UI engine, not an app-specific widget pack.
 
+Game UI is more than menu screens. Treat shop flow, HUD state, live combat
+overlays, tooltips, controller focus, visual feedback loops, and debug/tuning
+panels as first-class Glyph workflows. Extract reusable primitives from those
+workflows, but keep game-specific cards, economy rules, class icons, enemy
+spawner policy, text tags, particles, camera shake, and sound packs in examples
+or app code.
+
 ## Project Shape
 
 - Public entrypoint: `glyph.lua`
@@ -64,6 +71,9 @@ Glyph should provide primitives and reusable systems:
 - Adapter systems: backend-agnostic i18n, accessibility semantics/events, optional Push/Shove fixed viewport support, and optional Menori scene/world-UI support.
 - Animation systems: first-class visual-only enter/exit animation powered by vendored Flux.
 - Generic helpers for building custom game UI, such as draw context helpers, sprite sheet quad helpers, and color/math helpers.
+- Patterns and docs for game-shaped workflows: shop cards, HUD overlays,
+  tooltips, controller navigation, feedback loops, and live tuning panels built
+  from primitives.
 
 Keep game-specific widgets out of core. Examples may include things like HUD buttons, meters, blob transitions, particle backgrounds, animated menus, or game-themed controls, but core should expose the primitives that make those easy.
 

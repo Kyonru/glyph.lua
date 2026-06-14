@@ -18,6 +18,11 @@ Use this skill when changing Glyph internals: components, layout, runtime, style
 
 Core belongs in `glyph/` only when it is reusable across many games and tools. Game-specific widgets and visual motifs belong in `examples/`.
 
+Treat game loops as a primary design target, not just pause/menu screens. Shop
+flow, HUD state, live combat overlays, tooltips, controller focus, feedback
+loops, and debug/tuning panels should inform primitives and docs. Keep the game
+nouns themselves in examples or apps.
+
 ## Core Boundaries
 
 Add to core:
@@ -40,6 +45,7 @@ Add to core:
 Keep out of core:
 
 - Persona-style menu widgets.
+- Shop-card, passive-card, class-icon, or reroll widgets tied to one game.
 - Health/mana-specific widgets; use generic `ui.meter`.
 - Branded blob/splat/sticker button widgets.
 - Push/Shove-specific public APIs such as `ui.push` or `ui.shove`.

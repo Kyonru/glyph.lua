@@ -76,6 +76,7 @@ nav = [
   ] },
   { "Guides" = [
     { "Navigation" = "navigation.md" },
+    { "Game UI Patterns" = "game-ui-patterns.md" },
     { "Performance" = "performance.md" },
     { "Examples" = "examples.md" },
   ] },

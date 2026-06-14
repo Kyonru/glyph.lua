@@ -40,6 +40,9 @@ The command requires Love2D and FFmpeg. Set `LOVE_BIN` or `FFMPEG_BIN` when the
 executables are not on `PATH`; on macOS the script also checks
 `/Applications/love.app/Contents/MacOS/love`.
 
+For shop/combat/debug UI patterns that combine these examples, see
+[Game UI Patterns](game-ui-patterns.md).
+
 ## Accessibility
 
 Love2D-friendly semantics demo with keyboard/gamepad focus traversal, localized labels, live region events, hidden decoration, semantic snapshots, and a fake TTS/log adapter.
