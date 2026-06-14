@@ -2850,6 +2850,20 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     drawShape(graphics, mode, shape or props.shape, bounds or self, self)
   end
 
+  ---@param mode "fill"|"line"|string
+  ---@param bounds? GlyphBounds
+  ---@return nil
+  function ctx:circle(mode, bounds)
+    drawShape(graphics, mode, { kind = "circle" }, bounds or self, self)
+  end
+
+  ---@param mode "fill"|"line"|string
+  ---@param bounds? GlyphBounds
+  ---@return nil
+  function ctx:ellipse(mode, bounds)
+    drawShape(graphics, mode, { kind = "ellipse" }, bounds or self, self)
+  end
+
   ---@param shape? boolean|GlyphShape|fun(ctx: GlyphDrawContext): any
   ---@param fn fun()
   ---@return nil
