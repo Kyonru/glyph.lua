@@ -72,9 +72,44 @@ local function withAlpha(color, opacity)
   return { color[1], color[2], color[3], (color[4] or 1) * (opacity or 1) }
 end
 
--- Word-wrapped, per-glyph effect text. `chars` index is 1-based over the clean
+-- Word-wraps `chars` (a utf8 char array) to `limit`. Returns a list of lines,
+-- each { from, to, width } with 1-based inclusive indices into `chars` and the
+-- visible pixel width (excluding any trailing space). Shared by the draw and the
+-- height measurement so they always agree.
+local function layoutWrapped(font, chars, limit)
+  local lines = {}
+  local count = #chars
+  if count == 0 then
+    return lines
+  end
+  local i, lineFrom, cx, lineWidth = 1, 1, 0, 0
+  while i <= count do
+    local j, wordWidth = i, 0
+    while j <= count and chars[j] ~= " " do
+      wordWidth = wordWidth + font:getWidth(chars[j])
+      j = j + 1
+    end
+    if cx > 0 and cx + wordWidth > limit then
+      lines[#lines + 1] = { from = lineFrom, to = i - 1, width = lineWidth }
+      lineFrom, cx, lineWidth = i, 0, 0
+    end
+    cx = cx + wordWidth
+    lineWidth = cx -- visible width up to the end of this word
+    if j <= count and chars[j] == " " then
+      cx = cx + font:getWidth(" ")
+      i = j + 1
+    else
+      i = j
+    end
+  end
+  lines[#lines + 1] = { from = lineFrom, to = count, width = lineWidth }
+  return lines
+end
+
+-- Word-wrapped, per-glyph effect text. `align` ("left" | "center" | "right")
+-- offsets each line within `limit`. `chars` index is 1-based over the clean
 -- (effect-stripped) text, matching Love-Dialogue's effect start/end indices.
-local function drawEffectText(love, text, effects, x, y, limit, baseColor, time, opacity)
+local function drawEffectText(love, text, effects, x, y, limit, baseColor, time, opacity, align)
   local graphics = love.graphics
   local font = graphics.getFont()
   if not font then
@@ -82,74 +117,36 @@ local function drawEffectText(love, text, effects, x, y, limit, baseColor, time,
   end
   local lineHeight = font:getHeight() * 1.35
   local chars = utf8Chars(text)
-  local count = #chars
-  local cx, cy = 0, 0
-  local i = 1
+  local lines = layoutWrapped(font, chars, limit)
 
   graphics.push("all")
-  while i <= count do
-    local j = i
-    local wordWidth = 0
-    while j <= count and chars[j] ~= " " do
-      wordWidth = wordWidth + font:getWidth(chars[j])
-      j = j + 1
+  for index, line in ipairs(lines) do
+    local offset = 0
+    if align == "right" then
+      offset = limit - line.width
+    elseif align == "center" then
+      offset = (limit - line.width) / 2
     end
-    if cx > 0 and cx + wordWidth > limit then
-      cx = 0
-      cy = cy + lineHeight
-    end
-    for k = i, j - 1 do
+    local cx = 0
+    local cy = (index - 1) * lineHeight
+    for k = line.from, line.to do
       local tr = transformFor(effects, k, time)
       graphics.setColor(withAlpha(tr.color or baseColor, opacity))
-      graphics.print(chars[k], x + cx + tr.dx, y + cy + tr.dy, 0, 1, 1, 0, 0, tr.shearX or 0, 0)
+      graphics.print(chars[k], x + offset + cx + tr.dx, y + cy + tr.dy, 0, 1, 1, 0, 0, tr.shearX or 0, 0)
       cx = cx + font:getWidth(chars[k])
-    end
-    if j <= count and chars[j] == " " then
-      cx = cx + font:getWidth(" ")
-      i = j + 1
-    else
-      i = j
     end
   end
   graphics.pop()
 end
 
--- Pixel height of `text` wrapped to `limit`, using the same word wrap as
--- drawEffectText, so the box can be sized to fit long lines.
+-- Pixel height of `text` wrapped to `limit`, using the same wrap as the draw.
 local function wrappedTextHeight(font, text, limit)
   if not font or not limit or limit <= 0 then
     return 0
   end
   local lineHeight = font:getHeight() * 1.35
-  local chars = utf8Chars(text)
-  local count = #chars
-  if count == 0 then
-    return lineHeight
-  end
-  local cx, lines = 0, 1
-  local i = 1
-  while i <= count do
-    local j = i
-    local wordWidth = 0
-    while j <= count and chars[j] ~= " " do
-      wordWidth = wordWidth + font:getWidth(chars[j])
-      j = j + 1
-    end
-    if cx > 0 and cx + wordWidth > limit then
-      cx = 0
-      lines = lines + 1
-    end
-    for k = i, j - 1 do
-      cx = cx + font:getWidth(chars[k])
-    end
-    if j <= count and chars[j] == " " then
-      cx = cx + font:getWidth(" ")
-      i = j + 1
-    else
-      i = j
-    end
-  end
-  return lines * lineHeight
+  local lines = layoutWrapped(font, utf8Chars(text), limit)
+  return math.max(1, #lines) * lineHeight
 end
 
 local function drawCaret(love, x, y, width, height, color, opacity, time)
@@ -585,7 +582,6 @@ local function buildPortraitNode(self, model, o)
 
   local boxProps = {
     width = o.width or pSize,
-    height = o.height or "100%",
     interactive = false,
     accessibilityHidden = true,
     draw = function(_, x, y, width, height, love, _, ctx)
@@ -608,6 +604,12 @@ local function buildPortraitNode(self, model, o)
       end
     end,
   }
+  -- Fill via flex (e.g. below a name in a column) or take an explicit/full height.
+  if o.flex then
+    boxProps.flex = o.flex
+  else
+    boxProps.height = o.height or "100%"
+  end
   if o.layout then
     mergeInto(boxProps, o.layout)
   end
@@ -628,12 +630,18 @@ function Adapter:component(props)
   local textColor = props.textColor or theme.textColor or { 1, 1, 1, 1 }
   local accent = props.accent or theme.accent or { 1, 0.86, 0.4, 1 }
   local font = props.font or self.opts.font
+  local align = props.align or self.opts.textAlign or "left" -- body text alignment
 
   local content = {}
 
+  -- The speaker name sits on top of the body text, following the text alignment
+  -- (wrap = true so Glyph's printf honors textAlign even for a one-line name).
   if model.speaker and model.speaker.name and model.speaker.name ~= "" then
     content[#content + 1] = Components.text(model.speaker.name, {
       textStyle = "h2",
+      width = "100%",
+      wrap = true,
+      textAlign = align,
       style = { color = model.speaker.color or textColor, opacity = opacity },
     })
   end
@@ -651,7 +659,7 @@ function Adapter:component(props)
       mfont = mfont or (love.graphics.getFont and love.graphics.getFont())
       -- Measure the full line at the real width so the box can size to fit it.
       self:measureBody(mfont, model.text and model.text.full or "", width)
-      drawEffectText(love, model.text and model.text.shown or "", model.effects, x, y, width, textColor, self.elapsed, opacity)
+      drawEffectText(love, model.text and model.text.shown or "", model.effects, x, y, width, textColor, self.elapsed, opacity, align)
       if model.text and model.text.waiting and not model.choiceMode then
         drawCaret(love, x, y, width, height, textColor, opacity, self.elapsed)
       end
@@ -684,8 +692,8 @@ function Adapter:component(props)
     content[#content + 1] = Components.column({ width = "100%", gap = 4 }, choiceNodes)
   end
 
-  -- Place the portrait (left/right) beside the text, or drop it when
-  -- props.portrait == false; otherwise the content fills the box.
+  -- Place the portrait (left/right) beside the content, or drop it when
+  -- props.portrait == false; otherwise the content (name on top) fills the box.
   local side = props.portrait
   if side == nil then
     side = self.opts.portraitSide or "left"

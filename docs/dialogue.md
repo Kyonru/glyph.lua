@@ -158,6 +158,20 @@ ui.dialogue.new({
 `portraitStencil` accepts a `GlyphShape` (e.g. `{ kind = "circle" }`) or a
 function, applied with `ctx:stencil` to mask the image.
 
+The **speaker name** sits on top of the body text and follows the text alignment
+(`align`), so right-aligned text puts the name at the top-right (next to a
+right-side portrait). Per-line side is just `component({ portrait = "left"|"right" })`
+— for a two-sided conversation, drive it from `dialogue:model().speaker.name`:
+
+```lua
+local m = dialogue:model()
+local side = (m and m.speaker.name == "Wiisan") and "right" or "left"
+dialogue:component({ portrait = side, align = side }) -- portrait + name + text on that side
+```
+
+`align` (`"left"` | `"center"` | `"right"`, default `opts.textAlign`) aligns the
+body text — handy to right-align a right-side speaker.
+
 ### Portrait outside the box
 
 For a bust on top of the box (or anywhere), drop the inline portrait and place a

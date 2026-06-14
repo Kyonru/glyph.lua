@@ -62,6 +62,19 @@ local function collect(node, kind, out)
   return out
 end
 
+-- The portrait box (vs. the body box) is the drawable box with a numeric width.
+local function findPortraitBox(node)
+  if node.type == "box" and node.props and node.props.draw and type(node.props.width) == "number" then
+    return node
+  end
+  for _, child in ipairs(node.children or {}) do
+    local found = findPortraitBox(child)
+    if found then
+      return found
+    end
+  end
+end
+
 describe("dialogue adapter", function()
   it("normalizes the model from renderModel()", function()
     local instance = methodStub({
@@ -400,18 +413,7 @@ describe("dialogue adapter", function()
         end,
       }
       local node = Dialogue.new(fakeUi, { instance = instance, portraitAlign = align }):component()
-      local row
-      local function findRow(n)
-        if n.type == "row" then
-          row = n
-          return
-        end
-        for _, c in ipairs(n.children or {}) do
-          findRow(c)
-        end
-      end
-      findRow(node)
-      local portraitBox = row.children[1]
+      local portraitBox = findPortraitBox(node)
       local capturedY
       local fakeLove = {
         graphics = setmetatable({
@@ -445,17 +447,7 @@ describe("dialogue adapter", function()
         end,
       }
       local node = Dialogue.new(fakeUi, { instance = instance, portraitFit = fit }):component()
-      local row
-      local function findRow(n)
-        if n.type == "row" then
-          row = n
-          return
-        end
-        for _, c in ipairs(n.children or {}) do
-          findRow(c)
-        end
-      end
-      findRow(node)
+      local portraitBox = findPortraitBox(node)
       local capturedSx
       local fakeLove = {
         graphics = setmetatable({
@@ -466,7 +458,7 @@ describe("dialogue adapter", function()
           return function() end
         end }),
       }
-      row.children[1].props.draw(row.children[1], 0, 0, 120, boxHeight, fakeLove)
+      portraitBox.props.draw(portraitBox, 0, 0, 120, boxHeight, fakeLove)
       return capturedSx * 100 -- scaled size = sx * native width
     end
 
@@ -531,6 +523,52 @@ describe("dialogue adapter", function()
     }
     bodyBox.props.draw(bodyBox, 0, 0, 100, 80, fakeLove)
     assert.is_true(adapter.bodyTextHeight > 0)
+  end)
+
+  it("aligns the body text left/center/right", function()
+    local function firstPrintX(align)
+      local instance = {
+        renderModel = function()
+          return { active = true, speaker = { name = "H" }, text = { shown = "hi", full = "hi" }, choices = {} }
+        end,
+      }
+      local node = Dialogue.new(fakeUi, { instance = instance, textAlign = align }):component()
+      local bodyBox
+      local function find(n)
+        if n.type == "box" and n.props and type(n.props.draw) == "function" and n.props.width == "100%" then
+          bodyBox = n
+        end
+        for _, c in ipairs(n.children or {}) do
+          find(c)
+        end
+      end
+      find(node)
+      local firstX
+      local fakeLove = {
+        graphics = setmetatable({
+          getFont = function()
+            return setmetatable({}, { __index = function()
+              return function()
+                return 16
+              end
+            end })
+          end,
+          setFont = function() end,
+          print = function(_, px)
+            firstX = firstX or px
+          end,
+        }, { __index = function()
+          return function() end
+        end }),
+      }
+      bodyBox.props.draw(bodyBox, 0, 0, 300, 100, fakeLove)
+      return firstX
+    end
+
+    -- "hi" = 2 × 16px = 32 wide in a 300px line
+    assert.are.equal(0, firstPrintX("left"))
+    assert.are.equal(268, firstPrintX("right")) -- 300 - 32
+    assert.are.equal(134, firstPrintX("center")) -- (300 - 32) / 2
   end)
 
   it("exposes the fade transition from .state (and omits it at alpha 0)", function()
@@ -603,7 +641,7 @@ describe("dialogue adapter", function()
     local function portraitIndex(side)
       local row = findRow(Dialogue.new(fakeUi, { instance = portraitModelStub(), portraitSide = side }):component())
       for i, c in ipairs(row.children) do
-        if c.type == "box" then
+        if findPortraitBox(c) then -- the portrait+name column
           return i
         end
       end
@@ -619,13 +657,7 @@ describe("dialogue adapter", function()
 
   it("auto-flips the portrait when on the right", function()
     local function sxSign(side)
-      local row = findRow(Dialogue.new(fakeUi, { instance = portraitModelStub(), portraitSide = side }):component())
-      local pbox
-      for _, c in ipairs(row.children) do
-        if c.type == "box" then
-          pbox = c
-        end
-      end
+      local pbox = findPortraitBox(Dialogue.new(fakeUi, { instance = portraitModelStub(), portraitSide = side }):component())
       local sx
       local fakeLove = {
         graphics = setmetatable({

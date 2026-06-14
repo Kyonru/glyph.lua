@@ -1117,6 +1117,7 @@ local GlyphDialogueRenderModel = {}
 ---@field frame? GlyphDialogueFrame custom box frame (replaces the default border)
 ---@field flow? boolean return a flow node (not absolutely positioned) so it can be composed in a column/row
 ---@field width? number|string width when flow (default "100%")
+---@field align? "left"|"center"|"right" body text alignment (default opts.textAlign or "left")
 local GlyphDialogueComponentProps = {}
 
 ---@class GlyphDialoguePortraitProps
@@ -1151,6 +1152,7 @@ local GlyphDialoguePortraitProps = {}
 ---@field portraitFrame? GlyphDialogueFrame frame drawn behind the inline portrait
 ---@field portraitStencil? GlyphShape|fun(ctx: GlyphDrawContext): any mask applied to the inline portrait
 ---@field frame? GlyphDialogueFrame default custom box frame (replaces the default border)
+---@field textAlign? "left"|"center"|"right" default body text alignment
 local GlyphDialogueOptions = {}
 
 ---@class GlyphDialogueAdapter

@@ -197,7 +197,12 @@ local function Demo()
 				})
 			end
 		else
-			local box = adapter:component({ margin = 30, layout = { zIndex = 12 } })
+			-- Same full-width box, but the portrait + speaker name render on the
+			-- right for Wiisan and on the left for everyone else. Only the content
+			-- side changes (model.speaker.name drives it); the box stays put.
+			local model = adapter:model()
+			local side = (model and model.speaker and model.speaker.name == "Wiisan") and "right" or "left"
+			local box = adapter:component({ margin = 30, portrait = side, align = side, layout = { zIndex = 12 } })
 			if box then
 				children[#children + 1] = box
 			end
