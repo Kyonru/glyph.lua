@@ -55,6 +55,10 @@ end
 ---@return GlyphNode
 function Components.text(value, props)
   props = normalizeProps(props)
+  -- `rich = true` is shorthand for `format = "sysl"`; an explicit format wins.
+  if props.rich == true and props.format == nil then
+    props.format = "sysl"
+  end
   local node = createNode("text", props, nil)
   node.value = I18n.resolveText(value, props)
   return node
@@ -304,6 +308,7 @@ function Components.panel(props, children)
     display = "column",
     gap = props.gap or 8,
     padding = props.padding or 10,
+    margin = props.margin,
     width = props.width,
     height = props.height,
     grow = props.grow,

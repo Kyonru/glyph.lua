@@ -25,6 +25,25 @@ local function spacing(value)
   }
 end
 
+local ZERO_SPACING = { top = 0, right = 0, bottom = 0, left = 0 }
+
+-- Margin around a flow child. Returns numeric edges (non-numbers, e.g. percent
+-- strings, collapse to 0 — margin is pixel-only) and a shared zero table when
+-- absent, so the common no-margin path allocates nothing.
+local function marginOf(props)
+  if not props or props.margin == nil then
+    return ZERO_SPACING
+  end
+
+  local m = spacing(props.margin)
+  return {
+    top = type(m.top) == "number" and m.top or 0,
+    right = type(m.right) == "number" and m.right or 0,
+    bottom = type(m.bottom) == "number" and m.bottom or 0,
+    left = type(m.left) == "number" and m.left or 0,
+  }
+end
+
 local function clamp(value, minValue, maxValue)
   if minValue ~= nil and value < minValue then
     value = minValue
@@ -673,17 +692,18 @@ function Layout.compute(root, context)
       child.layout.assignedHeight = nil
 
       if not isAbsolute(child) then
-        local childAvailableWidth = innerCrossLimit
-        local childAvailableHeight = innerMainLimit
-        if direction == "row" then
-          childAvailableWidth = innerMainLimit
-          childAvailableHeight = innerCrossLimit
-        end
+        local m = marginOf(child.props)
+        local mMain = (direction == "row") and (m.left + m.right) or (m.top + m.bottom)
+        local mCross = (direction == "row") and (m.top + m.bottom) or (m.left + m.right)
+        local availMain = innerMainLimit and math.max(0, innerMainLimit - mMain) or innerMainLimit
+        local availCross = innerCrossLimit and math.max(0, innerCrossLimit - mCross) or innerCrossLimit
+        local childAvailableWidth = (direction == "row") and availMain or availCross
+        local childAvailableHeight = (direction == "row") and availCross or availMain
 
         visit(child, childAvailableWidth, childAvailableHeight)
         local basis = flexBasis(child, direction)
-        totalMain = totalMain + basis
-        maxCross = math.max(maxCross, cross(child, direction))
+        totalMain = totalMain + basis + mMain
+        maxCross = math.max(maxCross, cross(child, direction) + mCross)
         growTotal = growTotal + flexGrow(child.props)
         shrinkTotal = shrinkTotal + flexShrink(child.props) * basis
 
@@ -705,7 +725,10 @@ function Layout.compute(root, context)
             setMain(child, direction, assigned)
             assignMainConstraint(child, direction, assigned)
             child.dirty.layout = true
-            visit(child, assignedWidthFor(child, direction, assigned, innerCrossLimit), assignedHeightFor(child, direction, assigned, innerCrossLimit))
+            local m = marginOf(child.props)
+            local mCross = (direction == "row") and (m.top + m.bottom) or (m.left + m.right)
+            local availCross = innerCrossLimit and math.max(0, innerCrossLimit - mCross) or innerCrossLimit
+            visit(child, assignedWidthFor(child, direction, assigned, availCross), assignedHeightFor(child, direction, assigned, availCross))
           end
         end
       end
@@ -720,7 +743,10 @@ function Layout.compute(root, context)
             setMain(child, direction, assigned)
             assignMainConstraint(child, direction, assigned)
             child.dirty.layout = true
-            visit(child, assignedWidthFor(child, direction, assigned, innerCrossLimit), assignedHeightFor(child, direction, assigned, innerCrossLimit))
+            local m = marginOf(child.props)
+            local mCross = (direction == "row") and (m.top + m.bottom) or (m.left + m.right)
+            local availCross = innerCrossLimit and math.max(0, innerCrossLimit - mCross) or innerCrossLimit
+            visit(child, assignedWidthFor(child, direction, assigned, availCross), assignedHeightFor(child, direction, assigned, availCross))
           end
         end
       end
@@ -731,8 +757,11 @@ function Layout.compute(root, context)
     flowIndex = 0
     for _, child in ipairs(children) do
       if not isAbsolute(child) then
+        local m = marginOf(child.props)
         totalMain = totalMain + intrinsic(child, direction)
-        maxCross = math.max(maxCross, cross(child, direction))
+          + ((direction == "row") and (m.left + m.right) or (m.top + m.bottom))
+        maxCross = math.max(maxCross, cross(child, direction)
+          + ((direction == "row") and (m.top + m.bottom) or (m.left + m.right)))
         flowIndex = flowIndex + 1
         if flowIndex > 1 then
           totalMain = totalMain + gap
@@ -759,27 +788,34 @@ function Layout.compute(root, context)
 
     for _, child in ipairs(children) do
       if not isAbsolute(child) then
+        local m = marginOf(child.props)
+        local mainStart = (direction == "row") and m.left or m.top
+        local mainEnd = (direction == "row") and m.right or m.bottom
+        local crossStart = (direction == "row") and m.top or m.left
+        local crossEnd = (direction == "row") and m.bottom or m.right
+        local crossMargin = crossStart + crossEnd
         local childCross = cross(child, direction)
         local offsetCross = 0
 
         if align == "center" then
-          offsetCross = (innerCross - childCross) / 2
+          offsetCross = (innerCross - childCross - crossMargin) / 2
         elseif align == "end" then
-          offsetCross = innerCross - childCross
+          offsetCross = innerCross - childCross - crossMargin
         elseif align == "stretch" then
-          childCross = innerCross
-          setCross(child, direction, innerCross)
+          childCross = math.max(0, innerCross - crossMargin)
+          setCross(child, direction, childCross)
         end
 
+        cursor = cursor + mainStart
         if direction == "row" then
           child.layout.x = cursor
-          child.layout.y = pad.top + offsetCross
+          child.layout.y = pad.top + crossStart + offsetCross
         else
-          child.layout.x = pad.left + offsetCross
+          child.layout.x = pad.left + crossStart + offsetCross
           child.layout.y = cursor
         end
 
-        cursor = cursor + intrinsic(child, direction) + gap
+        cursor = cursor + intrinsic(child, direction) + mainEnd + gap
       end
     end
 
