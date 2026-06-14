@@ -1,8 +1,39 @@
 local moduleName = ...
 local glyphPrefix = moduleName and moduleName:match("^(.*)%.feedback$") or "glyph"
 
+-- Inert stand-in so feedback degrades to a no-op (instead of crashing the whole
+-- library) if the vendored Feel backend is ever absent. Every entry returns the
+-- safe default its caller expects.
+local function stubFeel()
+  return {
+    target = function()
+      return { values = {} }
+    end,
+    define = function() end,
+    get = function() end,
+    validate = function()
+      return false
+    end,
+    active = function()
+      return {}
+    end,
+    isPlaying = function()
+      return false
+    end,
+    play = function() end,
+    update = function()
+      return false
+    end,
+    clear = function() end,
+  }
+end
+
 local function loadFeel()
-  return require(glyphPrefix .. ".vendor.feel")
+  local ok, feel = pcall(require, glyphPrefix .. ".vendor.feel")
+  if ok and type(feel) == "table" then
+    return feel
+  end
+  return stubFeel()
 end
 
 local Feel = loadFeel()

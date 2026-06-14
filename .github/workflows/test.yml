@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Lua ${{ matrix.lua }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lua: ["5.4"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: leafo/gh-actions-lua@v11
+        with:
+          luaVersion: ${{ matrix.lua }}
+
+      - uses: leafo/gh-actions-luarocks@v5
+
+      - name: Install test dependencies
+        run: luarocks install busted
+
+      - name: Syntax check
+        run: |
+          luac -p glyph.lua glyph/*.lua spec/*.lua \
+            scripts/generate_doc_gifs.lua scripts/doc_gifs/*.lua
+
+      - name: Run tests
+        run: busted --verbose

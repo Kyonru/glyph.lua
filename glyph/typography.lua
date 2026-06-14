@@ -2,6 +2,46 @@ local Typography = {}
 
 local fontCache = {}
 
+-- Measuring wrapped text calls font:getWidth() once per word/candidate every
+-- layout pass, so cache it per (font, text). Outer tables are weak-keyed by the
+-- font object, so a font that goes out of scope drops its entries; a count cap
+-- bounds growth from many distinct strings.
+local widthCache = setmetatable({}, { __mode = "k" })
+local heightCache = setmetatable({}, { __mode = "k" })
+local widthCacheCount = 0
+local WIDTH_CACHE_LIMIT = 8192
+
+local function cachedWidth(font, text)
+  local key = tostring(text)
+  local perFont = widthCache[font]
+  if not perFont then
+    perFont = {}
+    widthCache[font] = perFont
+  end
+
+  local width = perFont[key]
+  if width == nil then
+    width = font:getWidth(key)
+    perFont[key] = width
+    widthCacheCount = widthCacheCount + 1
+    if widthCacheCount > WIDTH_CACHE_LIMIT then
+      widthCache = setmetatable({}, { __mode = "k" })
+      widthCacheCount = 0
+    end
+  end
+
+  return width
+end
+
+local function cachedHeight(font)
+  local height = heightCache[font]
+  if height == nil then
+    height = font:getHeight()
+    heightCache[font] = height
+  end
+  return height
+end
+
 local DEFAULT_STYLE_BY_TYPE = {
   button = "button",
   input = "input",
@@ -193,7 +233,7 @@ function Typography.measurePlain(text, props, theme, loveModule, baseStyle, defa
   local font = resolved.font
 
   if isFontObject(font) then
-    return font:getWidth(text), resolved.lineHeight or font:getHeight()
+    return cachedWidth(font, text), resolved.lineHeight or cachedHeight(font)
   end
 
   local fontSize = resolved.fontSize or theme.fontSize or 13
@@ -209,6 +249,9 @@ end
 ---@return nil
 function Typography.clearCache()
   fontCache = {}
+  widthCache = setmetatable({}, { __mode = "k" })
+  heightCache = setmetatable({}, { __mode = "k" })
+  widthCacheCount = 0
 end
 
 return Typography

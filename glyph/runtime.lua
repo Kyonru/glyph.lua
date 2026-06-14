@@ -211,7 +211,12 @@ local function assignPaths(node, path, parent)
   node.parent = parent
 
   for index, child in ipairs(node.children or {}) do
-    assignPaths(child, path .. "." .. index, node)
+    -- Prefer a stable `key` for the path segment so a node keeps its identity
+    -- (focus, hover, mid-edit input cursor, cached style) when its siblings
+    -- reorder. Without a key the positional index is used, as before.
+    local props = child.props
+    local segment = (props and props.key ~= nil) and ("k:" .. tostring(props.key)) or index
+    assignPaths(child, path .. "." .. segment, node)
   end
 end
 
