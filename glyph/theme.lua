@@ -143,6 +143,11 @@ theme.components = {
     focused = {
       borderColor = theme.accentColor,
     },
+    disabled = {
+      background = theme.disabledColor,
+      color = theme.mutedTextColor,
+      placeholderColor = theme.mutedTextColor,
+    },
   },
   tabs = {},
   tab = {
@@ -158,6 +163,10 @@ theme.components = {
     },
     pressed = {
       background = theme.surfacePressedColor,
+    },
+    disabled = {
+      background = theme.disabledColor,
+      color = theme.mutedTextColor,
     },
   },
 }
@@ -227,6 +236,9 @@ local function syncDerivedDefaults(nextTheme)
   theme.components.input.borderWidth = theme.borderWidth
   theme.components.input.radius = theme.radius
   theme.components.input.focused.borderColor = theme.accentColor
+  theme.components.input.disabled.background = theme.disabledColor
+  theme.components.input.disabled.color = theme.mutedTextColor
+  theme.components.input.disabled.placeholderColor = theme.mutedTextColor
 
   theme.components.tab.background = theme.surfaceColor
   theme.components.tab.color = theme.textColor
@@ -235,6 +247,8 @@ local function syncDerivedDefaults(nextTheme)
   theme.components.tab.active.color = theme.accentTextColor
   theme.components.tab.hover.background = theme.surfaceHoverColor
   theme.components.tab.pressed.background = theme.surfacePressedColor
+  theme.components.tab.disabled.background = theme.disabledColor
+  theme.components.tab.disabled.color = theme.mutedTextColor
   theme.components.scrollBar.width = theme.scrollbarWidth
   theme.components.scrollBar.thumbColor = theme.scrollbarColor
 
