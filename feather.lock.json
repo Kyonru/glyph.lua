@@ -1,21 +1,21 @@
 {
   "lockfileVersion": 1,
-  "generatedAt": "2026-06-07T15:28:47.497Z",
+  "generatedAt": "2026-06-14T17:02:39.040Z",
   "packages": {
     "feel": {
-      "version": "v1.0.0",
+      "version": "v1.3.0",
       "trust": "verified",
       "source": {
         "repo": "kyonru/feel.lua",
-        "tag": "v1.0.0",
-        "resolvedRef": "4ce759b3389ce0ff748c346e8a5b5f2b0c502219",
-        "commitSha": "4ce759b3389ce0ff748c346e8a5b5f2b0c502219"
+        "tag": "v1.3.0",
+        "resolvedRef": "321004ece914d2975c82711fe7b64a0bb91ffa32",
+        "commitSha": "321004ece914d2975c82711fe7b64a0bb91ffa32"
       },
       "files": [
         {
           "name": "feel/feedbacks.lua",
           "target": "glyph/vendor/feel/feedbacks.lua",
-          "sha256": "748b46ee60c403be84831dd62d8e0e94d27330d5a92be436f24843e3cca96877"
+          "sha256": "0e5fcb0644bfaca767b55e04492cc18f0d3b6ec65a16e9c7be8b3b914aa85d7f"
         },
         {
           "name": "feel/g3d.lua",
@@ -25,12 +25,17 @@
         {
           "name": "feel/init.lua",
           "target": "glyph/vendor/feel/init.lua",
-          "sha256": "f85d88c6d414ea0b19cc4025c07425f8ccd33897b314f967fab15046fb381210"
+          "sha256": "a44ae523ed8e6b06e6b295b4d4df462c24d837530a8f065f2fd6c31f7db16bb6"
         },
         {
           "name": "feel/love.lua",
           "target": "glyph/vendor/feel/love.lua",
-          "sha256": "78f7aeac9359534cbe877b4640672eb0286c3b6fcd338c1520399f3d7c60a8e0"
+          "sha256": "a8ef00afd1c0d8ff9b3aae781c8d40595dba81d956b85e601d32ffe0846cab34"
+        },
+        {
+          "name": "feel/menori.lua",
+          "target": "glyph/vendor/feel/menori.lua",
+          "sha256": "5953dc1f55fc809a7a4d8b236c26ad1b85fb6f1393df57cf86a17f0f7126e7aa"
         },
         {
           "name": "feel/presets.lua",
@@ -40,7 +45,7 @@
         {
           "name": "feel/validate.lua",
           "target": "glyph/vendor/feel/validate.lua",
-          "sha256": "9a273e316d1484838a96750b8a10d8f8608147cc23c087c817b69daf0dd181b9"
+          "sha256": "0d5c57fc075a0976dddaf28226b2d5def0a987d7bd47416c1be9b124217ef215"
         },
         {
           "name": "feel/vendor/flux.lua",
@@ -50,7 +55,7 @@
         {
           "name": "types/feel-feedbacks.lua",
           "target": "glyph/vendor/feel/types/feel-feedbacks.lua",
-          "sha256": "b7e1b89d26b2840e460637fd07431697143cfd816fac3d8ff46f1a0d2d931b43"
+          "sha256": "7ad405bf7ad40410d16c2474e92df2a5ed69731b8806775d0c1f09a282a7bf2e"
         },
         {
           "name": "types/feel-g3d.lua",
@@ -63,13 +68,18 @@
           "sha256": "6071ec680bc98cffc8ff2b918d4458193dc8fcc6ec88180cca8e3ba8e7b6301b"
         },
         {
+          "name": "types/feel-menori.lua",
+          "target": "glyph/vendor/feel/types/feel-menori.lua",
+          "sha256": "38b17ffdd7c4f7c42d3be6ce1c118fb68009026da206f943890dfae6b0dbb147"
+        },
+        {
           "name": "types/feel.lua",
           "target": "glyph/vendor/feel/types/feel.lua",
-          "sha256": "55095d52fc6ad63f813cf1ec0e2c78cac73efe9372c8254ac6143ce5d30d997f"
+          "sha256": "397b018877efe83217368454341b6d9fc9a6f5fc436e7b0b9a1683eadf03b380"
         }
       ],
       "installDir": "glyph/vendor",
-      "installedAt": "2026-06-07T15:28:47.496Z"
+      "installedAt": "2026-06-14T17:02:39.039Z"
     }
   }
 }

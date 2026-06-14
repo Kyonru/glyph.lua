@@ -8,6 +8,16 @@
 ---@field isPlaying fun(target?: FeelTarget, key?: string|number|table): boolean
 ---@field validate fun(sequence: FeelSequenceInput): boolean, string?
 ---@field channel fun(): FeelChannel
+---@field spring fun(x?: number, stiffness?: number, damping?: number): FeelSpring
+---@field stop fun(ctx?: FeelContext)
+---@field pause fun(ctx?: FeelContext)
+---@field resume fun(ctx?: FeelContext)
+---@field pauseAll fun()
+---@field resumeAll fun()
+---@field isPausedAll fun(): boolean
+---@field setTimeScale fun(scale: number): number
+---@field timeScale fun(): number
+---@field strictAliases fun(on?: boolean): boolean
 local feel = {}
 
 ---@class FeelTargetMeta
@@ -24,6 +34,13 @@ local feel = {}
 ---@field source any
 ---@field opts FeelPlayOptions
 ---@field runner FeelRunner
+---@field stop fun(self: FeelContext)
+---@field pause fun(self: FeelContext)
+---@field resume fun(self: FeelContext)
+---@field isPaused fun(self: FeelContext): boolean
+---@field isPlaying fun(self: FeelContext): boolean
+---@field onComplete fun(self: FeelContext, fn: fun(ctx: FeelContext)): FeelContext
+---@field onStop fun(self: FeelContext, fn: fun(ctx: FeelContext)): FeelContext
 
 ---@class FeelPlayOptions
 ---@field trigger? string
@@ -59,6 +76,8 @@ local feel = {}
 ---@field tweens table[]
 ---@field elapsed number
 ---@field cancelled? boolean
+---@field finished? boolean
+---@field paused? boolean
 
 ---@class FeelActiveRun
 ---@field target? FeelTarget
@@ -83,6 +102,33 @@ local feel = {}
 ---@field onStart? fun(values: table<string, number>, ctx: FeelContext)
 ---@field onUpdate? fun(values: table<string, number>, ctx: FeelContext)
 ---@field onComplete? fun(values: table<string, number>, ctx: FeelContext)
+
+---@class FeelSpringStep
+---@field kind "spring"
+---@field to? table<string, number>
+---@field pull? table<string, number>
+---@field from? table<string, number>
+---@field stiffness? number
+---@field k? number
+---@field damping? number
+---@field d? number
+---@field settle? number
+---@field epsilon? number
+---@field duration? number
+---@field onStart? fun(values: table<string, number>, ctx: FeelContext)
+---@field onUpdate? fun(values: table<string, number>, ctx: FeelContext)
+---@field onComplete? fun(values: table<string, number>, ctx: FeelContext)
+
+---@class FeelSpring
+---@field x number
+---@field v number
+---@field target number
+---@field k number
+---@field d number
+---@field update fun(self: FeelSpring, dt: number): number
+---@field pull fun(self: FeelSpring, force: number, stiffness?: number, damping?: number): FeelSpring
+---@field animate fun(self: FeelSpring, target: number, stiffness?: number, damping?: number): FeelSpring
+---@field settled fun(self: FeelSpring, epsilon?: number): boolean
 
 ---@class FeelWaitStep
 ---@field kind "wait"|"pause"
@@ -169,6 +215,7 @@ local feel = {}
 
 ---@alias FeelStepKind
 ---| '"animate"'
+---| '"spring"'
 ---| '"wait"'
 ---| '"pause"'
 ---| '"emit"'
@@ -181,7 +228,7 @@ local feel = {}
 ---| '"log"'
 ---@alias FeelSideEffectStep FeelEmitStep|FeelAudioStep|FeelCallbackStep|FeelLogStep
 ---@alias FeelControlStep FeelPlayStep|FeelParallelStep|FeelRepeatStep|FeelRandomStep
----@alias FeelStep FeelAnimateStep|FeelWaitStep|FeelSideEffectStep|FeelControlStep|table
+---@alias FeelStep FeelAnimateStep|FeelSpringStep|FeelWaitStep|FeelSideEffectStep|FeelControlStep|table
 ---@alias FeelStepInput FeelStep|fun(ctx: FeelContext)|string|number|boolean|nil
 ---@alias FeelSequenceInput string|FeelStepInput|FeelStepInput[]|nil|false
 
@@ -228,6 +275,33 @@ function feel.clear(target) end
 
 ---@return FeelChannel
 function feel.channel() end
+
+---@param ctx? FeelContext
+function feel.stop(ctx) end
+
+---@param ctx? FeelContext
+function feel.pause(ctx) end
+
+---@param ctx? FeelContext
+function feel.resume(ctx) end
+
+function feel.pauseAll() end
+
+function feel.resumeAll() end
+
+---@return boolean
+function feel.isPausedAll() end
+
+---@param scale number
+---@return number
+function feel.setTimeScale(scale) end
+
+---@return number
+function feel.timeScale() end
+
+---@param on? boolean
+---@return boolean
+function feel.strictAliases(on) end
 
 ---@param intent string
 ---@param handler FeelFeedbackHandler
