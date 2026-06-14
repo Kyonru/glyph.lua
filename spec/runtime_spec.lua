@@ -38,6 +38,60 @@ describe("runtime", function()
     assert.are.equal("Count: 2", runtime.root.value)
   end)
 
+  it("keeps a keyed child's path stable across reorder", function()
+    local runtime = Runtime.new()
+    local order = { "a", "b", "c" }
+
+    local function App()
+      local children = {}
+      for _, id in ipairs(order) do
+        children[#children + 1] = Components.box({ key = id, width = 10, height = 10 })
+      end
+      return Components.column({}, children)
+    end
+
+    local function pathForKey(key)
+      local found
+      local function walk(node)
+        if node.props and node.props.key == key then
+          found = node.path
+        end
+        for _, child in ipairs(node.children or {}) do
+          walk(child)
+        end
+      end
+      walk(runtime.root)
+      return found
+    end
+
+    runtime:build(App)
+    local before = pathForKey("b")
+
+    order = { "c", "b", "a" } -- reorder; "b" moves but keeps its key
+    runtime:build(App)
+
+    assert.is_truthy(before)
+    assert.are.equal(before, pathForKey("b")) -- identity follows the key, not the index
+  end)
+
+  it("uses positional paths for children without a key", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      return Components.column({}, {
+        Components.box({ width = 10, height = 10 }),
+        Components.box({ key = "tagged", width = 10, height = 10 }),
+      })
+    end
+
+    runtime:build(App)
+    local first = runtime.root.children[1]
+    local keyed = runtime.root.children[2]
+
+    assert.are.equal("0.1", first.path) -- positional segment
+    assert.are.equal("0.k:tagged", keyed.path) -- key segment
+  end)
+
   it("publishes local parent-relative bounds with onBounds", function()
     local runtime = Runtime.new()
     local seen

@@ -1774,7 +1774,16 @@ local function imageDrawPlan(runtime, node, width, height)
   }
 
   runtime.imagePlans = runtime.imagePlans or {}
+  if runtime.imagePlans[cacheId] == nil then
+    runtime.imagePlanCount = (runtime.imagePlanCount or 0) + 1
+  end
   runtime.imagePlans[cacheId] = { key = key, plan = plan }
+  -- Bound growth: this cache keys on node.path and persists across rebuilds.
+  -- Entries are re-derivable, so a reset past the cap only costs a recompute.
+  if runtime.imagePlanCount and runtime.imagePlanCount > 4096 then
+    runtime.imagePlans = {}
+    runtime.imagePlanCount = 0
+  end
   return plan
 end
 

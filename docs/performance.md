@@ -24,9 +24,10 @@ Glyph is intended for debugger panels and game UI, so performance matters.
 
 ## Typography
 
-Theme font specs are loaded lazily and cached by resolved size. Prefer named
-fonts and `textStyle` presets over creating Love2D fonts inside component
-functions.
+Theme font specs are loaded lazily and cached by resolved size, and wrapped-text
+measurement (`font:getWidth`) is cached per `(font, text)` so re-laying out the
+same labels each frame does not re-measure them. Prefer named fonts and
+`textStyle` presets over creating Love2D fonts inside component functions.
 
 SYSL-backed rich text is opt-in. Use plain `ui.text` for hot-path labels, and
 reserve `ui.richText` for copy that actually needs rich formatting, images,
@@ -49,6 +50,20 @@ Use `ui.static(node)` for stable labels, icons, or repeated rows that do not nee
 ```lua
 local label = ui.static(ui.text("Ready"))
 ```
+
+## Reactivity model
+
+A render rebuilds the tree only when it is **dirty** — a `useState` setter ran,
+input changed focus/hover, or an animation is in flight — then lays out and
+draws. On an idle frame the existing tree is reused; layout short-circuits
+unchanged/static subtrees, so idle cost is low. (See
+[Architecture](architecture.md).)
+
+Glyph does not yet do fine-grained diffing or automatic memoization: a dirty
+render rebuilds and re-allocates the affected tree. For large or rapidly-changing
+UIs the tools above — `ui.memo`, `ui.static`, stable `key`s, and a mounted
+visible window — are how you keep that bounded. Finer-grained reactivity is a
+possible future direction, not something you need to design around today.
 
 ## Images
 
@@ -98,6 +113,9 @@ For large log/table views:
 - Keep the dataset outside the UI tree.
 - Mount a visible window of rows.
 - Reuse stable row components where possible.
+- Give each row a stable `key` so its identity — focus, hover, a mid-edit input
+  cursor, and cached style — follows the data when rows are inserted, removed, or
+  reordered, instead of snapping to whichever sibling now sits at that index.
 - Use `scrollView` bounds and scroll offsets to clamp work.
 - Show coarse live counters such as FPS, render time, layout passes, and mounted
   row counts so performance examples explain their budget at a glance.
