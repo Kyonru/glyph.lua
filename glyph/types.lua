@@ -1079,6 +1079,11 @@ local GlyphDialogueChoice = {}
 ---@field alpha? number
 local GlyphDialoguePortrait = {}
 
+---@class GlyphDialogueTransition
+---@field color GlyphColor full-screen fade color
+---@field alpha number current fade alpha (0..1)
+local GlyphDialogueTransition = {}
+
 ---@class GlyphDialogueRenderModel
 ---@field active boolean
 ---@field status? string
@@ -1088,6 +1093,7 @@ local GlyphDialoguePortrait = {}
 ---@field text GlyphDialogueRenderModelText
 ---@field effects? table
 ---@field portrait? GlyphDialoguePortrait
+---@field transition? GlyphDialogueTransition
 ---@field choiceMode? boolean
 ---@field selectedChoice? number
 ---@field choices GlyphDialogueChoice[]
@@ -1132,6 +1138,7 @@ local GlyphDialogueOptions = {}
 ---@field isFinished fun(self: GlyphDialogueAdapter): boolean
 ---@field model fun(self: GlyphDialogueAdapter): GlyphDialogueRenderModel|nil
 ---@field component fun(self: GlyphDialogueAdapter, props?: GlyphDialogueComponentProps): GlyphNode|nil
+---@field overlay fun(self: GlyphDialogueAdapter, props?: { zIndex?: number }): GlyphNode|nil
 local GlyphDialogueAdapter = {}
 
 ---@class GlyphDialogueApi

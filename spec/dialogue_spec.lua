@@ -532,4 +532,41 @@ describe("dialogue adapter", function()
     bodyBox.props.draw(bodyBox, 0, 0, 100, 80, fakeLove)
     assert.is_true(adapter.bodyTextHeight > 0)
   end)
+
+  it("exposes the fade transition from .state (and omits it at alpha 0)", function()
+    local active = Dialogue.new(fakeUi, {
+      instance = stateStub({ isActive = true, transition = { color = { 1, 1, 1 }, alpha = 0.7 }, activeChoices = {} }),
+    }):model()
+    assert.is_not_nil(active.transition)
+    assert.are.equal(0.7, active.transition.alpha)
+    assert.are.same({ 1, 1, 1 }, active.transition.color)
+
+    local idle = Dialogue.new(fakeUi, {
+      instance = stateStub({ isActive = true, transition = { color = { 0, 0, 0 }, alpha = 0 }, activeChoices = {} }),
+    }):model()
+    assert.is_nil(idle.transition)
+  end)
+
+  it("renders a fade overlay only while a transition is active", function()
+    local alpha = 0
+    local instance = {
+      renderModel = function()
+        return {
+          active = true,
+          speaker = { name = "H" },
+          text = { shown = "" },
+          choices = {},
+          transition = alpha > 0 and { color = { 0, 0, 0 }, alpha = alpha } or nil,
+        }
+      end,
+    }
+    local adapter = Dialogue.new(fakeUi, { instance = instance })
+    assert.is_nil(adapter:overlay()) -- no fade
+
+    alpha = 0.5
+    local node = adapter:overlay({ zIndex = 9 })
+    assert.is_not_nil(node)
+    assert.are.equal("box", node.type)
+    assert.are.equal(9, node.props.zIndex)
+  end)
 end)

@@ -25,7 +25,7 @@ local DebugPlugin = okDialogue and require("LoveDialogue.plugins.DebugPlugin") o
 
 local myDialogue = nil
 local adapter = nil -- ui.dialogue adapter wrapping the current instance
-local renderMode = "library" -- "library" (Love-Dialogue draws) | "glyph" (ui.dialogue draws)
+local renderMode = "glyph" -- "library" (Love-Dialogue draws) | "glyph" (ui.dialogue draws)
 local savedState = nil
 local config = nil
 local nextScriptPath = nil
@@ -127,6 +127,12 @@ local function Demo()
 		local box = adapter:component({ margin = 30, layout = { zIndex = 12 } })
 		if box then
 			children[#children + 1] = box
+		end
+		-- Full-screen [fade: ...] transitions (the library draws these itself in
+		-- library mode); below the controls hint, matching the library demo.
+		local fade = adapter:overlay({ zIndex = 15 })
+		if fade then
+			children[#children + 1] = fade
 		end
 	end
 	children[#children + 1] = ui.box({

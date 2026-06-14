@@ -275,6 +275,13 @@ local function buildModel(instance)
     end
   end
 
+  -- Full-screen fade transition ([fade: ...]). The library updates its alpha in
+  -- :update; only the draw lives in :draw, which the adapter replaces.
+  local transition = nil
+  if s.transition and (s.transition.alpha or 0) > 0 then
+    transition = { color = s.transition.color or { 0, 0, 0 }, alpha = s.transition.alpha }
+  end
+
   return {
     active = s.isActive,
     status = s.status,
@@ -284,6 +291,7 @@ local function buildModel(instance)
     text = { full = s.fullText, shown = s.displayedText, waiting = s.waitingForInput },
     effects = s.effects,
     portrait = portrait,
+    transition = transition,
     choiceMode = s.choiceMode,
     selectedChoice = s.selectedChoice,
     choices = choices,
@@ -628,6 +636,33 @@ function Adapter:component(props)
   }
   mergeInto(layout, props.layout)
   return Components.column(layout, { inner })
+end
+
+-- Full-screen fade overlay for the library's [fade: ...] transitions, or nil
+-- when no fade is active. Place it on top of your scene (it covers the whole
+-- screen). `props.zIndex` sets its stacking order.
+function Adapter:overlay(props)
+  props = props or {}
+  local model = self:model()
+  local t = model and model.transition
+  if not t or not t.alpha or t.alpha <= 0 then
+    return nil
+  end
+  local color = t.color or { 0, 0, 0 }
+  local alpha = t.alpha
+  return Components.box({
+    position = "absolute",
+    inset = 0,
+    interactive = false,
+    accessibilityHidden = true,
+    zIndex = props.zIndex,
+    draw = function(_, x, y, width, height, love)
+      love.graphics.push("all")
+      love.graphics.setColor(color[1], color[2], color[3], alpha)
+      love.graphics.rectangle("fill", x, y, width, height)
+      love.graphics.pop()
+    end,
+  })
 end
 
 ---@param rootUi glyph

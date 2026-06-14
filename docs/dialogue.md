@@ -72,6 +72,7 @@ The adapter prefers a `renderModel()` method on the instance and otherwise reads
   text = { full, shown, waiting }, -- shown is the typewriter-revealed prefix
   effects,                          -- parsed inline effect spans
   portrait,                         -- current character portrait, or nil
+  transition,                       -- active full-screen fade, or nil
   choiceMode, selectedChoice,
   choices = { { text, target, effects } },
 }
@@ -177,6 +178,25 @@ Total grown height is roughly `height + #choices × (choiceHeight + 4)`, clamped
 make it grow less per choice, and set `maxHeight` to cap it. With
 `animateHeight = false` the box stays a fixed `height` (or the per-call
 `component({ height = ... })`).
+
+## Fade transitions
+
+Scripts can run full-screen fades with `[fade: out 1.0]` / `[fade: in 1.0 #FFFFFF]`.
+The library draws those itself in library mode; since the adapter replaces its
+drawing, render them with `dialogue:overlay()` — a full-screen node (or `nil`
+when no fade is active) that you place on top of your scene:
+
+```lua
+ui.render(function()
+  return ui.stack({ width = "100%", height = "100%" }, {
+    -- ... scene + dialogue:component(...) ...
+    dialogue:overlay({ zIndex = 50 }), -- covers the screen during a fade
+  })
+end)
+```
+
+The fade alpha and color come from `model.transition`; the library advances them
+during `dialogue:update(dt)`.
 
 ## Runtime augmentation
 
