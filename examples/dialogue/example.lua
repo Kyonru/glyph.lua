@@ -34,6 +34,13 @@ local bodyFont = nil
 local fancy = false -- "j" toggles a custom box frame + a framed circular bust
 local bgColor = { 0.1, 0.1, 0.2, 1 }
 
+-- Docs-GIF capture (GLYPH_DIALOGUE_DOC_GIF=1, set by scripts/doc_gifs): play the
+-- feature-rich story script and auto-advance each line on a fixed dwell so
+-- `make docs-gifs FEATURE=dialogue` records a deterministic clip of the
+-- glyph-rendered typewriter, inline effects, portraits, and a choice menu.
+local docGifMode = os.getenv("GLYPH_DIALOGUE_DOC_GIF") == "1"
+local docGifDwell = 0
+
 local CONTROLS = "Space/Enter (Next)  |  F (Skip)  |  S (Save)  |  L (Load)  |  Esc (Quit)"
 
 local function onSignal(name, args)
@@ -72,6 +79,29 @@ end
 
 local function toggleFancy()
 	fancy = not fancy
+end
+
+-- Drive the conversation forward during a docs-GIF capture: once a line finishes
+-- typing (or after pausing on a choice menu), advance on a fixed dwell. Frames are
+-- captured with a constant dt, so this stays deterministic across runs.
+local function runDocGifScript(dt)
+	if not docGifMode or not (adapter and myDialogue) then
+		return
+	end
+	local model = adapter:model()
+	if not model or not model.active then
+		return
+	end
+	local settled = (model.text and model.text.waiting) or model.choiceMode
+	if settled then
+		docGifDwell = docGifDwell + (dt or 0)
+		if docGifDwell >= (model.choiceMode and 1.1 or 0.34) then
+			docGifDwell = 0
+			adapter:keypressed("space") -- next line, or select the highlighted choice
+		end
+	else
+		docGifDwell = 0
+	end
 end
 
 -- A custom box frame (component({ frame = ... })): a filled panel with a glowing
@@ -307,7 +337,14 @@ return {
 			pluginData = { Debug = { enabled = false } },
 		}
 
-		startDialogue("demo/launcher.ld")
+		if docGifMode then
+			-- Snappier typewriter + the effect/portrait/choice-rich story script.
+			config.typingSpeed = 0.018
+			config.textSpeeds = { slow = 0.03, normal = 0.018, fast = 0.012 }
+			startDialogue("demo/scripts/story.ld")
+		else
+			startDialogue("demo/launcher.ld")
+		end
 	end,
 	update = function(dt)
 		if not myDialogue then
@@ -319,6 +356,7 @@ return {
 			nextScriptPath = nil
 			return
 		end
+		runDocGifScript(dt)
 		adapter:update(dt)
 	end,
 	component = function()

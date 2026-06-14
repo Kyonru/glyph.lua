@@ -4,6 +4,10 @@ icon: lucide/messages-square
 
 # Dialogue Adapter
 
+<!-- glyph:feature-gif dialogue -->
+![Animated GIF showing the Glyph dialogue adapter: typewriter text with inline color, wave, shake, and jiggle effects, character portraits, and a choice menu.](assets/feature-gifs/dialogue.gif)
+<!-- /glyph:feature-gif dialogue -->
+
 `ui.dialogue` is an optional adapter for the
 [Miisan-png/Love-Dialogue](https://github.com/Miisan-png/Love-Dialogue) dialogue
 engine. Love-Dialogue stays app-provided and keeps doing what it is good at —
