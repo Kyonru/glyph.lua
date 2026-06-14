@@ -323,4 +323,213 @@ describe("dialogue adapter", function()
     adapter:update(0)
     assert.are.equal(1, adapter:portraitPopScale())
   end)
+
+  it("grows the box height to fit choices", function()
+    local choiceMode = false
+    local instance = {
+      update = function() end,
+      renderModel = function()
+        return {
+          active = true,
+          status = "active",
+          speaker = { name = "H" },
+          text = { shown = "" },
+          choiceMode = choiceMode,
+          choices = choiceMode and { { text = "a" }, { text = "b" }, { text = "c" } } or {},
+        }
+      end,
+    }
+    local adapter = Dialogue.new(fakeUi, { instance = instance, height = 160 })
+    adapter:update(0.016)
+    local base = adapter.boxHeight
+    choiceMode = true
+    for _ = 1, 120 do
+      adapter:update(0.016)
+    end
+    assert.is_true(adapter.boxHeight > base)
+  end)
+
+  it("expands the box open from 0 while active", function()
+    local instance = {
+      update = function() end,
+      renderModel = function()
+        return { active = true, status = "active", speaker = { name = "H" }, text = { shown = "" }, choiceMode = false, choices = {} }
+      end,
+    }
+    local adapter = Dialogue.new(fakeUi, { instance = instance })
+    adapter:update(0.016)
+    assert.is_true(adapter.open > 0 and adapter.open < 1)
+    for _ = 1, 240 do
+      adapter:update(0.016)
+    end
+    assert.is_true(adapter.open > 0.99)
+  end)
+
+  it("clamps the grown height to maxHeight", function()
+    local instance = {
+      update = function() end,
+      renderModel = function()
+        return {
+          active = true,
+          status = "active",
+          speaker = { name = "H" },
+          text = { shown = "" },
+          choiceMode = true,
+          choices = { { text = "a" }, { text = "b" }, { text = "c" }, { text = "d" }, { text = "e" } },
+        }
+      end,
+    }
+    local adapter = Dialogue.new(fakeUi, { instance = instance, height = 200, choiceHeight = 40, maxHeight = 260 })
+    for _ = 1, 200 do
+      adapter:update(0.016)
+    end
+    assert.is_true(adapter.boxHeight <= 260.5)
+  end)
+
+  it("anchors the portrait per portraitAlign", function()
+    local function portraitDrawY(align)
+      local instance = {
+        renderModel = function()
+          return {
+            active = true,
+            speaker = { name = "H" },
+            text = { shown = "" },
+            choices = {},
+            portrait = { texture = "T", quad = "Q", width = 100, height = 100, size = 120, scale = 1 },
+          }
+        end,
+      }
+      local node = Dialogue.new(fakeUi, { instance = instance, portraitAlign = align }):component()
+      local row
+      local function findRow(n)
+        if n.type == "row" then
+          row = n
+          return
+        end
+        for _, c in ipairs(n.children or {}) do
+          findRow(c)
+        end
+      end
+      findRow(node)
+      local portraitBox = row.children[1]
+      local capturedY
+      local fakeLove = {
+        graphics = setmetatable({
+          draw = function(_, _, _, y)
+            capturedY = y
+          end,
+        }, { __index = function()
+          return function() end
+        end }),
+      }
+      portraitBox.props.draw(portraitBox, 0, 0, 120, 200, fakeLove)
+      return capturedY
+    end
+
+    assert.are.equal(0, portraitDrawY("top")) -- top of the box
+    assert.are.equal(80, portraitDrawY("bottom")) -- 200 - 120
+    assert.are.equal(40, portraitDrawY("center")) -- (200 - 120) / 2
+  end)
+
+  it("portraitFit clamps the portrait to the box height", function()
+    local function drawnSize(fit, boxHeight)
+      local instance = {
+        renderModel = function()
+          return {
+            active = true,
+            speaker = { name = "H" },
+            text = { shown = "" },
+            choices = {},
+            portrait = { texture = "T", quad = "Q", width = 100, height = 100, size = 120, scale = 1 },
+          }
+        end,
+      }
+      local node = Dialogue.new(fakeUi, { instance = instance, portraitFit = fit }):component()
+      local row
+      local function findRow(n)
+        if n.type == "row" then
+          row = n
+          return
+        end
+        for _, c in ipairs(n.children or {}) do
+          findRow(c)
+        end
+      end
+      findRow(node)
+      local capturedSx
+      local fakeLove = {
+        graphics = setmetatable({
+          draw = function(_, _, _, _, _, sx)
+            capturedSx = sx
+          end,
+        }, { __index = function()
+          return function() end
+        end }),
+      }
+      row.children[1].props.draw(row.children[1], 0, 0, 120, boxHeight, fakeLove)
+      return capturedSx * 100 -- scaled size = sx * native width
+    end
+
+    assert.are.equal(120, drawnSize(false, 80)) -- overflow: drawn at full 120 in an 80px box
+    assert.are.equal(80, drawnSize(true, 80)) -- contained: clamped to the 80px box
+    assert.are.equal(120, drawnSize(true, 200)) -- box is tall enough: stays 120
+  end)
+
+  it("grows the box to fit tall wrapped text", function()
+    local instance = {
+      update = function() end,
+      renderModel = function()
+        return { active = true, status = "active", speaker = { name = "H" }, text = { shown = "", full = "x" }, choiceMode = false, choices = {} }
+      end,
+    }
+    local adapter = Dialogue.new(fakeUi, { instance = instance, height = 130 })
+    adapter:update(0.016)
+    local baseH = adapter.boxHeight
+    adapter.bodyTextHeight = 300 -- simulate a tall measured body
+    for _ = 1, 200 do
+      adapter:update(0.016)
+    end
+    assert.is_true(adapter.boxHeight > baseH + 100)
+  end)
+
+  it("measures the wrapped body text height from the draw", function()
+    local longText = string.rep("word ", 40)
+    local instance = {
+      renderModel = function()
+        return { active = true, speaker = { name = "H" }, text = { shown = "", full = longText }, choices = {} }
+      end,
+    }
+    local adapter = Dialogue.new(fakeUi, { instance = instance })
+    local node = adapter:component()
+    local bodyBox
+    local function find(n)
+      if n.type == "box" and n.props and type(n.props.draw) == "function" then
+        bodyBox = n
+      end
+      for _, c in ipairs(n.children or {}) do
+        find(c)
+      end
+    end
+    find(node)
+
+    local function stubFont()
+      return setmetatable({}, { __index = function()
+        return function()
+          return 16
+        end
+      end })
+    end
+    local fakeLove = {
+      graphics = setmetatable({
+        getFont = function()
+          return stubFont()
+        end,
+        setFont = function() end,
+      }, { __index = function()
+        return function() end
+      end }),
+    }
+    bodyBox.props.draw(bodyBox, 0, 0, 100, 80, fakeLove)
+    assert.is_true(adapter.bodyTextHeight > 0)
+  end)
 end)

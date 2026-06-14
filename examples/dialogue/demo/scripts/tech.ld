@@ -42,6 +42,7 @@ Miisan: (Happy) Now for a transition test...
 
 Miisan: (Happy) We swapped places in the dark!
 Eiisan: (Happy) Magic.
+Miisan: (Happy) This is an extremely long text Syntax highlighting, snippets, and language support for LoveDialogue (.ld) files in Visual Studio Code. LoveDialogue is a lightweight dialogue engine for Love2D games featuring rich text effects, character portraits, logic systems, and more. A lightweight, flexible dialogue engine for Love2D with a custom scripting language, rich text effects, and visual novel features.
 
 -> Return to Launcher [target:back]
 

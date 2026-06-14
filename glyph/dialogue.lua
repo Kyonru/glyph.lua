@@ -114,6 +114,44 @@ local function drawEffectText(love, text, effects, x, y, limit, baseColor, time,
   graphics.pop()
 end
 
+-- Pixel height of `text` wrapped to `limit`, using the same word wrap as
+-- drawEffectText, so the box can be sized to fit long lines.
+local function wrappedTextHeight(font, text, limit)
+  if not font or not limit or limit <= 0 then
+    return 0
+  end
+  local lineHeight = font:getHeight() * 1.35
+  local chars = utf8Chars(text)
+  local count = #chars
+  if count == 0 then
+    return lineHeight
+  end
+  local cx, lines = 0, 1
+  local i = 1
+  while i <= count do
+    local j = i
+    local wordWidth = 0
+    while j <= count and chars[j] ~= " " do
+      wordWidth = wordWidth + font:getWidth(chars[j])
+      j = j + 1
+    end
+    if cx > 0 and cx + wordWidth > limit then
+      cx = 0
+      lines = lines + 1
+    end
+    for k = i, j - 1 do
+      cx = cx + font:getWidth(chars[k])
+    end
+    if j <= count and chars[j] == " " then
+      cx = cx + font:getWidth(" ")
+      i = j + 1
+    else
+      i = j
+    end
+  end
+  return lines * lineHeight
+end
+
 local function drawCaret(love, x, y, width, height, color, opacity, time)
   if math.floor(time * 2) % 2 ~= 0 then
     return
@@ -163,11 +201,28 @@ local function drawPortraitImage(love, portrait, x, y, size, opacity, rotation)
   graphics.pop()
 end
 
+-- Vertical placement of a `scaled`-tall portrait inside a `boxHeight` slot.
+local function portraitYFor(align, y, boxHeight, scaled, offsetY)
+  offsetY = offsetY or 0
+  if align == "top" then
+    return y + offsetY
+  elseif align == "center" then
+    return y + (boxHeight - scaled) / 2 + offsetY
+  end
+  return y + boxHeight - scaled + offsetY -- "bottom" (default)
+end
+
 -- Ease-out-back: overshoots slightly past 1.0 then settles, giving a "pop".
 local function easeOutBack(p)
   local c1 = 1.70158
   local c3 = c1 + 1
   return 1 + c3 * (p - 1) ^ 3 + c1 * (p - 1) ^ 2
+end
+
+-- Frame-rate independent exponential approach toward `target`.
+local function approach(current, target, dt, speed)
+  local k = 1 - math.exp(-(speed or 12) * (dt or 0))
+  return current + (target - current) * k
 end
 
 local function mergeInto(base, extra)
@@ -316,6 +371,56 @@ function Adapter:update(dt)
     self.instance:update(dt)
   end
   self:trackPortrait()
+  self:updateHeight(dt)
+end
+
+-- Caches the wrapped pixel height of the current line's text so the box can
+-- grow to fit long lines. Called from the body draw with the real width/font.
+function Adapter:measureBody(font, text, width)
+  text = text or ""
+  if self._bodyText == text and self._bodyWidth == width and self._bodyFont == font then
+    return
+  end
+  self._bodyText = text
+  self._bodyWidth = width
+  self._bodyFont = font
+  self.bodyTextHeight = wrappedTextHeight(font, text, width)
+end
+
+-- Animates the box height: a base height that grows to fit long wrapped text and
+-- the choice buttons, and an `open` factor (0..1) that expands the box in when
+-- the dialogue appears and collapses it while it fades out.
+function Adapter:updateHeight(dt)
+  local model = self:model()
+  local base = self.opts.height or 160
+  -- Grow the base so long, wrapped lines are not clipped (chrome = padding +
+  -- speaker name + gaps). Measured by the body draw a frame earlier.
+  if self.bodyTextHeight and self.bodyTextHeight > 0 then
+    local chrome = 2 * (self.opts.padding or 18) + 44
+    base = math.max(base, self.bodyTextHeight + chrome)
+  end
+  local target = base
+  if model and model.choiceMode and model.choices and #model.choices > 0 then
+    -- Each choice adds one button row (height + 4px gap) to the base.
+    local unit = (self.opts.choiceHeight or 34) + 4
+    target = base + #model.choices * unit
+  end
+  if self.opts.maxHeight then
+    target = math.min(target, self.opts.maxHeight)
+  end
+  local openTarget = (model and model.active and model.status ~= "fading_out") and 1 or 0
+  self.boxHeight = approach(self.boxHeight or target, target, dt, 14)
+  self.open = approach(self.open or 0, openTarget, dt, 12)
+end
+
+-- Current animated box height (content height × open factor), or the fixed
+-- height when animateHeight is disabled.
+function Adapter:resolvedHeight(props)
+  local base = self.opts.height or 160
+  if self.opts.animateHeight == false then
+    return (props and props.height) or base
+  end
+  return (self.boxHeight or base) * (self.open or 1)
 end
 
 -- Detect when the visible portrait (speaker or expression) changes so the pop
@@ -441,9 +546,13 @@ function Adapter:component(props)
     interactive = false,
     accessibilityLabel = model.text and model.text.full or nil,
     draw = function(_, x, y, width, height, love)
-      if font and love.graphics.setFont then
-        love.graphics.setFont(font)
+      local mfont = font
+      if mfont and love.graphics.setFont then
+        love.graphics.setFont(mfont)
       end
+      mfont = mfont or (love.graphics.getFont and love.graphics.getFont())
+      -- Measure the full line at the real width so the box can size to fit it.
+      self:measureBody(mfont, model.text and model.text.full or "", width)
       drawEffectText(love, model.text and model.text.shown or "", model.effects, x, y, width, textColor, self.elapsed, opacity)
       if model.text and model.text.waiting and not model.choiceMode then
         drawCaret(love, x, y, width, height, textColor, opacity, self.elapsed)
@@ -458,6 +567,7 @@ function Adapter:component(props)
       choiceNodes[#choiceNodes + 1] = Components.button({
         label = choice.text,
         width = "100%",
+        height = self.opts.choiceHeight or 34,
         focusable = false,
         style = {
           background = selected and { 1, 1, 1, 0.16 } or { 1, 1, 1, 0.04 },
@@ -479,7 +589,7 @@ function Adapter:component(props)
   -- Lay the portrait (if any) beside the text; otherwise the content fills.
   local inner
   if model.portrait then
-    local pSize = model.portrait.size or 100
+    local pSize = self.opts.portraitSize or model.portrait.size or 100
     inner = Components.row({ width = "100%", height = "100%", gap = props.gap or 14 }, {
       Components.box({
         width = pSize,
@@ -489,10 +599,15 @@ function Adapter:component(props)
         draw = function(_, x, y, _, height, love)
           local p = model.portrait
           -- Honor the character transform (scale) and the built-in pop, scaling
-          -- around the portrait's bottom-center so it grows from the floor.
+          -- around the portrait's horizontal center; vertical anchor is
+          -- configurable via opts.portraitAlign ("bottom" | "top" | "center").
           local scaled = pSize * (p.scale or 1) * self:portraitPopScale()
+          -- portraitFit keeps the portrait inside the box (no overflow).
+          if self.opts.portraitFit then
+            scaled = math.min(scaled, height)
+          end
           local dx = x + (pSize - scaled) / 2 + (p.offsetX or 0)
-          local dy = y + height - scaled + (p.offsetY or 0)
+          local dy = portraitYFor(self.opts.portraitAlign, y, height, scaled, p.offsetY)
           drawPortraitImage(love, p, dx, dy, scaled, opacity, p.rotation)
         end,
       }),
@@ -507,7 +622,7 @@ function Adapter:component(props)
     left = props.margin or 24,
     right = props.margin or 24,
     bottom = props.margin or 24,
-    height = props.height or 200,
+    height = self:resolvedHeight(props),
     padding = props.padding or 18,
     style = boxStyle,
   }
@@ -528,6 +643,8 @@ function Dialogue.new(rootUi, opts)
     elapsed = 0,
     portraitKey = nil,
     portraitChangeAt = nil,
+    boxHeight = nil,
+    open = nil,
   }, Adapter)
   if opts.instance then
     adapter:wrap(opts.instance)

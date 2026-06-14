@@ -91,6 +91,30 @@ the box and lays the text out beside it (the same place Love-Dialogue's own
 renderer puts it). The expression follows `currentExpression`, falling back to
 `Default`.
 
+Anchor the portrait vertically with the `portraitAlign` option:
+
+```lua
+ui.dialogue.new({ library = LoveDialogue, portraitAlign = "top" }) -- "bottom" (default) | "top" | "center"
+```
+
+### Overflow vs. fit
+
+The portrait is drawn at its `portraitSize`. When that is larger than the box's
+content height, the portrait extends past the box edge — the "character bust
+rising above the textbox" look (and what Love-Dialogue itself does with a short
+box). To keep it inside the box instead, set `portraitFit = true` (scales the
+portrait down to the box height), or override the size with `portraitSize`:
+
+```lua
+ui.dialogue.new({
+  library = LoveDialogue,
+  portraitFit = true, -- never spill past the box
+  portraitSize = 96,  -- or just draw it smaller
+})
+```
+
+You can also raise the box `height` so the full-size portrait fits.
+
 ### Animated size
 
 The drawn size is `portraitSize × scale × pop`:
@@ -124,6 +148,35 @@ lives in the adapter, so it needs no access to the library's internal modules.
 > The adapter renders `{bold}` as plain text. Use `{wave}`/`{shake}`/`{color}`
 > for emphasis, or render a custom box from `dialogue:model()` if you need
 > different styling.
+
+## Box height
+
+By default the box height animates (driven by `dialogue:update(dt)`):
+
+- **Fit the text** — `height` is a *minimum*; the box grows when a line wraps to
+  more lines than the base allows, so long text is never clipped. (The body text
+  is custom-drawn for the inline effects, so the adapter measures the wrapped
+  height itself.)
+- **Grow for choices** — it also grows to fit the choice buttons when choices
+  appear, then shrinks back.
+- **Expand in / collapse out** — the box expands up from the bottom when a line
+  appears and collapses while it fades out.
+
+```lua
+ui.dialogue.new({
+  library = LoveDialogue,
+  height = 130,          -- base text-area height (smaller = shorter box)
+  choiceHeight = 30,     -- how much each choice grows the box (and the button height)
+  maxHeight = 300,       -- optional clamp so it never grows past this
+  animateHeight = false, -- opt out entirely: fixed height
+})
+```
+
+Total grown height is roughly `height + #choices × (choiceHeight + 4)`, clamped to
+`maxHeight`. So lower `height` for a shorter box overall, lower `choiceHeight` to
+make it grow less per choice, and set `maxHeight` to cap it. With
+`animateHeight = false` the box stays a fixed `height` (or the per-call
+`component({ height = ... })`).
 
 ## Runtime augmentation
 

@@ -106,18 +106,37 @@ end
 
 local function Demo()
 	local children = {
-		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, draw = drawBackground }),
-		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, zIndex = 10, draw = drawDialogue }),
+		ui.box({
+			position = "absolute",
+			inset = 0,
+			interactive = false,
+			accessibilityHidden = true,
+			draw = drawBackground,
+		}),
+		ui.box({
+			position = "absolute",
+			inset = 0,
+			interactive = false,
+			accessibilityHidden = true,
+			zIndex = 10,
+			draw = drawDialogue,
+		}),
 	}
 	-- In glyph mode, ui.dialogue renders the box from the shared instance's state.
 	if renderMode == "glyph" and adapter then
-		local box = adapter:component({ height = 220, margin = 30, font = bodyFont, layout = { zIndex = 12 } })
+		local box = adapter:component({ margin = 30, layout = { zIndex = 12 } })
 		if box then
 			children[#children + 1] = box
 		end
 	end
-	children[#children + 1] =
-		ui.box({ position = "absolute", inset = 0, interactive = false, accessibilityHidden = true, zIndex = 20, draw = drawControls })
+	children[#children + 1] = ui.box({
+		position = "absolute",
+		inset = 0,
+		interactive = false,
+		accessibilityHidden = true,
+		zIndex = 20,
+		draw = drawControls,
+	})
 	return ui.stack({ width = "100%", height = "100%" }, children)
 end
 
@@ -160,7 +179,15 @@ return {
 		love.graphics.setDefaultFilter("nearest", "nearest")
 		hintFont = love.graphics.newFont(14)
 		bodyFont = love.graphics.newFont(20)
-		adapter = ui.dialogue.new({ library = LoveDialogue, font = bodyFont })
+		adapter = ui.dialogue.new({
+			library = LoveDialogue,
+			font = bodyFont,
+			height = 130, -- base text-area height
+			choiceHeight = 30, -- each choice grows the box by ~this much
+			maxHeight = 300, -- never taller than this
+			portraitAlign = "bottom", -- "bottom" | "top" | "center",
+			portraitSize = 150,
+		})
 
 		PluginManager:register(DebugPlugin)
 

@@ -1111,6 +1111,13 @@ local GlyphDialogueComponentProps = {}
 ---@field onSignal? fun(name: string, args: any)
 ---@field font? any
 ---@field portraitPop? boolean|{ duration?: number, from?: number } portrait scale-pop on change (default on); false disables
+---@field height? number base text-area height; the box grows from this to fit choices (default 160)
+---@field choiceHeight? number per-choice button height (and how much the box grows per choice; default 34)
+---@field maxHeight? number clamp the grown box height to at most this many pixels
+---@field animateHeight? boolean animate box height (grow-for-choices + expand-in); false keeps a fixed height (default true)
+---@field portraitAlign? "bottom"|"top"|"center" vertical anchor of the portrait in the box (default "bottom")
+---@field portraitSize? number override the drawn portrait size (default: the library's portraitSize)
+---@field portraitFit? boolean scale the portrait to stay inside the box instead of overflowing (default false)
 local GlyphDialogueOptions = {}
 
 ---@class GlyphDialogueAdapter
