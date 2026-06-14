@@ -31,6 +31,7 @@ local config = nil
 local nextScriptPath = nil
 local hintFont = nil
 local bodyFont = nil
+local fancy = false -- "j" toggles a custom box frame + a framed circular bust
 local bgColor = { 0.1, 0.1, 0.2, 1 }
 
 local CONTROLS = "Space/Enter (Next)  |  F (Skip)  |  S (Save)  |  L (Load)  |  Esc (Quit)"
@@ -69,6 +70,36 @@ local function toggleRenderer()
 	renderMode = (renderMode == "library") and "glyph" or "library"
 end
 
+local function toggleFancy()
+	fancy = not fancy
+end
+
+-- A custom box frame (component({ frame = ... })): a filled panel with a glowing
+-- double outline, drawn with the ctx instead of the default 1px border.
+local function fancyBoxFrame(ctx, x, y, width, height, love, opacity)
+	opacity = opacity or 1
+	ctx:color({ 0.03, 0.05, 0.1, 0.92 * opacity })
+	ctx:rect("fill", x, y, width, height, 14)
+	if love.graphics.setLineWidth then
+		love.graphics.setLineWidth(2)
+	end
+	ctx:color({ 0.45, 0.7, 1, 0.85 * opacity })
+	ctx:rect("line", x, y, width, height, 14)
+	ctx:color({ 0.45, 0.7, 1, 0.32 * opacity })
+	ctx:rect("line", x + 6, y + 6, width - 12, height - 12, 10)
+end
+
+-- A ring drawn on top of the circular bust (the stencil masks the image to a
+-- circle; this outlines it). Used as a box draw callback.
+local function fancyRing(_, x, y, width, height, love, _, ctx)
+	if love.graphics.setLineWidth then
+		love.graphics.setLineWidth(3)
+	end
+	ctx:color({ 0.5, 0.78, 1, 0.9 })
+	local padding = 0
+	ctx:shape("line", { kind = "circle", segments = 48 }, { x = x, y = y + padding, width = width, height = height })
+end
+
 -- Vertical gradient background, matching the upstream demo's love.draw.
 local function drawBackground(_, x, y, width, height, love)
 	love.graphics.push("all")
@@ -100,7 +131,11 @@ local function drawControls(_, x, y, width, height, love)
 		love.graphics.setFont(hintFont)
 	end
 	love.graphics.setColor(1, 1, 1, 0.6)
-	love.graphics.print(CONTROLS .. "  |  G (Renderer: " .. renderMode .. ")", x + 20, y + height - 30)
+	local hint = CONTROLS .. "  |  G (Renderer: " .. renderMode .. ")"
+	if renderMode == "glyph" then
+		hint = hint .. "  |  J (Frame: " .. (fancy and "on" or "off") .. ")"
+	end
+	love.graphics.print(hint, x + 20, y + height - 30)
 	love.graphics.pop()
 end
 
@@ -124,13 +159,52 @@ local function Demo()
 	}
 	-- In glyph mode, ui.dialogue renders the box from the shared instance's state.
 	if renderMode == "glyph" and adapter then
-		local box = adapter:component({ margin = 30, layout = { zIndex = 12 } })
-		if box then
-			children[#children + 1] = box
+		if fancy then
+			-- Flow composition: a bottom-anchored column with a fixed-size, framed
+			-- circular bust ON TOP of the (flow) box. As the box grows it pushes the
+			-- column up, lifting the bust — the bust itself never resizes.
+			local box = adapter:component({ frame = fancyBoxFrame, portrait = false, flow = true })
+			if box then
+				local SIZE = 150
+				local bust = adapter:portrait({
+					size = SIZE,
+					width = "100%",
+					height = "100%",
+					side = "right", -- mirrors the bust to face the text
+					stencil = { kind = "circle" }, -- mask the image to a circle
+				})
+				local cell = {}
+				if bust then
+					cell[#cell + 1] = bust
+				end
+				cell[#cell + 1] = ui.box({
+					position = "absolute",
+					inset = 0,
+					interactive = false,
+					accessibilityHidden = true,
+					draw = fancyRing,
+				})
+				children[#children + 1] = ui.column({
+					position = "absolute",
+					left = 30,
+					right = 30,
+					bottom = 30,
+					gap = 16, -- space between the bust and the box (the bust's "margin bottom")
+					zIndex = 12,
+				}, {
+					ui.row({ width = "100%", justify = "end" }, { ui.stack({ width = SIZE, height = SIZE }, cell) }),
+					box,
+				})
+			end
+		else
+			local box = adapter:component({ margin = 30, layout = { zIndex = 12 } })
+			if box then
+				children[#children + 1] = box
+			end
 		end
 		-- Full-screen [fade: ...] transitions (the library draws these itself in
 		-- library mode); below the controls hint, matching the library demo.
-		local fade = adapter:overlay({ zIndex = 15 })
+		local fade = adapter:overlay({ zIndex = 19 })
 		if fade then
 			children[#children + 1] = fade
 		end
@@ -267,6 +341,9 @@ return {
 			end
 		elseif key == "g" then
 			toggleRenderer()
+			return
+		elseif key == "j" then
+			toggleFancy()
 			return
 		end
 		adapter:keypressed(key)

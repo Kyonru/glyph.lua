@@ -569,4 +569,173 @@ describe("dialogue adapter", function()
     assert.are.equal("box", node.type)
     assert.are.equal(9, node.props.zIndex)
   end)
+
+  local function portraitModelStub()
+    return {
+      renderModel = function()
+        return {
+          active = true,
+          speaker = { name = "H" },
+          text = { shown = "" },
+          choices = {},
+          portrait = { texture = "T", quad = "Q", width = 100, height = 100, size = 120, flipH = false },
+        }
+      end,
+    }
+  end
+
+  local function findRow(node)
+    local row
+    local function walk(n)
+      if n.type == "row" then
+        row = n
+        return
+      end
+      for _, c in ipairs(n.children or {}) do
+        walk(c)
+      end
+    end
+    walk(node)
+    return row
+  end
+
+  it("places the portrait on the requested side", function()
+    local function portraitIndex(side)
+      local row = findRow(Dialogue.new(fakeUi, { instance = portraitModelStub(), portraitSide = side }):component())
+      for i, c in ipairs(row.children) do
+        if c.type == "box" then
+          return i
+        end
+      end
+    end
+    assert.are.equal(1, portraitIndex("left")) -- portrait first
+    assert.are.equal(2, portraitIndex("right")) -- portrait last
+  end)
+
+  it("drops the inline portrait with portrait = false", function()
+    local node = Dialogue.new(fakeUi, { instance = portraitModelStub() }):component({ portrait = false })
+    assert.is_nil(findRow(node))
+  end)
+
+  it("auto-flips the portrait when on the right", function()
+    local function sxSign(side)
+      local row = findRow(Dialogue.new(fakeUi, { instance = portraitModelStub(), portraitSide = side }):component())
+      local pbox
+      for _, c in ipairs(row.children) do
+        if c.type == "box" then
+          pbox = c
+        end
+      end
+      local sx
+      local fakeLove = {
+        graphics = setmetatable({
+          draw = function(_, _, _, _, _, s)
+            sx = s
+          end,
+        }, { __index = function()
+          return function()
+            return 16
+          end
+        end }),
+      }
+      pbox.props.draw(pbox, 0, 0, 120, 200, fakeLove)
+      return sx
+    end
+    assert.is_true(sxSign("left") > 0) -- not flipped (base flipH = false)
+    assert.is_true(sxSign("right") < 0) -- auto-flipped on the right
+  end)
+
+  it("returns a standalone portrait node with layout (nil without a portrait)", function()
+    local node = Dialogue.new(fakeUi, { instance = portraitModelStub() }):portrait({
+      width = 120,
+      height = 160,
+      layout = { position = "absolute", zIndex = 7 },
+    })
+    assert.are.equal("box", node.type)
+    assert.are.equal(7, node.props.zIndex)
+    assert.are.equal("absolute", node.props.position)
+
+    local none = Dialogue.new(fakeUi, {
+      instance = { renderModel = function()
+        return { active = true, speaker = { name = "H" }, text = { shown = "" }, choices = {} }
+      end },
+    })
+    assert.is_nil(none:portrait())
+
+    -- inactive dialogue: nil (its textures are released once it ends)
+    local inactive = Dialogue.new(fakeUi, {
+      instance = { renderModel = function()
+        return { active = false, speaker = { name = "H" }, text = { shown = "" }, choices = {}, portrait = { texture = "T", width = 100, height = 100, size = 120 } }
+      end },
+    })
+    assert.is_nil(inactive:portrait())
+  end)
+
+  it("uses a custom box frame instead of the default border", function()
+    local instance = {
+      renderModel = function()
+        return { active = true, speaker = { name = "H" }, text = { shown = "" }, choices = {} }
+      end,
+    }
+    local framed = false
+    local node = Dialogue.new(fakeUi, { instance = instance }):component({
+      frame = function()
+        framed = true
+      end,
+    })
+    assert.are.equal("function", type(node.props.draw))
+    assert.is_nil(node.props.style.borderColor) -- default border replaced
+    node.props.draw(node, 0, 0, 100, 50, { graphics = setmetatable({}, { __index = function()
+      return function() end
+    end }) }, nil, {})
+    assert.is_true(framed)
+  end)
+
+  it("returns a flow node (not absolutely positioned) with flow = true", function()
+    local instance = {
+      renderModel = function()
+        return { active = true, speaker = { name = "H" }, text = { shown = "" }, choices = {} }
+      end,
+    }
+    local flow = Dialogue.new(fakeUi, { instance = instance }):component({ flow = true })
+    assert.is_nil(flow.props.position) -- composable in a column/row
+    assert.are.equal("100%", flow.props.width)
+
+    local absolute = Dialogue.new(fakeUi, { instance = instance }):component()
+    assert.are.equal("absolute", absolute.props.position)
+  end)
+
+  it("applies a nine-slice frame and stencil mask via the draw context", function()
+    local node = Dialogue.new(fakeUi, { instance = portraitModelStub() }):portrait({
+      frame = { image = "IMG" },
+      stencil = { kind = "circle" },
+    })
+    local seen = {}
+    local ctx = {
+      nineSlice = function(_, image)
+        seen.nineSlice = image
+      end,
+      stencil = function(_, shape, fn)
+        seen.stencil = shape
+        if fn then
+          fn()
+        end
+      end,
+    }
+    local fakeLove = {
+      graphics = setmetatable({
+        draw = function()
+          seen.drew = true
+        end,
+      }, { __index = function()
+        return function()
+          return 16
+        end
+      end }),
+    }
+    node.props.draw(node, 0, 0, 120, 120, fakeLove, nil, ctx)
+    assert.are.equal("IMG", seen.nineSlice)
+    assert.are.same({ kind = "circle" }, seen.stencil)
+    assert.is_true(seen.drew) -- image drawn inside the stencil
+  end)
 end)

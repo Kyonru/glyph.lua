@@ -138,6 +138,82 @@ local dialogue = ui.dialogue.new({
 The pop is driven by the adapter's clock, so call `dialogue:update(dt)` each
 frame.
 
+### Side, frame & mask
+
+```lua
+ui.dialogue.new({
+  library = LoveDialogue,
+  portraitSide = "right",     -- "left" (default) | "right"; auto-mirrors on the right
+  portraitFlip = true,        -- force the mirror (default: auto from side)
+  portraitFrame = {           -- frame drawn behind the portrait...
+    background = { 0, 0, 0, 0.5 }, borderColor = { 1, 1, 1, 0.4 }, borderWidth = 2, radius = 8,
+  },
+  portraitStencil = { kind = "circle" }, -- ...and a mask on the image
+})
+```
+
+`portraitFrame` (and the box `frame`) accept a **style table** like above, a
+**nine-slice** table `{ image = myImage }` (drawn with `ctx:nineSlice`), or a
+**draw function** `function(ctx, x, y, w, h, love, opacity) … end`.
+`portraitStencil` accepts a `GlyphShape` (e.g. `{ kind = "circle" }`) or a
+function, applied with `ctx:stencil` to mask the image.
+
+### Portrait outside the box
+
+For a bust on top of the box (or anywhere), drop the inline portrait and place a
+standalone one with `dialogue:portrait(props)` — it returns a node (or `nil`):
+
+```lua
+ui.stack({ width = "100%", height = "100%" }, {
+  dialogue:portrait({
+    width = 120, height = 180,
+    layout = { position = "absolute", left = 40, bottom = 150, zIndex = 14 },
+    frame = { image = panelImage }, -- its own nine-slice panel
+    stencil = { kind = "circle" },
+  }),
+  dialogue:component({ portrait = false }), -- box without the inline portrait
+})
+```
+
+#### Anchor the bust above the box (pushed up by growth)
+
+To keep the bust a **fixed size** and have the growing box *push it up* (instead
+of resizing it), compose it in a bottom-anchored column with `component({ flow =
+true })` — `flow` returns the box as a normal flow node instead of an absolutely
+positioned bar, so the layout does the anchoring automatically:
+
+```lua
+ui.column({ position = "absolute", left = 24, right = 24, bottom = 24, gap = 0 }, {
+  ui.row({ width = "100%", justify = "end" }, {
+    ui.stack({ width = 150, height = 150 }, {
+      dialogue:portrait({ width = "100%", height = "100%", stencil = { kind = "circle" } }),
+      ui.box({ position = "absolute", inset = 0, draw = ringDraw }), -- ring on top
+    }),
+  }),
+  dialogue:component({ portrait = false, flow = true }), -- box below; growth lifts the bust
+})
+```
+
+As the box grows to fit choices/long text, the column grows upward (bottom is
+fixed) and the bust rises with it — its size never changes.
+
+## Custom box frame
+
+The box border is customizable inline via `style`:
+
+```lua
+dialogue:component({ style = { borderColor = { 1, 0.8, 0.2, 1 }, borderWidth = 3, radius = 12 } })
+```
+
+For a richer frame (a painted UI-kit panel or your own draw), pass `frame` — a
+nine-slice table, a style table, or a draw function. It replaces the default
+border and is drawn behind the content:
+
+```lua
+dialogue:component({ frame = { image = boxFrameImage, opts = { border = 16 } } })
+-- or: frame = function(ctx, x, y, w, h) ctx:nineSlice(myImage, { x = x, y = y, width = w, height = h }) end
+```
+
 ## Inline text effects
 
 `component` custom-draws `text.shown` per glyph and applies Love-Dialogue's

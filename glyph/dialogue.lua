@@ -166,11 +166,15 @@ local function drawCaret(love, x, y, width, height, color, opacity, time)
 end
 
 -- Draws a character portrait (a love Image + optional quad) scaled to `size`,
--- mirrored when flipH and rotated around its center. Mirrors Love-Dialogue's
--- LoveCharacter:drawPortrait, plus optional rotation.
-local function drawPortraitImage(love, portrait, x, y, size, opacity, rotation)
+-- mirrored when `flip` and rotated around its center. Mirrors Love-Dialogue's
+-- LoveCharacter:drawPortrait, plus optional rotation. `flip` defaults to the
+-- portrait's own flipH when nil.
+local function drawPortraitImage(love, portrait, x, y, size, opacity, rotation, flip)
   if not portrait or not portrait.texture then
     return
+  end
+  if flip == nil then
+    flip = portrait.flipH
   end
   local graphics = love.graphics
   local sx, sy = size, size
@@ -181,7 +185,7 @@ local function drawPortraitImage(love, portrait, x, y, size, opacity, rotation)
     sy = size / portrait.height
   end
   local ox = 0
-  if portrait.flipH then
+  if flip then
     sx = -sx
     ox = portrait.width or 0
   end
@@ -210,6 +214,49 @@ local function portraitYFor(align, y, boxHeight, scaled, offsetY)
     return y + (boxHeight - scaled) / 2 + offsetY
   end
   return y + boxHeight - scaled + offsetY -- "bottom" (default)
+end
+
+-- Resolves the effective horizontal flip. `flip` may be true/false (force),
+-- or nil/"auto" (use the portrait's own flipH, inverted when on the right so
+-- the character faces the text).
+local function resolveFlip(flip, side, base)
+  base = base and true or false
+  if flip == true then
+    return true
+  elseif flip == false then
+    return false
+  end
+  if side == "right" then
+    return not base
+  end
+  return base
+end
+
+-- Draws a frame at (x, y, w, h). `frame` may be a draw function
+-- (ctx, x, y, w, h, love, opacity), a nine-slice table ({ image = img, ... }),
+-- or a style table ({ background, borderColor, borderWidth, radius }).
+local function drawFrame(ctx, love, frame, x, y, width, height, opacity)
+  if not frame then
+    return
+  end
+  opacity = opacity or 1
+  if type(frame) == "function" then
+    frame(ctx, x, y, width, height, love, opacity)
+  elseif frame.image then
+    ctx:nineSlice(frame.image, { x = x, y = y, width = width, height = height }, frame.opts or frame)
+  else
+    if frame.background then
+      ctx:color(withAlpha(frame.background, opacity))
+      ctx:rect("fill", x, y, width, height, frame.radius)
+    end
+    if frame.borderColor and (frame.borderWidth or 0) > 0 then
+      if love.graphics.setLineWidth then
+        love.graphics.setLineWidth(frame.borderWidth)
+      end
+      ctx:color(withAlpha(frame.borderColor, opacity))
+      ctx:rect("line", x, y, width, height, frame.radius)
+    end
+  end
 end
 
 -- Ease-out-back: overshoots slightly past 1.0 then settles, giving a "pop".
@@ -516,6 +563,57 @@ function Adapter:model()
   return buildModel(instance)
 end
 
+-- Builds a portrait box node (or nil), shared by the inline portrait and the
+-- standalone Adapter:portrait. `o` controls size/width/height/side/align/fit/
+-- flip/frame/stencil/layout.
+local function buildPortraitNode(self, model, o)
+  o = o or {}
+  local p = model and model.portrait
+  if not p then
+    return nil
+  end
+  local pSize = o.size or self.opts.portraitSize or p.size or 100
+  local flip = resolveFlip(o.flip, o.side, p.flipH)
+  local align = o.align or self.opts.portraitAlign
+  local fit = o.fit
+  if fit == nil then
+    fit = self.opts.portraitFit
+  end
+  local frame = o.frame
+  local stencil = o.stencil
+  local opacity = model.opacity or 1
+
+  local boxProps = {
+    width = o.width or pSize,
+    height = o.height or "100%",
+    interactive = false,
+    accessibilityHidden = true,
+    draw = function(_, x, y, width, height, love, _, ctx)
+      if frame then
+        drawFrame(ctx, love, frame, x, y, width, height, opacity)
+      end
+      local function drawImage()
+        local scaled = pSize * (p.scale or 1) * self:portraitPopScale()
+        if fit then
+          scaled = math.min(scaled, height)
+        end
+        local dx = x + (width - scaled) / 2 + (p.offsetX or 0)
+        local dy = portraitYFor(align, y, height, scaled, p.offsetY)
+        drawPortraitImage(love, p, dx, dy, scaled, opacity, p.rotation, flip)
+      end
+      if stencil then
+        ctx:stencil(stencil, drawImage, o.stencilOpts)
+      else
+        drawImage()
+      end
+    end,
+  }
+  if o.layout then
+    mergeInto(boxProps, o.layout)
+  end
+  return Components.box(boxProps)
+end
+
 -- Returns a Glyph node tree rendering the current dialogue, or nil when there is
 -- no active line. Layout/position/style are overridable through `props`.
 function Adapter:component(props)
@@ -530,14 +628,6 @@ function Adapter:component(props)
   local textColor = props.textColor or theme.textColor or { 1, 1, 1, 1 }
   local accent = props.accent or theme.accent or { 1, 0.86, 0.4, 1 }
   local font = props.font or self.opts.font
-
-  local boxStyle = mergeInto({
-    background = { 0, 0, 0, 0.86 },
-    borderColor = { 1, 1, 1, 0.9 },
-    borderWidth = 2,
-    radius = 8,
-  }, props.style)
-  boxStyle.opacity = opacity
 
   local content = {}
 
@@ -594,48 +684,65 @@ function Adapter:component(props)
     content[#content + 1] = Components.column({ width = "100%", gap = 4 }, choiceNodes)
   end
 
-  -- Lay the portrait (if any) beside the text; otherwise the content fills.
+  -- Place the portrait (left/right) beside the text, or drop it when
+  -- props.portrait == false; otherwise the content fills the box.
+  local side = props.portrait
+  if side == nil then
+    side = self.opts.portraitSide or "left"
+  end
   local inner
-  if model.portrait then
-    local pSize = self.opts.portraitSize or model.portrait.size or 100
-    inner = Components.row({ width = "100%", height = "100%", gap = props.gap or 14 }, {
-      Components.box({
-        width = pSize,
-        height = "100%",
-        interactive = false,
-        accessibilityHidden = true,
-        draw = function(_, x, y, _, height, love)
-          local p = model.portrait
-          -- Honor the character transform (scale) and the built-in pop, scaling
-          -- around the portrait's horizontal center; vertical anchor is
-          -- configurable via opts.portraitAlign ("bottom" | "top" | "center").
-          local scaled = pSize * (p.scale or 1) * self:portraitPopScale()
-          -- portraitFit keeps the portrait inside the box (no overflow).
-          if self.opts.portraitFit then
-            scaled = math.min(scaled, height)
-          end
-          local dx = x + (pSize - scaled) / 2 + (p.offsetX or 0)
-          local dy = portraitYFor(self.opts.portraitAlign, y, height, scaled, p.offsetY)
-          drawPortraitImage(love, p, dx, dy, scaled, opacity, p.rotation)
-        end,
-      }),
-      Components.column({ flex = 1, height = "100%", gap = props.gap or 8 }, content),
+  if side ~= false and model.portrait then
+    local portrait = buildPortraitNode(self, model, {
+      side = side,
+      frame = self.opts.portraitFrame,
+      stencil = self.opts.portraitStencil,
     })
+    local contentColumn = Components.column({ flex = 1, height = "100%", gap = props.gap or 8 }, content)
+    local rowChildren = (side == "right") and { contentColumn, portrait } or { portrait, contentColumn }
+    inner = Components.row({ width = "100%", height = "100%", gap = props.gap or 14 }, rowChildren)
   else
     inner = Components.column({ width = "100%", height = "100%", gap = props.gap or 8 }, content)
   end
 
+  -- A custom box frame (props.frame / opts.frame) is drawn behind the content
+  -- and replaces the default border; otherwise the default styled border shows.
+  local frame = props.frame or self.opts.frame
+  local boxStyle = mergeInto({}, props.style)
+  local boxDraw = nil
+  if frame then
+    boxDraw = function(_, x, y, width, height, love, _, ctx)
+      drawFrame(ctx, love, frame, x, y, width, height, opacity)
+    end
+  else
+    boxStyle = mergeInto({
+      background = { 0, 0, 0, 0.86 },
+      borderColor = { 1, 1, 1, 0.9 },
+      borderWidth = 2,
+      radius = 8,
+    }, props.style)
+  end
+  boxStyle.opacity = opacity
+
   local layout = {
-    position = "absolute",
-    left = props.margin or 24,
-    right = props.margin or 24,
-    bottom = props.margin or 24,
     height = self:resolvedHeight(props),
     padding = props.padding or 18,
+    display = "column",
     style = boxStyle,
+    draw = boxDraw,
   }
+  if props.flow then
+    -- A flow node (not absolutely positioned), so it can be composed in a
+    -- column/row — e.g. with a fixed-size portrait above that the growing box
+    -- pushes up.
+    layout.width = props.width or "100%"
+  else
+    layout.position = "absolute"
+    layout.left = props.margin or 24
+    layout.right = props.margin or 24
+    layout.bottom = props.margin or 24
+  end
   mergeInto(layout, props.layout)
-  return Components.column(layout, { inner })
+  return Components.box(layout, { inner })
 end
 
 -- Full-screen fade overlay for the library's [fade: ...] transitions, or nil
@@ -662,6 +769,32 @@ function Adapter:overlay(props)
       love.graphics.rectangle("fill", x, y, width, height)
       love.graphics.pop()
     end,
+  })
+end
+
+-- Standalone portrait node (or nil) you can position anywhere — e.g. a bust on
+-- top of the box, in its own frame. Pair with component({ portrait = false }).
+-- props: size, width, height, side, align, fit, flip, frame, stencil, layout.
+function Adapter:portrait(props)
+  props = props or {}
+  local model = self:model()
+  -- Require an active dialogue: once it ends, Love-Dialogue releases its
+  -- textures (LoveDialogue:destroy), so the portrait must not be drawn.
+  if not model or not model.active or not model.portrait then
+    return nil
+  end
+  return buildPortraitNode(self, model, {
+    size = props.size,
+    width = props.width,
+    height = props.height,
+    side = props.side,
+    align = props.align,
+    fit = props.fit,
+    flip = props.flip,
+    frame = props.frame,
+    stencil = props.stencil,
+    stencilOpts = props.stencilOpts,
+    layout = props.layout,
   })
 end
 

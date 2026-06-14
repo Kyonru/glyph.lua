@@ -1099,6 +1099,10 @@ local GlyphDialogueTransition = {}
 ---@field choices GlyphDialogueChoice[]
 local GlyphDialogueRenderModel = {}
 
+-- A frame is a style table ({ background, borderColor, borderWidth, radius }), a
+-- nine-slice table ({ image = <love Image>, ... }), or a draw function.
+---@alias GlyphDialogueFrame GlyphStyle|table|fun(ctx: GlyphDrawContext, x: number, y: number, w: number, h: number, love: table, opacity: number)
+
 ---@class GlyphDialogueComponentProps
 ---@field margin? number
 ---@field height? number
@@ -1109,7 +1113,25 @@ local GlyphDialogueRenderModel = {}
 ---@field textColor? GlyphColor
 ---@field accent? GlyphColor
 ---@field font? any
+---@field portrait? "left"|"right"|false where to place the inline portrait, or false to drop it (default opts.portraitSide)
+---@field frame? GlyphDialogueFrame custom box frame (replaces the default border)
+---@field flow? boolean return a flow node (not absolutely positioned) so it can be composed in a column/row
+---@field width? number|string width when flow (default "100%")
 local GlyphDialogueComponentProps = {}
+
+---@class GlyphDialoguePortraitProps
+---@field size? number
+---@field width? number
+---@field height? number
+---@field side? "left"|"right" affects auto-flip
+---@field align? "bottom"|"top"|"center"
+---@field fit? boolean clamp the portrait to the node height
+---@field flip? boolean force horizontal flip (default: auto from side)
+---@field frame? GlyphDialogueFrame frame drawn behind the portrait
+---@field stencil? GlyphShape|fun(ctx: GlyphDrawContext): any mask applied to the portrait image
+---@field stencilOpts? table
+---@field layout? table positioning props merged into the node (position, top, left, zIndex, ...)
+local GlyphDialoguePortraitProps = {}
 
 ---@class GlyphDialogueOptions
 ---@field library? table the Love-Dialogue module (required to use :play)
@@ -1124,6 +1146,11 @@ local GlyphDialogueComponentProps = {}
 ---@field portraitAlign? "bottom"|"top"|"center" vertical anchor of the portrait in the box (default "bottom")
 ---@field portraitSize? number override the drawn portrait size (default: the library's portraitSize)
 ---@field portraitFit? boolean scale the portrait to stay inside the box instead of overflowing (default false)
+---@field portraitSide? "left"|"right" default side for the inline portrait (default "left")
+---@field portraitFlip? boolean force the inline portrait flip (default: auto from side)
+---@field portraitFrame? GlyphDialogueFrame frame drawn behind the inline portrait
+---@field portraitStencil? GlyphShape|fun(ctx: GlyphDrawContext): any mask applied to the inline portrait
+---@field frame? GlyphDialogueFrame default custom box frame (replaces the default border)
 local GlyphDialogueOptions = {}
 
 ---@class GlyphDialogueAdapter
@@ -1139,6 +1166,7 @@ local GlyphDialogueOptions = {}
 ---@field model fun(self: GlyphDialogueAdapter): GlyphDialogueRenderModel|nil
 ---@field component fun(self: GlyphDialogueAdapter, props?: GlyphDialogueComponentProps): GlyphNode|nil
 ---@field overlay fun(self: GlyphDialogueAdapter, props?: { zIndex?: number }): GlyphNode|nil
+---@field portrait fun(self: GlyphDialogueAdapter, props?: GlyphDialoguePortraitProps): GlyphNode|nil
 local GlyphDialogueAdapter = {}
 
 ---@class GlyphDialogueApi

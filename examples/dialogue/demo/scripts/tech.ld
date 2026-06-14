@@ -19,10 +19,10 @@
 Miisan: (Happy) Welcome to the {color:00FFFF}Tech Showcase!{/color}
 Eiisan: (Happy) That was a white flash intro.
 
-[move: Miisan 200 0 1.0]
 Miisan: I am sliding to the right...
-[move: Miisan 0 0 0.5]
+[move: Miisan 200 0 1.0]
 Miisan: And snapping back!
+[move: Miisan 0 0 0.5]
 
 Eiisan: (Happy) My turn!
 [move: Eiisan 0 -50 0.2]
