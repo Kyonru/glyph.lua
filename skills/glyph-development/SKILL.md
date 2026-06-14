@@ -203,7 +203,7 @@ Menori support lives in `glyph/menori.lua`.
 Dialogue support lives in `glyph/dialogue.lua`.
 
 - Keep Love-Dialogue optional and app-provided through `ui.dialogue.new({ library = LoveDialogue })`. `examples/dialogue` may vendor a snapshot, but core must not depend on it.
-- The adapter only renders + bridges input. It augments each wrapped instance at runtime (adding `renderModel`/`selectChoice`/`isFinished` and a renderless-aware `draw` when missing) and otherwise builds the model from `dialogue.state`. Never edit the vendored library — keep the snapshot byte-for-byte upstream.
+- The adapter only renders + bridges input. It augments each wrapped instance at runtime (adding `renderModel`/`selectChoice`/`isFinished` and a renderless-aware `draw` when missing) and otherwise builds the model from `dialogue.state`, so it needs no library edits. Don't patch the vendored library for the adapter's sake; small upstreamable gameplay patches are fine if marked `-- Glyph patch` and listed in `vendor/LOVE_DIALOGUE_NOTICE.md` (e.g. sequential `[move:]`).
 - Do not move parsing, branching, variables, audio, or save/load into Glyph. Keep inline-effect math self-contained in the adapter (never require the library's internal modules).
 - Test with a stub instance covering both the `renderModel()` path and the `.state` fallback; do not require the vendored library in specs.
 

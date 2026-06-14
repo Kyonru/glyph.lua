@@ -18,7 +18,20 @@ The upstream repository does not ship a standalone `LICENSE` file; the MIT grant
 is stated in its `README.md`. To refresh this snapshot, clone the upstream repo
 and copy its `LoveDialogue/` directory here.
 
-This snapshot is **unmodified** — byte-for-byte upstream. Glyph's `ui.dialogue`
-adapter adds the methods it needs (`renderModel`, `selectChoice`, `isFinished`,
-and a renderless-aware `draw`) to each instance at runtime, so the vendored
-library does not need to be edited.
+The `ui.dialogue` **adapter** needs no library changes: it adds the methods it
+uses (`renderModel`, `selectChoice`, `isFinished`, and a renderless-aware `draw`)
+to each instance at runtime.
+
+## Local patches
+
+This snapshot carries one small, upstreamable gameplay fix (marked
+`-- Glyph patch` in the source), otherwise it is upstream:
+
+- `LoveDialogue/LoveDialogue.lua` — `[move:]` now **blocks** until its tween
+  completes (mirroring how `[fade:]` already pauses processing), so consecutive
+  `[move:]` commands play in sequence (e.g. a bounce) instead of all starting at
+  once and cancelling out. Upstream processes `[move:]` non-blocking, which makes
+  chained moves overwrite each other on the same character.
+
+This patch is unrelated to the adapter — it fixes demo motion and is a good
+upstream PR candidate.

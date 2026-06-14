@@ -270,12 +270,19 @@ function LoveDialogue:processCurrentLine()
     elseif line.type == "move" then
         local char = self.state.characters[line.name]
         if char then
-            local tween = Tween.new(char, { x = line.x, y = line.y }, line.duration, "easeout")
+            -- Glyph patch: block until the move finishes so consecutive [move:]
+            -- commands play in sequence (e.g. a bounce) instead of all starting
+            -- at once and cancelling out. Mirrors how [fade:] already pauses.
+            local tween = Tween.new(char, { x = line.x, y = line.y }, line.duration, "easeout", function()
+                self.state.currentLineIndex = self.state.currentLineIndex + 1
+                self:processCurrentLine()
+            end)
             table.insert(self.state.activeTweens, tween)
+            return -- Pause processing until the move tween completes
         end
         self.state.currentLineIndex = self.state.currentLineIndex + 1
-        return self:processCurrentLine() 
-        
+        return self:processCurrentLine()
+
     elseif line.type == "bgm" then
         self:playBGM(line.path, true)
         self.state.currentLineIndex = self.state.currentLineIndex + 1

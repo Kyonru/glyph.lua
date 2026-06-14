@@ -211,8 +211,9 @@ runtime**, leaving the library source untouched:
   the library's own `:draw()` becomes a no-op so the adapter owns drawing.
 
 Each method is only added when absent, so an upstream copy that already provides
-its own keeps it. The vendored `examples/dialogue` snapshot is therefore
-byte-for-byte upstream (see `vendor/LOVE_DIALOGUE_NOTICE.md`).
+its own keeps it. The adapter therefore needs no library edits; the vendored
+`examples/dialogue` snapshot carries only one small, documented gameplay patch
+(sequential `[move:]`) — see `vendor/LOVE_DIALOGUE_NOTICE.md`.
 
 ## Example
 
