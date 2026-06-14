@@ -8,6 +8,10 @@ icon: lucide/boxes
 ![Animated GIF showing Glyph text, image, button, input, meter, tabs, and panel components.](assets/feature-gifs/components.gif)
 <!-- /glyph:feature-gif components -->
 
+> [!TIP]
+> See it in action: [`examples/basic`](examples.md) wires up text, buttons,
+> inputs, meters, tabs, and a scroll view end to end.
+
 Glyph components return virtual nodes. Components are plain Lua functions; there is no class system.
 
 ## Text
@@ -43,6 +47,10 @@ ui.richText("Status: [color=#7cffae]online[/color] [font=mono]stable[/font]", {
   textVerticalAlign = "center",
 })
 ```
+
+`ui.richText(value, props)` is sugar for `ui.text(value, { format = "sysl" })`.
+On a plain `ui.text`, `rich = true` is the same shorthand (`format = "sysl"`); an
+explicit `format` always wins.
 
 `textVerticalAlign = "top" | "center" | "bottom"` offsets plain or SYSL-backed
 text inside an explicit text node height. It is visual-only and does not change

@@ -8,6 +8,10 @@ icon: lucide/accessibility
 ![Animated GIF showing Glyph semantic labels, focus events, live announcements, and snapshots.](assets/feature-gifs/accessibility.gif)
 <!-- /glyph:feature-gif accessibility -->
 
+> [!TIP]
+> See it in action: [`examples/accessibility`](examples.md) demonstrates semantic
+> labels, focus events, live announcements, and snapshots.
+
 Glyph runs inside Love2D, so it cannot magically turn nodes into native OS
 screen-reader controls. Instead, Glyph exposes semantic metadata, focus and
 activation announcements, live-region events, and tree snapshots. Your app can

@@ -8,6 +8,10 @@ icon: lucide/gamepad-2
 ![Animated GIF showing Glyph spatial navigation focus moving through buttons and scoped groups.](assets/feature-gifs/navigation.gif)
 <!-- /glyph:feature-gif navigation -->
 
+> [!TIP]
+> See it in action: [`examples/navigate`](examples.md) moves focus through
+> buttons and scoped groups with the keyboard and gamepad d-pad.
+
 Glyph includes a spatial navigation system for joystick, d-pad, and keyboard-driven interfaces.
 `ui.navigate(direction)` moves focus to the nearest focusable node in a given direction using
 screen-space geometry, so it handles two-dimensional layouts correctly without any manual

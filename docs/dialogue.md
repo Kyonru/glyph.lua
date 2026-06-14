@@ -180,18 +180,19 @@ ui.dialogue.new({
 function, applied with `ctx:stencil` to mask the image.
 
 The **speaker name** sits on top of the body text and follows the text alignment
-(`align`), so right-aligned text puts the name at the top-right (next to a
+(`textAlign`), so right-aligned text puts the name at the top-right (next to a
 right-side portrait). Per-line side is just `component({ portrait = "left"|"right" })`
 — for a two-sided conversation, drive it from `dialogue:model().speaker.name`:
 
 ```lua
 local m = dialogue:model()
 local side = (m and m.speaker.name == "Wiisan") and "right" or "left"
-dialogue:component({ portrait = side, align = side }) -- portrait + name + text on that side
+dialogue:component({ portrait = side, textAlign = side }) -- portrait + name + text on that side
 ```
 
-`align` (`"left"` | `"center"` | `"right"`, default `opts.textAlign`) aligns the
-body text — handy to right-align a right-side speaker.
+`textAlign` (`"left"` | `"center"` | `"right"`, default `opts.textAlign`) aligns
+the body text — handy to right-align a right-side speaker. (`align` is still
+accepted as a back-compat alias.)
 
 ### Portrait outside the box
 

@@ -8,6 +8,10 @@ icon: lucide/layout-grid
 ![Animated GIF showing Glyph rows, columns, responsive grids, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif)
 <!-- /glyph:feature-gif layout -->
 
+> [!TIP]
+> See it in action: [`examples/inventory`](examples.md) leans on grids,
+> `ui.grid.pointToCell`, absolute overlays, and flow layout.
+
 Glyph uses a small pure-Lua layout engine. The model is explicit and game-friendly, not CSS.
 
 ## Flow Layout
@@ -18,7 +22,8 @@ Common props:
 
 - `width`, `height`
 - `minWidth`, `maxWidth`, `minHeight`, `maxHeight`
-- `padding`
+- `padding` (inner spacing)
+- `margin` (outer spacing around a flow child)
 - `gap`
 - `align = "start" | "center" | "end" | "stretch"`
 - `justify = "start" | "center" | "end"`
@@ -30,6 +35,43 @@ Common props:
 `flex = 1` means “take remaining space” using a zero basis unless width or height is provided.
 `align` controls the cross axis; `justify` controls the main axis. In a row, `justify = "center"`
 centers children horizontally. In a column, it centers children vertically.
+
+> [!NOTE]
+> `align` is the flex **cross-axis** alignment of children — it is not text
+> alignment. To align text inside a node, use `textAlign = "left" | "center" |
+> "right"` (see [Styling](styling.md)).
+
+### Margin
+
+`margin` is outer spacing around a flow child (a child of a `row`/`column`). It
+accepts a number (all sides) or a per-edge table, mirroring `padding`:
+
+```lua
+ui.row({ width = 600 }, {
+  ui.button({ label = "Back" }),
+  ui.button({ label = "Next", margin = { left = 12 } }), -- 12px gap to its left
+})
+```
+
+Margin counts toward the container's content size and shifts the child's
+position; it is pixel-only (percent strings are ignored). Use `gap` for even
+spacing between every child, and `margin` to nudge an individual one.
+
+### Min / max sizing
+
+`minWidth`/`maxWidth`/`minHeight`/`maxHeight` clamp a node's own size, and the
+clamp is honored when the node is a **flex child** too — so a `flex = 1` child
+will not grow past its `maxWidth` or shrink below its `minWidth`:
+
+```lua
+ui.row({ width = 800 }, {
+  ui.box({ flex = 1, minWidth = 240 }), -- never narrower than 240
+  ui.box({ flex = 1, maxWidth = 360 }), -- never wider than 360
+})
+```
+
+Constraints are applied per child in a single pass (Glyph does not redistribute
+the space freed by a clamped child to its siblings).
 
 ```lua
 ui.row({ width = 600, gap = 8 }, {

@@ -8,6 +8,10 @@ icon: lucide/layers
 ![Animated GIF showing Glyph scene layers, overlays, modal blocking, and backdrop behavior.](assets/feature-gifs/scenes-modals.gif)
 <!-- /glyph:feature-gif scenes-modals -->
 
+> [!TIP]
+> See it in action: [`examples/scene`](examples.md) and
+> [`examples/modal`](examples.md) demonstrate the stack, layers, and overlays.
+
 Glyph provides a native scene/layer stack. Scenes, overlays, and modals use one stack model, one transition pipeline, one input router, and isolated hook scopes.
 
 ## Scene API

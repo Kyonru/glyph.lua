@@ -8,6 +8,10 @@ icon: lucide/cpu
 ![Animated GIF showing Glyph runtime updates, input events, focus, and render callbacks.](assets/feature-gifs/runtime.gif)
 <!-- /glyph:feature-gif runtime -->
 
+> [!TIP]
+> See it in action: [`examples/basic`](examples.md) is a full app with state,
+> input, focus, and the update/render loop.
+
 Glyph has one shared runtime exposed through `ui.update`, `ui.render`, input forwarding functions, hooks, and helper APIs.
 
 ## Rendering

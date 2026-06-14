@@ -8,6 +8,10 @@ icon: lucide/palette
 ![Animated GIF showing Glyph theme colors, variants, and state styles.](assets/feature-gifs/styling.gif)
 <!-- /glyph:feature-gif styling -->
 
+> [!TIP]
+> See it in action: [`examples/themes`](examples.md) swaps full themes, and
+> [`examples/styles`](examples.md) shows variants and state styles.
+
 Glyph uses Lua tables for styling, not CSS syntax.
 
 ## Inline Style
@@ -95,7 +99,16 @@ Supported states:
 - `active`
 - `disabled`
 
+`button`, `input`, and `tab` ship a default `disabled` style (a muted
+background and text), so setting `disabled = true` dims them without any per-app
+styling. Override the theme component's `disabled` table to customize it.
+
 Tabs should use `active` state styling rather than ad hoc active colors.
+
+> [!NOTE]
+> `textAlign` (`"left" | "center" | "right"`) aligns **text** within a node. Do
+> not confuse it with the flex `align` prop, which controls cross-axis alignment
+> of a container's children (see [Layout](layout.md)).
 
 ## Themes
 
@@ -134,6 +147,28 @@ ui.button({
   variant = "primary",
 })
 ```
+
+## Precedence
+
+A node's draw style is resolved by merging sources in order, **later wins**:
+
+1. `theme.base`
+2. `theme.components[type]` — component defaults (e.g. `button`, `input`)
+3. the selected `variant` (`theme.components[type].variants[variant]`)
+4. **component** state styles for the active states
+5. **variant** state styles for the active states
+6. legacy top-level props (`background`, `color`, `radius`, …)
+7. inline `props.style`
+8. inline `props.style` state styles for the active states
+
+So inline `style` overrides the theme, and a node's own state style (e.g.
+`style = { hover = {...} }`) overrides the component/variant state style. When
+several states are active at once, they apply in the order **hover → pressed →
+focused → active → disabled**, so `disabled` wins over `active`, which wins over
+`focused`, and so on.
+
+Resolved styles are cached per node and invalidated when the node's state, the
+inputs, or the theme `version` change.
 
 ## Audio Cues
 

@@ -51,6 +51,7 @@ nav = [
   { "Overview" = "README.md" },
   { "Installation" = "installation.md" },
   { "Getting Started" = "getting-started.md" },
+  { "Architecture" = "architecture.md" },
   { "API" = [
     { "Components" = "components.md" },
     { "Layout" = "layout.md" },
@@ -61,6 +62,9 @@ nav = [
     { "Accessibility" = "accessibility.md" },
     { "Responsive Helpers" = "responsive.md" },
     { "Custom Draw And Helpers" = "custom-draw.md" },
+    { "Sprite Sheets" = "sprite-sheet.md" },
+    { "Drag" = "drag.md" },
+    { "Offscreen Surfaces" = "surface.md" },
     { "Animations" = "animations.md" },
     { "Feedback" = "feedback.md" },
   ] },
