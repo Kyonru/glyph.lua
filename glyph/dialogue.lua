@@ -649,7 +649,8 @@ function Adapter:component(props)
   local textColor = props.textColor or theme.textColor or { 1, 1, 1, 1 }
   local accent = props.accent or theme.accent or { 1, 0.86, 0.4, 1 }
   local font = props.font or self.opts.font
-  local align = props.align or self.opts.textAlign or "left" -- body text alignment
+  -- Prefer `textAlign` (matches core text props); `align` is a back-compat alias.
+  local align = props.textAlign or props.align or self.opts.textAlign or "left"
 
   local content = {}
 
