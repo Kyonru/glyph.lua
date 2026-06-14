@@ -232,6 +232,76 @@ describe("style", function()
     assert.are.same({ "fill", "line" }, shapes)
   end)
 
+  it("draws triangle, arc, rounded rect, and dashed/rounded lines through the draw context", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    local function record(name)
+      return function(...)
+        calls[#calls + 1] = { name, ... }
+      end
+    end
+    local fakeLove = {
+      graphics = setmetatable({
+        polygon = record("polygon"),
+        arc = record("arc"),
+        rectangle = record("rectangle"),
+        line = record("line"),
+      }, {
+        __index = function()
+          return function() end
+        end,
+      }),
+    }
+    runtime:setLove(fakeLove)
+
+    local function App()
+      return Components.box({
+        width = 40,
+        height = 20,
+        draw = function(_, _, _, _, _, _, _, ctx)
+          ctx:triangle("fill", 10, 10, 20, 30)
+          ctx:triangleEquilateral("line", 0, 0, 10)
+          ctx:arc("fill", 5, 6, 7, 0, 1)
+          ctx:roundedRect("line", 0, 0, 40, 20, 4)
+          ctx:dashedLine(0, 0, 10, 0, 2, 2)
+          ctx:roundedLine(0, 0, 10, 0, 4)
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime.root.layout = { x = 0, y = 0, width = 40, height = 20 }
+    runtime:draw(runtime.root)
+
+    local function named(name)
+      local out = {}
+      for _, call in ipairs(calls) do
+        if call[1] == name then
+          out[#out + 1] = call
+        end
+      end
+      return out
+    end
+
+    local polygons = named("polygon")
+    -- triangle and triangleEquilateral both route through polygon
+    assert.are.equal(2, #polygons)
+    -- isosceles triangle centered on (10, 10), size 20x30, pointing right
+    assert.are.same({ "polygon", "fill", 25, 10, -5, 0, -5, 20 }, polygons[1])
+
+    -- arc forwards the default "pie" arctype to love.graphics.arc
+    assert.are.same({ { "arc", "fill", "pie", 5, 6, 7, 0, 1 } }, named("arc"))
+
+    local rectangles = named("rectangle")
+    -- roundedRect is a centered rectangle with rounded corners
+    assert.are.same({ "rectangle", "line", -20, -10, 40, 20, 4, 4 }, rectangles[1])
+    -- roundedLine draws a fully-rounded capsule rectangle
+    assert.are.same({ "rectangle", "fill", 0, -2, 10, 4, 2, 2 }, rectangles[2])
+
+    -- dashedLine emits dash segments (length 10, dash 2, gap 2 -> 3 segments)
+    assert.are.equal(3, #named("line"))
+  end)
+
   it("updates derived component defaults from top-level theme colors", function()
     local theme = dofile("glyph/theme.lua")
     local nextSurface = color(8)

@@ -9,7 +9,7 @@ icon: lucide/pen-tool
 <!-- /glyph:feature-gif custom-draw -->
 
 > [!TIP]
-> See it in action: [`examples/custom-draw`](examples.md) and
+> See it in action: [`examples/hud-primitives`](examples.md) and
 > [`examples/path-feedback`](examples.md) cover draw helpers, paths, and masks.
 
 Glyph supports custom drawing on any node through `props.draw`.
@@ -57,6 +57,13 @@ Useful methods:
 - `ctx:shape(mode, shape, bounds?)`
 - `ctx:circle(mode, bounds?)` — shorthand for `ctx:shape(mode, { kind = "circle" }, bounds)`
 - `ctx:ellipse(mode, bounds?)` — shorthand for `ctx:shape(mode, { kind = "ellipse" }, bounds)`
+- `ctx:triangle(mode, cx, cy, width, height)` — isosceles triangle centered on `(cx, cy)`, pointing right
+- `ctx:triangleEquilateral(mode, cx, cy, width)` — equilateral triangle centered on `(cx, cy)`, pointing right
+- `ctx:arc(mode, x, y, radius, a1, a2, arctype?)` — arc from angle `a1` to `a2` (`arctype` defaults to `"pie"`)
+- `ctx:roundedRect(mode, cx, cy, width, height, radius?)` — rectangle centered on `(cx, cy)` with optional corner radius
+- `ctx:dashedLine(x1, y1, x2, y2, dashSize, gapSize)` — dashed line segment
+- `ctx:dashedRectangle(cx, cy, width, height, dashSize, gapSize)` — dashed rectangle centered on `(cx, cy)`
+- `ctx:roundedLine(x1, y1, x2, y2, width)` — line of thickness `width` with rounded ends
 - `ctx:blob(bounds?, opts?)`
 - `ctx:clip(shape, fn)`
 - `ctx:stencil(shapeOrFn, fn, opts?)`

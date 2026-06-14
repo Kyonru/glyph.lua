@@ -2878,6 +2878,122 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     drawShape(graphics, mode, { kind = "ellipse" }, bounds or self, self)
   end
 
+  ---Draws an isosceles triangle of size `width` x `height` centered on (cx, cy), pointing right (angle 0).
+  ---@param mode "fill"|"line"|string
+  ---@param cx number
+  ---@param cy number
+  ---@param width number
+  ---@param height number
+  ---@return nil
+  function ctx:triangle(mode, cx, cy, width, height)
+    if graphics and graphics.polygon then
+      local x1, y1 = cx + height / 2, cy
+      local x2, y2 = cx - height / 2, cy - width / 2
+      local x3, y3 = cx - height / 2, cy + width / 2
+      graphics.polygon(mode, x1, y1, x2, y2, x3, y3)
+    end
+  end
+
+  ---Draws an equilateral triangle of size `width` centered on (cx, cy), pointing right (angle 0).
+  ---@param mode "fill"|"line"|string
+  ---@param cx number
+  ---@param cy number
+  ---@param width number
+  ---@return nil
+  function ctx:triangleEquilateral(mode, cx, cy, width)
+    local height = math.sqrt(width * width - (width / 2) * (width / 2))
+    self:triangle(mode, cx, cy, width, height)
+  end
+
+  ---Draws an arc of radius `radius` from angle `a1` to `a2` centered on (x, y).
+  ---@param mode "fill"|"line"|string
+  ---@param x number
+  ---@param y number
+  ---@param radius number
+  ---@param a1 number
+  ---@param a2 number
+  ---@param arctype? "pie"|"open"|"closed"
+  ---@return nil
+  function ctx:arc(mode, x, y, radius, a1, a2, arctype)
+    if graphics and graphics.arc then
+      graphics.arc(mode, arctype or "pie", x, y, radius, a1, a2)
+    end
+  end
+
+  ---Draws a rectangle of size `width` x `height` centered on (cx, cy), with optional corner `radius`.
+  ---@param mode "fill"|"line"|string
+  ---@param cx number
+  ---@param cy number
+  ---@param width number
+  ---@param height number
+  ---@param radius? number
+  ---@return nil
+  function ctx:roundedRect(mode, cx, cy, width, height, radius)
+    drawRect(love, mode, cx - width / 2, cy - height / 2, width, height, radius)
+  end
+
+  ---Draws a dashed line from (x1, y1) to (x2, y2). `dashSize` and `gapSize` control the dash pattern.
+  ---@param x1 number
+  ---@param y1 number
+  ---@param x2 number
+  ---@param y2 number
+  ---@param dashSize number
+  ---@param gapSize number
+  ---@return nil
+  function ctx:dashedLine(x1, y1, x2, y2, dashSize, gapSize)
+    if not (graphics and graphics.line and graphics.push) then
+      return
+    end
+    local dx, dy = x2 - x1, y2 - y1
+    local step = dashSize + gapSize
+    local length = math.sqrt(dx * dx + dy * dy)
+    local count = (length - dashSize) / step
+    graphics.push()
+    graphics.translate(x1, y1)
+    graphics.rotate(math.atan2(dy, dx))
+    for i = 0, count do
+      graphics.line(i * step, 0, i * step + dashSize, 0)
+    end
+    graphics.pop()
+  end
+
+  ---Draws a dashed rectangle of size `width` x `height` centered on (cx, cy).
+  ---@param cx number
+  ---@param cy number
+  ---@param width number
+  ---@param height number
+  ---@param dashSize number
+  ---@param gapSize number
+  ---@return nil
+  function ctx:dashedRectangle(cx, cy, width, height, dashSize, gapSize)
+    local left, right = cx - width / 2, cx + width / 2
+    local top, bottom = cy - height / 2, cy + height / 2
+    self:dashedLine(left, top, right, top, dashSize, gapSize)
+    self:dashedLine(left, top, left, bottom, dashSize, gapSize)
+    self:dashedLine(left, bottom, right, bottom, dashSize, gapSize)
+    self:dashedLine(right, top, right, bottom, dashSize, gapSize)
+  end
+
+  ---Draws a line from (x1, y1) to (x2, y2) with rounded ends of the given `width`.
+  ---@param x1 number
+  ---@param y1 number
+  ---@param x2 number
+  ---@param y2 number
+  ---@param width number
+  ---@return nil
+  function ctx:roundedLine(x1, y1, x2, y2, width)
+    if not (graphics and graphics.rectangle and graphics.push) then
+      return
+    end
+    local dx, dy = x2 - x1, y2 - y1
+    local length = math.sqrt(dx * dx + dy * dy)
+    graphics.push()
+    graphics.translate(x1, y1)
+    graphics.rotate(math.atan2(dy, dx))
+    graphics.rectangle("fill", 0, -width / 2, length, width, width / 2, width / 2)
+    graphics.pop()
+  end
+
   ---@param shape? boolean|GlyphShape|fun(ctx: GlyphDrawContext): any
   ---@param fn fun()
   ---@return nil
