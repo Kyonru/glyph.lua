@@ -467,6 +467,36 @@ describe("dialogue adapter", function()
     assert.are.equal(120, drawnSize(true, 200)) -- box is tall enough: stays 120
   end)
 
+  it("applies portraitFilter to the portrait texture", function()
+    local minFilter, magFilter
+    local texture = {
+      setFilter = function(_, min, mag)
+        minFilter, magFilter = min, mag
+      end,
+    }
+    local instance = {
+      renderModel = function()
+        return {
+          active = true,
+          speaker = { name = "H" },
+          text = { shown = "" },
+          choices = {},
+          portrait = { texture = texture, quad = "Q", width = 100, height = 100, size = 120, scale = 1 },
+        }
+      end,
+    }
+    local node = Dialogue.new(fakeUi, { instance = instance, portraitFilter = "nearest" }):component()
+    local portraitBox = findPortraitBox(node)
+    local fakeLove = {
+      graphics = setmetatable({}, { __index = function()
+        return function() end
+      end }),
+    }
+    portraitBox.props.draw(portraitBox, 0, 0, 120, 200, fakeLove)
+    assert.are.equal("nearest", minFilter)
+    assert.are.equal("nearest", magFilter)
+  end)
+
   it("grows the box to fit tall wrapped text", function()
     local instance = {
       update = function() end,
@@ -569,6 +599,50 @@ describe("dialogue adapter", function()
     assert.are.equal(0, firstPrintX("left"))
     assert.are.equal(268, firstPrintX("right")) -- 300 - 32
     assert.are.equal(134, firstPrintX("center")) -- (300 - 32) / 2
+  end)
+
+  it("draws {bold} glyphs multiple times (faux bold)", function()
+    local function printCount(effects)
+      local instance = {
+        renderModel = function()
+          return { active = true, speaker = { name = "H" }, text = { shown = "ab", full = "ab" }, choices = {}, effects = effects }
+        end,
+      }
+      local node = Dialogue.new(fakeUi, { instance = instance }):component()
+      local bodyBox
+      local function find(n)
+        if n.type == "box" and n.props and type(n.props.draw) == "function" and n.props.width == "100%" then
+          bodyBox = n
+        end
+        for _, c in ipairs(n.children or {}) do
+          find(c)
+        end
+      end
+      find(node)
+      local count = 0
+      local fakeLove = {
+        graphics = setmetatable({
+          getFont = function()
+            return setmetatable({}, { __index = function()
+              return function()
+                return 16
+              end
+            end })
+          end,
+          setFont = function() end,
+          print = function()
+            count = count + 1
+          end,
+        }, { __index = function()
+          return function() end
+        end }),
+      }
+      bodyBox.props.draw(bodyBox, 0, 0, 300, 100, fakeLove)
+      return count
+    end
+
+    assert.are.equal(2, printCount(nil)) -- "ab" plain: one print per glyph
+    assert.are.equal(8, printCount({ { type = "bold", startIndex = 1, endIndex = 2 } })) -- 2 glyphs × 4 offsets
   end)
 
   it("exposes the fade transition from .state (and omits it at alpha 0)", function()

@@ -42,7 +42,14 @@ local effectTransforms = {
   italic = function(effect, _, _, tr)
     tr.shearX = (effect.content == "left") and 0.5 or -0.5
   end,
+  bold = function(_, _, _, tr)
+    tr.bold = true
+  end,
 }
+
+-- Faux bold: each bold glyph is drawn at these sub-pixel offsets to thicken it
+-- (the glyph advance is unchanged, so wrapping is unaffected).
+local boldOffsets = { { 0, 0 }, { 0.7, 0 }, { 0, 0.7 }, { 0.7, 0.7 } }
 
 local function transformFor(effects, index, time)
   local tr = { dx = 0, dy = 0, color = nil, shearX = 0 }
@@ -132,7 +139,14 @@ local function drawEffectText(love, text, effects, x, y, limit, baseColor, time,
     for k = line.from, line.to do
       local tr = transformFor(effects, k, time)
       graphics.setColor(withAlpha(tr.color or baseColor, opacity))
-      graphics.print(chars[k], x + offset + cx + tr.dx, y + cy + tr.dy, 0, 1, 1, 0, 0, tr.shearX or 0, 0)
+      local px, py = x + offset + cx + tr.dx, y + cy + tr.dy
+      if tr.bold then
+        for _, b in ipairs(boldOffsets) do
+          graphics.print(chars[k], px + b[1], py + b[2], 0, 1, 1, 0, 0, tr.shearX or 0, 0)
+        end
+      else
+        graphics.print(chars[k], px, py, 0, 1, 1, 0, 0, tr.shearX or 0, 0)
+      end
       cx = cx + font:getWidth(chars[k])
     end
   end
@@ -165,13 +179,17 @@ end
 -- Draws a character portrait (a love Image + optional quad) scaled to `size`,
 -- mirrored when `flip` and rotated around its center. Mirrors Love-Dialogue's
 -- LoveCharacter:drawPortrait, plus optional rotation. `flip` defaults to the
--- portrait's own flipH when nil.
-local function drawPortraitImage(love, portrait, x, y, size, opacity, rotation, flip)
+-- portrait's own flipH when nil. `filter` ("nearest"|"linear"|...) sets the
+-- texture's scaling filter when provided.
+local function drawPortraitImage(love, portrait, x, y, size, opacity, rotation, flip, filter)
   if not portrait or not portrait.texture then
     return
   end
   if flip == nil then
     flip = portrait.flipH
+  end
+  if filter and portrait.texture.setFilter then
+    portrait.texture:setFilter(filter, filter)
   end
   local graphics = love.graphics
   local sx, sy = size, size
@@ -578,6 +596,7 @@ local function buildPortraitNode(self, model, o)
   end
   local frame = o.frame
   local stencil = o.stencil
+  local filter = o.filter or self.opts.portraitFilter
   local opacity = model.opacity or 1
 
   local boxProps = {
@@ -595,7 +614,7 @@ local function buildPortraitNode(self, model, o)
         end
         local dx = x + (width - scaled) / 2 + (p.offsetX or 0)
         local dy = portraitYFor(align, y, height, scaled, p.offsetY)
-        drawPortraitImage(love, p, dx, dy, scaled, opacity, p.rotation, flip)
+        drawPortraitImage(love, p, dx, dy, scaled, opacity, p.rotation, flip, filter)
       end
       if stencil then
         ctx:stencil(stencil, drawImage, o.stencilOpts)
@@ -782,7 +801,7 @@ end
 
 -- Standalone portrait node (or nil) you can position anywhere — e.g. a bust on
 -- top of the box, in its own frame. Pair with component({ portrait = false }).
--- props: size, width, height, side, align, fit, flip, frame, stencil, layout.
+-- props: size, width, height, side, align, fit, flip, frame, stencil, filter, layout.
 function Adapter:portrait(props)
   props = props or {}
   local model = self:model()
@@ -802,6 +821,7 @@ function Adapter:portrait(props)
     frame = props.frame,
     stencil = props.stencil,
     stencilOpts = props.stencilOpts,
+    filter = props.filter,
     layout = props.layout,
   })
 end

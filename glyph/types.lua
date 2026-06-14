@@ -1131,6 +1131,7 @@ local GlyphDialogueComponentProps = {}
 ---@field frame? GlyphDialogueFrame frame drawn behind the portrait
 ---@field stencil? GlyphShape|fun(ctx: GlyphDrawContext): any mask applied to the portrait image
 ---@field stencilOpts? table
+---@field filter? "nearest"|"linear" texture scaling filter for the portrait image
 ---@field layout? table positioning props merged into the node (position, top, left, zIndex, ...)
 local GlyphDialoguePortraitProps = {}
 
@@ -1151,6 +1152,7 @@ local GlyphDialoguePortraitProps = {}
 ---@field portraitFlip? boolean force the inline portrait flip (default: auto from side)
 ---@field portraitFrame? GlyphDialogueFrame frame drawn behind the inline portrait
 ---@field portraitStencil? GlyphShape|fun(ctx: GlyphDrawContext): any mask applied to the inline portrait
+---@field portraitFilter? "nearest"|"linear" texture scaling filter for the portrait image
 ---@field frame? GlyphDialogueFrame default custom box frame (replaces the default border)
 ---@field textAlign? "left"|"center"|"right" default body text alignment
 local GlyphDialogueOptions = {}

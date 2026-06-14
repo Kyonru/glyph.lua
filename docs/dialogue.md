@@ -116,6 +116,23 @@ ui.dialogue.new({
 
 You can also raise the box `height` so the full-size portrait fits.
 
+### Texture filter
+
+Pixel-art portraits usually want nearest-neighbour scaling so they stay crisp
+when popped/scaled, while higher-res art wants linear. Set the texture's scaling
+filter with `portraitFilter` (or per standalone portrait with `filter`):
+
+```lua
+ui.dialogue.new({
+  library = LoveDialogue,
+  portraitFilter = "nearest", -- "nearest" (pixelated) | "linear" (smooth)
+})
+```
+
+It calls `Image:setFilter(filter, filter)` on the portrait image before drawing,
+so it overrides `love.graphics.setDefaultFilter` for the portrait only. Omit it
+to keep whatever filter the image already has.
+
 ### Animated size
 
 The drawn size is `portraitSize × scale × pop`:
@@ -231,14 +248,15 @@ dialogue:component({ frame = { image = boxFrameImage, opts = { border = 16 } } }
 ## Inline text effects
 
 `component` custom-draws `text.shown` per glyph and applies Love-Dialogue's
-inline effects (`{wave}`, `{shake}`, `{jiggle}`, `{color:RRGGBB}`, `{italic}`)
-using offsets equivalent to the library's own `TextEffects`. The effect math
-lives in the adapter, so it needs no access to the library's internal modules.
+inline effects (`{wave}`, `{shake}`, `{jiggle}`, `{color:RRGGBB}`, `{italic}`,
+`{bold}`) using offsets equivalent to the library's own `TextEffects`. The effect
+math lives in the adapter, so it needs no access to the library's internal modules.
 
 > [!NOTE]
-> The adapter renders `{bold}` as plain text. Use `{wave}`/`{shake}`/`{color}`
-> for emphasis, or render a custom box from `dialogue:model()` if you need
-> different styling.
+> `{bold}` is faux bold — each glyph is drawn a few times at sub-pixel offsets to
+> thicken it (the same trick Love-Dialogue uses), so it works with any font but
+> looks heavier/softer than a real bold typeface. For crisp bold, render a custom
+> box from `dialogue:model()` with an actual bold `Font`.
 
 ## Box height
 
