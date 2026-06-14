@@ -89,6 +89,74 @@ describe("layout", function()
     assert.are.equal(90, tree.children[2].layout.width)
   end)
 
+  it("offsets flow children by their margin", function()
+    local tree = ui.row({ width = 300, height = 50 }, {
+      ui.box({ width = 50, height = 50 }),
+      ui.box({ width = 50, height = 50, margin = { left = 20 } }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(0, tree.children[1].layout.x)
+    assert.are.equal(70, tree.children[2].layout.x) -- 50 + 20 left margin
+  end)
+
+  it("adds child margin to a content-sized container", function()
+    local tree = ui.row({}, {
+      ui.box({ width = 30, height = 30, margin = 10 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(50, tree.layout.width) -- 30 + 20 horizontal margin
+    assert.are.equal(50, tree.layout.height) -- 30 + 20 vertical margin
+    assert.are.equal(10, tree.children[1].layout.x)
+    assert.are.equal(10, tree.children[1].layout.y)
+  end)
+
+  it("accounts for cross-axis margin when centering", function()
+    local tree = ui.column({ width = 200, height = 200, align = "center" }, {
+      ui.box({ width = 40, height = 20, margin = { left = 10 } }),
+    })
+
+    Layout.compute(tree, context)
+
+    -- centered within (200 - 40 - 10) then shifted by the 10px left margin
+    assert.are.equal(85, tree.children[1].layout.x)
+  end)
+
+  it("shrinks a stretched child's cross size by its margin", function()
+    local tree = ui.column({ width = 100, height = 60, align = "stretch" }, {
+      ui.box({ height = 20, margin = { left = 15, right = 25 } }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(60, tree.children[1].layout.width) -- 100 - (15 + 25)
+    assert.are.equal(15, tree.children[1].layout.x)
+  end)
+
+  it("clamps a grown flex child to its maxWidth", function()
+    local tree = ui.row({ width = 400 }, {
+      ui.box({ height = 10, flex = 1, maxWidth = 120 }),
+      ui.box({ height = 10, flex = 1 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(120, tree.children[1].layout.width)
+  end)
+
+  it("keeps a shrinking flex child above its minWidth", function()
+    local tree = ui.row({ width = 100 }, {
+      ui.box({ width = 200, height = 10, shrink = 1, minWidth = 150 }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.is_true(tree.children[1].layout.width >= 150)
+  end)
+
   it("supports percent widths against available parent space", function()
     local tree = ui.column({ width = 240, padding = 20 }, {
       ui.box({ width = "100%", height = 10 }),

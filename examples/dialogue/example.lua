@@ -232,7 +232,7 @@ local function Demo()
 			-- side changes (model.speaker.name drives it); the box stays put.
 			local model = adapter:model()
 			local side = (model and model.speaker and model.speaker.name == "Wiisan") and "right" or "left"
-			local box = adapter:component({ margin = 30, portrait = side, align = side, layout = { zIndex = 12 } })
+			local box = adapter:component({ margin = 30, portrait = side, textAlign = side, layout = { zIndex = 12 } })
 			if box then
 				children[#children + 1] = box
 			end

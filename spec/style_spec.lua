@@ -105,6 +105,15 @@ describe("style", function()
     assert.are.same(color(3), resolved.color)
   end)
 
+  it("ships default disabled styles for input and tab", function()
+    local theme = dofile("glyph/theme.lua")
+
+    assert.is_table(theme.components.input.disabled)
+    assert.are.same(theme.disabledColor, theme.components.input.disabled.background)
+    assert.is_table(theme.components.tab.disabled)
+    assert.are.same(theme.disabledColor, theme.components.tab.disabled.background)
+  end)
+
   it("invalidates static style cache when theme version changes", function()
     local runtime = Runtime.new()
     runtime.theme = {
@@ -187,6 +196,40 @@ describe("style", function()
     assert.are.same({ "lineWidth", 3 }, calls[1])
     assert.are.same({ "shader", shader }, calls[2])
     assert.are.same({ "rect", "fill", 80, 24, 6 }, calls[4])
+  end)
+
+  it("draws circles and ellipses through the draw context", function()
+    local runtime = Runtime.new()
+    local shapes = {}
+    local fakeLove = {
+      graphics = setmetatable({
+        ellipse = function(mode)
+          shapes[#shapes + 1] = mode
+        end,
+      }, {
+        __index = function()
+          return function() end
+        end,
+      }),
+    }
+    runtime:setLove(fakeLove)
+
+    local function App()
+      return Components.box({
+        width = 40,
+        height = 20,
+        draw = function(_, _, _, _, _, _, _, ctx)
+          ctx:circle("fill", { x = 0, y = 0, width = 40, height = 20 })
+          ctx:ellipse("line", { x = 0, y = 0, width = 40, height = 20 })
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime.root.layout = { x = 0, y = 0, width = 40, height = 20 }
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "fill", "line" }, shapes)
   end)
 
   it("updates derived component defaults from top-level theme colors", function()

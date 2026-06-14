@@ -601,6 +601,51 @@ describe("dialogue adapter", function()
     assert.are.equal(134, firstPrintX("center")) -- (300 - 32) / 2
   end)
 
+  it("prefers per-call textAlign and keeps align as a back-compat alias", function()
+    local function firstPrintX(props)
+      local instance = {
+        renderModel = function()
+          return { active = true, speaker = { name = "H" }, text = { shown = "hi", full = "hi" }, choices = {} }
+        end,
+      }
+      local node = Dialogue.new(fakeUi, { instance = instance }):component(props)
+      local bodyBox
+      local function find(n)
+        if n.type == "box" and n.props and type(n.props.draw) == "function" and n.props.width == "100%" then
+          bodyBox = n
+        end
+        for _, c in ipairs(n.children or {}) do
+          find(c)
+        end
+      end
+      find(node)
+      local firstX
+      local fakeLove = {
+        graphics = setmetatable({
+          getFont = function()
+            return setmetatable({}, { __index = function()
+              return function()
+                return 16
+              end
+            end })
+          end,
+          setFont = function() end,
+          print = function(_, px)
+            firstX = firstX or px
+          end,
+        }, { __index = function()
+          return function() end
+        end }),
+      }
+      bodyBox.props.draw(bodyBox, 0, 0, 300, 100, fakeLove)
+      return firstX
+    end
+
+    assert.are.equal(268, firstPrintX({ textAlign = "right" })) -- 300 - 32
+    assert.are.equal(268, firstPrintX({ align = "right" })) -- legacy alias
+    assert.are.equal(0, firstPrintX({ textAlign = "left" }))
+  end)
+
   it("draws {bold} glyphs multiple times (faux bold)", function()
     local function printCount(effects)
       local instance = {

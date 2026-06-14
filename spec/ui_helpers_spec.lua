@@ -75,6 +75,16 @@ describe("ui helpers", function()
     assert.are.equal("paragraph", paragraph.props.textStyle)
   end)
 
+  it("treats rich = true as shorthand for format = sysl", function()
+    local node = ui.text("Ready [color=#ffff00]go[/color]", { rich = true })
+    assert.are.equal("sysl", node.props.format)
+  end)
+
+  it("keeps an explicit format over the rich shorthand", function()
+    local node = ui.text("plain", { rich = true, format = "plain" })
+    assert.are.equal("plain", node.props.format)
+  end)
+
   it("creates image nodes", function()
     local source = {
       getWidth = function() return 64 end,
