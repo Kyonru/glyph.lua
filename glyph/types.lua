@@ -55,7 +55,7 @@ local GlyphAudioCues = {}
 ---@field shape? GlyphShape|fun(ctx: table): any
 ---@field shader? any
 ---@field blendMode? string
----@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table)
+---@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table, style: GlyphStyle, ctx: GlyphDrawContext)
 ---@field hover? GlyphStateStyle
 ---@field pressed? GlyphStateStyle
 ---@field focused? GlyphStateStyle
@@ -152,6 +152,8 @@ local GlyphPathDrawOpts = {}
 ---@field line fun(self: GlyphDrawContext, ...: any)
 ---@field polygon fun(self: GlyphDrawContext, mode: "fill"|"line"|string, points: number[])
 ---@field shape fun(self: GlyphDrawContext, mode: "fill"|"line"|string, shape?: GlyphShape|fun(ctx: GlyphDrawContext): any, bounds?: GlyphBounds)
+---@field circle fun(self: GlyphDrawContext, mode: "fill"|"line"|string, bounds?: GlyphBounds)
+---@field ellipse fun(self: GlyphDrawContext, mode: "fill"|"line"|string, bounds?: GlyphBounds)
 ---@field clip fun(self: GlyphDrawContext, shape: boolean|GlyphShape|fun(ctx: GlyphDrawContext): any, fn: fun())
 ---@field stencil fun(self: GlyphDrawContext, shapeOrFn: GlyphShape|fun(ctx: GlyphDrawContext): any, fn: fun(), opts?: GlyphStencil)
 ---@field meter fun(self: GlyphDrawContext, bounds?: GlyphBounds, opts?: GlyphMeterProps)
@@ -318,21 +320,22 @@ local GlyphPadding = {}
 ---@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table, style: GlyphStyle, ctx: GlyphDrawContext)
 ---@field onBounds? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
 ---@field onLayout? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
----@field width? number|string
----@field height? number|string
----@field minWidth? number
----@field maxWidth? number
----@field minHeight? number
----@field maxHeight? number
----@field padding? number|GlyphPadding
+---@field width? number numeric pixels, or a percent string of the parent's content size, e.g. "50%"
+---@field height? number numeric pixels, or a percent string of the parent's content size, e.g. "50%"
+---@field minWidth? number lower clamp; also honored when this node is a flex child
+---@field maxWidth? number upper clamp; also honored when this node is a flex child
+---@field minHeight? number lower clamp; also honored when this node is a flex child
+---@field maxHeight? number upper clamp; also honored when this node is a flex child
+---@field padding? number|GlyphPadding inner spacing
+---@field margin? number|GlyphPadding outer spacing around a flow child (number = all sides)
 ---@field gap? number
----@field align? "start"|"center"|"end"|"stretch"
+---@field align? "start"|"center"|"end"|"stretch" flex cross-axis alignment of children (not text; see textAlign)
 ---@field justify? "start"|"center"|"end"
 ---@field flex? number|boolean
 ---@field grow? number
 ---@field shrink? number
 ---@field basis? number
----@field position? "absolute"
+---@field position? "absolute"|"relative" "absolute" removes the node from flow (use left/right/top/bottom/inset); "relative" (default) keeps it in flow
 ---@field x? number|string
 ---@field y? number|string
 ---@field top? number|string
@@ -351,9 +354,10 @@ local GlyphPadding = {}
 ---@field fontSize? number
 ---@field lineHeight? number
 ---@field textStyle? string
+---@field textAlign? "left"|"center"|"right" horizontal alignment of text (applies to wrapped text; distinct from the flex `align`)
 ---@field textVerticalAlign? "top"|"center"|"middle"|"bottom"|"start"|"end"
 ---@field format? "plain"|"sysl"
----@field rich? boolean
+---@field rich? boolean shorthand for `format = "sysl"` (rich text); ignored when `format` is set explicitly
 ---@field role? "button"|"text"|"input"|"panel"|"tab"|"meter"|"dialog"|"group"|"none"|string
 ---@field accessibilityLabel? string
 ---@field accessibilityLabelKey? string
@@ -427,9 +431,10 @@ local GlyphDragProps = {}
 ---@field textFallback? string
 ---@field textCacheKey? string|number
 ---@field textStyle? "text"|"h1"|"h2"|"paragraph"|"caption"|"code"|string
+---@field textAlign? "left"|"center"|"right" horizontal alignment of wrapped text
 ---@field textVerticalAlign? "top"|"center"|"middle"|"bottom"|"start"|"end"
 ---@field format? "plain"|"sysl"
----@field rich? boolean
+---@field rich? boolean shorthand for `format = "sysl"` (rich text); ignored when `format` is set explicitly
 local GlyphTextProps = {}
 
 ---@class GlyphImageProps : GlyphProps
@@ -1117,7 +1122,8 @@ local GlyphDialogueRenderModel = {}
 ---@field frame? GlyphDialogueFrame custom box frame (replaces the default border)
 ---@field flow? boolean return a flow node (not absolutely positioned) so it can be composed in a column/row
 ---@field width? number|string width when flow (default "100%")
----@field align? "left"|"center"|"right" body text alignment (default opts.textAlign or "left")
+---@field textAlign? "left"|"center"|"right" body text alignment (default opts.textAlign or "left")
+---@field align? "left"|"center"|"right" deprecated alias for textAlign
 local GlyphDialogueComponentProps = {}
 
 ---@class GlyphDialoguePortraitProps
