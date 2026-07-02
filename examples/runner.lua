@@ -44,8 +44,8 @@ local function wrapComponent(example, mode)
 		})
 	end
 
-	return ui.column({ width = "100%", height = "100%", padding = 24, gap = 16 }, {
-		ui.column({ width = "100%", gap = 6 }, headerChildren),
+	return ui.column({ width = "100%", height = "100%", gap = 16 }, {
+		ui.column({ width = "100%", padding = { x = 24, y = 24 }, gap = 6 }, headerChildren),
 		ui.stack({ width = "100%", grow = 1 }, {
 			content,
 		}),

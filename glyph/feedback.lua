@@ -25,6 +25,30 @@ local function stubFeel()
       return false
     end,
     clear = function() end,
+    spring = function(initial, stiffness, damping)
+      local value = initial or 0
+      return {
+        x = value,
+        target = value,
+        v = 0,
+        k = stiffness or 0,
+        d = damping or 0,
+        update = function(self)
+          return self.x
+        end,
+        pull = function(self)
+          return self
+        end,
+        animate = function(self, target)
+          self.target = target or self.target
+          self.x = self.target
+          return self
+        end,
+        settled = function()
+          return true
+        end,
+      }
+    end,
   }
 end
 
@@ -282,6 +306,11 @@ function Feedback.clear(runtime, node)
       runtime:markDirty()
     end
   end
+end
+
+function Feedback.spring(initial, opts)
+  opts = opts or {}
+  return Feel.spring(initial, opts.stiffness or opts.k, opts.damping or opts.d)
 end
 
 Feedback.feel = Feel

@@ -88,7 +88,7 @@ A faithful port of the upstream [Love-Dialogue](https://github.com/Miisan-png/Lo
 
 ## HUD Menu
 
-Custom-drawn game UI with animated command buttons. This example demonstrates what belongs in app/example code rather than Glyph core.
+Custom-drawn game UI with d-pad navigation, `ui.spring` hover/focus command buttons, and app-owned shaped burst particles. This example demonstrates what belongs in app/example code rather than Glyph core.
 
 ## HUD Primitives
 

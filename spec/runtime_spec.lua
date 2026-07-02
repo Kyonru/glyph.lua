@@ -786,6 +786,54 @@ describe("runtime", function()
     assert.is_false(Feedback.isPlaying(runtime, runtime.root, "combo"))
   end)
 
+  it("exposes raw Feel-backed springs for retargeted app motion", function()
+    local spring = Feedback.spring(1, { stiffness = 120, damping = 12 })
+
+    spring:animate(1.5)
+    spring:update(0.016)
+
+    assert.is_true(spring.x > 1)
+    assert.are.equal(1.5, spring.target)
+
+    local beforePull = spring.x
+    spring:pull(-0.2)
+
+    assert.is_true(spring.x < beforePull)
+  end)
+
+  it("runs feedback spring steps", function()
+    local runtime = Runtime.new()
+
+    Feedback.clear(runtime)
+    local ok, err = Feedback.validate({
+      kind = "spring",
+      to = { scale = 1.18 },
+      stiffness = 120,
+      damping = 12,
+      duration = 0.2,
+    })
+    assert.is_true(ok, err)
+
+    local function App()
+      return Components.stack({ key = "target", width = 40, height = 20 })
+    end
+
+    runtime:build(App)
+    Feedback.play(runtime, {
+      kind = "spring",
+      to = { scale = 1.18 },
+      stiffness = 120,
+      damping = 12,
+      duration = 0.2,
+    }, runtime.root, { key = "spring", restart = true })
+
+    runtime:update(0.05)
+
+    assert.is_not_nil(runtime.root._glyphFeedback)
+    assert.is_true(runtime.root._glyphFeedback.scale > 1)
+    assert.is_true(runtime.root._glyphFeedback.scale <= 1.18)
+  end)
+
   it("clears one feedback target without dropping registered sequences", function()
     local runtime = Runtime.new()
 

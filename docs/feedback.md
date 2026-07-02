@@ -59,6 +59,15 @@ Set `feedback = false` on a node to disable feedback.
 
 Supported values are `opacity`, `x`, `y`, `scale`, `scaleX`, `scaleY`, and `rotation`. These do not affect layout, hit testing, focus, navigation, or accessibility snapshots.
 
+`spring` uses the same visual-only values but drives them with Feel's damped spring solver:
+
+```lua
+{ kind = "spring", to = { scale = 1.12 }, stiffness = 180, damping = 14 }
+{ kind = "spring", pull = { scale = -0.12 }, stiffness = 260, damping = 18 }
+```
+
+Use `to` to move the rest target, and `pull` for an impact displacement that springs back. `stiffness`/`k`, `damping`/`d`, `settle`/`epsilon`, and optional `duration` tune the run.
+
 `audio` emits the same app-owned audio callback shape as interaction cues:
 
 ```lua
@@ -133,6 +142,25 @@ local ok, err = ui.feedback.validate(sequence)
 local active = ui.feedback.active()
 local busy = ui.feedback.isPlaying(node, "slot.drop")
 ```
+
+## Raw Springs
+
+Use `ui.spring(initial, opts)` when app/example code needs continuously retargeted motion, such as hover-follow scale, cursor lag, slider handles, camera panels, or custom draw values.
+
+```lua
+local scale = ui.spring(1, { stiffness = 180, damping = 14 })
+
+function love.update(dt)
+  scale:animate(isHot and 1.08 or 1)
+  scale:update(dt)
+end
+
+function activate()
+  scale:pull(-0.12, 260, 18)
+end
+```
+
+Raw springs are app-driven: call `spring:update(dt)` yourself and use `spring.x` while drawing. Feedback sequence springs are runtime-driven by `ui.update(dt)`.
 
 ## Standalone Feel
 

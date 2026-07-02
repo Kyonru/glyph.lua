@@ -55,6 +55,7 @@ local runtime = Runtime.new()
 ---@field animation GlyphAnimationApi
 ---@field accessibility GlyphAccessibilityApi
 ---@field feedback GlyphFeedbackApi
+---@field spring fun(initial?: number, opts?: GlyphSpringOpts): GlyphSpring
 ---@field i18n GlyphI18nApi
 ---@field richTextBackend GlyphRichTextBackendApi
 ---@field spriteSheet fun(image: any, opts: GlyphSpriteSheetProps): GlyphSpriteSheet
@@ -167,6 +168,13 @@ ui.feedback = {
     Feedback.clear(runtime, node)
   end,
 }
+
+---@param initial? number
+---@param opts? GlyphSpringOpts
+---@return GlyphSpring
+function ui.spring(initial, opts)
+  return Feedback.spring(initial, opts)
+end
 
 ui.richTextBackend = {
   ---@param opts? GlyphRichTextBackendConfig

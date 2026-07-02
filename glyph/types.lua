@@ -226,15 +226,41 @@ local GlyphAnimationSpec = {}
 ---@field onComplete? fun(subject: table)
 local GlyphAnimationTweenOpts = {}
 
+---@class GlyphSpringOpts
+---@field stiffness? number
+---@field damping? number
+---@field k? number alias for stiffness
+---@field d? number alias for damping
+local GlyphSpringOpts = {}
+
+---@class GlyphSpring
+---@field x number current value
+---@field target number rest target
+---@field v number velocity
+---@field k number stiffness
+---@field d number damping
+---@field update fun(self: GlyphSpring, dt: number): number
+---@field animate fun(self: GlyphSpring, target: number, stiffness?: number, damping?: number): GlyphSpring
+---@field pull fun(self: GlyphSpring, force: number, stiffness?: number, damping?: number): GlyphSpring
+---@field settled fun(self: GlyphSpring, epsilon?: number): boolean
+local GlyphSpring = {}
+
 ---@class GlyphFeedbackStep
----@field kind? "animate"|"wait"|"pause"|"audio"|"emit"|"callback"|"play"|"parallel"|"repeat"|"random"|"log"|string
+---@field kind? "animate"|"spring"|"wait"|"pause"|"audio"|"emit"|"callback"|"play"|"parallel"|"repeat"|"random"|"log"|string
 ---@field target? "node"|string
 ---@field from? GlyphAnimationValues
 ---@field to? GlyphAnimationValues
+---@field pull? GlyphAnimationValues
 ---@field duration? number
 ---@field time? number
 ---@field delay? number
 ---@field ease? string
+---@field stiffness? number
+---@field damping? number
+---@field k? number
+---@field d? number
+---@field settle? number
+---@field epsilon? number
 ---@field cue? string
 ---@field audioKind? string
 ---@field event? string

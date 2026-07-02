@@ -10,6 +10,16 @@ describe("ui helpers", function()
     assert.are.same({ 0.5, 0.25, 0.75, 1 }, ui.mixColor({ 0, 0, 1, 1 }, { 1, 0.5, 0.5, 1 }, 0.5))
   end)
 
+  it("creates raw spring helpers", function()
+    local spring = ui.spring(1, { stiffness = 120, damping = 12 })
+
+    spring:animate(1.4)
+    spring:update(0.016)
+
+    assert.is_true(spring.x > 1)
+    assert.are.equal(1.4, spring.target)
+  end)
+
   it("builds skewed polygon boxes", function()
     assert.are.same({
       2,
