@@ -106,14 +106,17 @@ local function quit(status)
 	end
 end
 
-local function wantsNextOnEnter()
-	local value = os.getenv("GLYPH_EXAMPLE_NEXT_ON_ENTER")
+local function wantsNextOnEscape()
+	local value = os.getenv("GLYPH_EXAMPLE_NEXT_ON_ESCAPE")
+	if not value or value == "" then
+		value = os.getenv("GLYPH_EXAMPLE_NEXT_ON_ENTER")
+	end
 	return value == "1" or value == "true" or value == "yes"
 end
 
 function Runner.run(example)
 	local capture = nil
-	local nextOnEnter = wantsNextOnEnter()
+	local nextOnEscape = wantsNextOnEscape()
 
 	local function updateExample(dt)
 		call(example, "update", dt, "standalone")
@@ -136,7 +139,7 @@ function Runner.run(example)
 	end
 
 	function love.keypressed(key)
-		if nextOnEnter and (key == "return" or key == "kpenter") then
+		if nextOnEscape and key == "escape" then
 			quit(0)
 			return
 		end

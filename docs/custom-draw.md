@@ -9,8 +9,8 @@ icon: lucide/pen-tool
 <!-- /glyph:feature-gif custom-draw -->
 
 > [!TIP]
-> See it in action: [`examples/hud-primitives`](examples.md) and
-> [`examples/path-feedback`](examples.md) cover draw helpers, paths, and masks.
+> See it in action: [`examples/path-feedback`](examples.md) covers draw
+> helpers, paths, morphing, and masks.
 
 Glyph supports custom drawing on any node through `props.draw`.
 

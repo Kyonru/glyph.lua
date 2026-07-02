@@ -10,8 +10,8 @@ bursts, and debug/tuning panels that run beside the game.
 
 > [!TIP]
 > See the ingredients in action: [`examples/viewport`](examples.md) for fixed
-> virtual coordinates, [`examples/hud-primitives`](examples.md) for HUD cards
-> and gauges, [`examples/inventory`](examples.md) for dense item grids,
+> virtual coordinates, [`examples/hud-menu`](examples.md) for custom-drawn
+> command UI, [`examples/inventory`](examples.md) for dense item grids,
 > [`examples/juice`](examples.md) for interaction feedback,
 > [`examples/navigate`](examples.md) for controller focus, and
 > [`examples/dashboard`](examples.md) for dense debugger-style panels.

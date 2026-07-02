@@ -14,7 +14,6 @@ love examples/basic
 love examples/dashboard
 love examples/dialogue
 love examples/hud-menu
-love examples/hud-primitives
 love examples/i18n
 love examples/inventory
 love examples/juice
@@ -37,7 +36,7 @@ make examples-tour
 make tour
 ```
 
-Press **Enter** in the Love2D window to close the current example and launch the
+Press **Esc** in the Love2D window to close the current example and launch the
 next one.
 
 The Makefile uses `LOVE_BIN` when set, otherwise it tries `love` from `PATH` and
@@ -89,10 +88,6 @@ A faithful port of the upstream [Love-Dialogue](https://github.com/Miisan-png/Lo
 ## HUD Menu
 
 Custom-drawn game UI with d-pad navigation, `ui.spring` hover/focus command buttons, and app-owned shaped burst particles. This example demonstrates what belongs in app/example code rather than Glyph core.
-
-## HUD Primitives
-
-Native meters, filled sweep gauges with centered overlays, d-pad/card navigation, `ui.image` portraits, shape descriptors, visual clipping, stencil masks, and dynamic backgrounds for game HUDs without adding game-specific core widgets.
 
 ## I18n
 
