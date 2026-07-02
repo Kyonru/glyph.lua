@@ -1859,6 +1859,57 @@ local function pathDrawMode(props, mode)
   return "line"
 end
 
+local function fillPathPoints(points)
+  local result = {}
+  local previousX = nil
+  local previousY = nil
+
+  for index = 1, #points, 2 do
+    local x = points[index]
+    local y = points[index + 1]
+    if x ~= nil and y ~= nil and (x ~= previousX or y ~= previousY) then
+      result[#result + 1] = x
+      result[#result + 1] = y
+      previousX = x
+      previousY = y
+    end
+  end
+
+  if #result >= 4 and result[1] == result[#result - 1] and result[2] == result[#result] then
+    result[#result] = nil
+    result[#result] = nil
+  end
+
+  return result
+end
+
+local function drawPathFill(love, points)
+  local graphics = love and love.graphics
+  if not graphics or not graphics.polygon then
+    return
+  end
+
+  local fillPoints = fillPathPoints(points)
+  if #fillPoints < 6 then
+    return
+  end
+
+  local triangulate = love.math and love.math.triangulate
+  if triangulate and #fillPoints > 6 then
+    local ok, triangles = pcall(triangulate, fillPoints)
+    if ok and type(triangles) == "table" and #triangles > 0 then
+      for _, triangle in ipairs(triangles) do
+        if type(triangle) == "table" and #triangle >= 6 then
+          graphics.polygon("fill", (table.unpack or unpack)(triangle))
+        end
+      end
+      return
+    end
+  end
+
+  graphics.polygon("fill", (table.unpack or unpack)(fillPoints))
+end
+
 local function drawPath(runtime, love, pathSource, bounds, opts, style, opacity, mode, includeOptsOpacity)
   local graphics = love and love.graphics
   if not graphics or pathSource == nil then
@@ -1895,7 +1946,7 @@ local function drawPath(runtime, love, pathSource, bounds, opts, style, opacity,
 
   if (mode == "fill" or mode == "both") and fill ~= nil and graphics.polygon and #points >= 6 then
     color(love, withOpacity(fill, pathOpacity))
-    graphics.polygon("fill", (table.unpack or unpack)(points))
+    drawPathFill(love, points)
   end
 
   local stroke = opts.stroke

@@ -183,6 +183,56 @@ describe("path", function()
     assert.are.equal(0, lines)
   end)
 
+  it("triangulates concave filled path components when available", function()
+    local runtime = Runtime.new()
+    local triangulated
+    local polygons = {}
+
+    runtime:setLove({
+      math = {
+        triangulate = function(points)
+          triangulated = points
+          return {
+            { 0, 0, 20, 0, 20, 20 },
+            { 0, 0, 20, 20, 10, 10 },
+            { 0, 0, 10, 10, 0, 20 },
+          }
+        end,
+      },
+      graphics = {
+        getLineWidth = function()
+          return 1
+        end,
+        setLineWidth = function() end,
+        getColor = function()
+          return 1, 1, 1, 1
+        end,
+        setColor = function() end,
+        polygon = function(mode, ...)
+          polygons[#polygons + 1] = { mode, ... }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.path({
+        d = "M0 0 L20 0 L20 20 L10 10 L0 20 Z",
+        width = 20,
+        height = 20,
+        fill = { 0, 1, 0, 1 },
+        fit = "stretch",
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ 0, 0, 20, 0, 20, 20, 10, 10, 0, 20 }, triangulated)
+    assert.are.equal(3, #polygons)
+    assert.are.same({ "fill", 0, 0, 20, 0, 20, 20 }, polygons[1])
+    assert.are.same({ "fill", 0, 0, 20, 20, 10, 10 }, polygons[2])
+    assert.are.same({ "fill", 0, 0, 10, 10, 0, 20 }, polygons[3])
+  end)
+
   it("draws ctx paths with fill, morphing, and local state restoration", function()
     local runtime = Runtime.new()
     local calls = {}

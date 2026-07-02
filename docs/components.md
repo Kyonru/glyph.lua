@@ -223,6 +223,10 @@ Supported SVG commands are `M/m`, `L/l`, `H/h`, `V/v`, `C/c`, `Q/q`, and
 `Z/z`. Arcs, gradients, CSS styling, masks, transforms, holes, and winding rules
 are out of scope for v1.
 
+Filled paths target simple closed single-contour shapes. Concave contours are
+triangulated with Love2D's math backend when available, so stars and chevrons
+fill correctly; self-intersecting outlines and holes are still app-owned.
+
 Paths can morph between compatible command sequences, or resample both outlines
 when the shapes differ:
 

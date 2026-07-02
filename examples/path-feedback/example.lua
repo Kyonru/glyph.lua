@@ -163,7 +163,11 @@ local function playTrace()
 	v.glow = 0.26
 	setStatus("Trace", colors.teal)
 	playPathSequence({
-		{ kind = "emit", event = "path.spark", payload = { count = 18, color = colors.teal, anchorX = 0.2, anchorY = 0.42 } },
+		{
+			kind = "emit",
+			event = "path.spark",
+			payload = { count = 18, color = colors.teal, anchorX = 0.2, anchorY = 0.42 },
+		},
 		{
 			kind = "parallel",
 			steps = {
@@ -184,7 +188,11 @@ local function playMorph()
 	v.shake = 0
 	setStatus("Morph", colors.violet)
 	playPathSequence({
-		{ kind = "emit", event = "path.spark", payload = { count = 22, color = colors.violet, anchorX = 0.6, anchorY = 0.5 } },
+		{
+			kind = "emit",
+			event = "path.spark",
+			payload = { count = 22, color = colors.violet, anchorX = 0.6, anchorY = 0.5 },
+		},
 		{
 			kind = "parallel",
 			steps = {
@@ -213,10 +221,19 @@ local function playPulse()
 					count = 3,
 					step = {
 						{ kind = "animate", to = { ring = 1, pulse = 1, glow = 1 }, duration = 0.1, ease = "quadout" },
-						{ kind = "animate", to = { ring = 0, pulse = 0, glow = 0.38 }, duration = 0.18, ease = "quadinout" },
+						{
+							kind = "animate",
+							to = { ring = 0, pulse = 0, glow = 0.38 },
+							duration = 0.18,
+							ease = "quadinout",
+						},
 					},
 				},
-				{ kind = "emit", event = "path.flare", payload = { count = 32, color = colors.gold, spread = 1.05, anchorX = 0.58, anchorY = 0.5 } },
+				{
+					kind = "emit",
+					event = "path.flare",
+					payload = { count = 32, color = colors.gold, spread = 1.05, anchorX = 0.58, anchorY = 0.5 },
+				},
 			},
 		},
 		{ kind = "animate", to = { glow = 0.3, ring = 0, pulse = 0 }, duration = 0.18 },
@@ -246,14 +263,33 @@ local function playOverload()
 				{
 					kind = "random",
 					options = {
-						{ weight = 3, step = { kind = "emit", event = "path.flare", payload = { count = 34, color = colors.coral, spread = 1.55 } } },
-						{ weight = 1, step = { kind = "emit", event = "path.flare", payload = { count = 34, color = colors.blue, spread = 1.45 } } },
+						{
+							weight = 3,
+							step = {
+								kind = "emit",
+								event = "path.flare",
+								payload = { count = 34, color = colors.coral, spread = 1.55 },
+							},
+						},
+						{
+							weight = 1,
+							step = {
+								kind = "emit",
+								event = "path.flare",
+								payload = { count = 34, color = colors.blue, spread = 1.45 },
+							},
+						},
 					},
 				},
 				{ kind = "animate", to = { ring = 1, pulse = 1 }, duration = 0.16, ease = "quadout" },
 			},
 		},
-		{ kind = "animate", to = { shake = 0, ring = 0, pulse = 0, scan = 0, glow = 0.32 }, duration = 0.28, ease = "backout" },
+		{
+			kind = "animate",
+			to = { shake = 0, ring = 0, pulse = 0, scan = 0, glow = 0.32 },
+			duration = 0.28,
+			ease = "backout",
+		},
 	}, "overload")
 end
 
@@ -361,12 +397,7 @@ local function drawStage(_, x, y, width, height, _, _, ctx)
 	end
 
 	local coreBounds = { x = x + width * 0.5 - 78, y = y + height * 0.5 - 78, width = 156, height = 156 }
-	ctx:path("line", ringPath, coreBounds, {
-		stroke = alpha(colors.teal, 0.16 + glow * 0.18),
-		strokeWidth = 2,
-		fit = "stretch",
-		samples = 96,
-	})
+
 	ctx:path("line", circuitPath, {
 		x = x + 44,
 		y = y + height - 92,
@@ -408,11 +439,13 @@ local function stageView()
 		flex = 1,
 		minHeight = 390,
 		onLayout = function(bounds)
-			if not stageBounds
+			if
+				not stageBounds
 				or stageBounds.x ~= bounds.x
 				or stageBounds.y ~= bounds.y
 				or stageBounds.width ~= bounds.width
-				or stageBounds.height ~= bounds.height then
+				or stageBounds.height ~= bounds.height
+			then
 				stageBounds = { x = bounds.x, y = bounds.y, width = bounds.width, height = bounds.height }
 				markDirty()
 			end
@@ -502,7 +535,10 @@ local function statMeter(label, value, color)
 	return ui.column({ gap = 5, width = "100%" }, {
 		ui.row({ width = "100%", justify = "center", align = "center" }, {
 			ui.text(label, { flex = 1, textStyle = "caption", style = { color = colors.muted } }),
-			ui.text(tostring(math.floor(value * 100 + 0.5)) .. "%", { textStyle = "caption", style = { color = color } }),
+			ui.text(
+				tostring(math.floor(value * 100 + 0.5)) .. "%",
+				{ textStyle = "caption", style = { color = color } }
+			),
 		}),
 		ui.meter({
 			value = value,
@@ -649,7 +685,6 @@ local function App()
 		width = "100%",
 		height = "100%",
 	}, {
-		background(),
 		ui.column({
 			position = "absolute",
 			left = 28,
