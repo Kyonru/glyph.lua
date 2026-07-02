@@ -178,6 +178,10 @@ ui.box({
 space as routed pointer input. It includes parent offsets, scene/modal layer
 offsets, and `scrollView` visual scroll offsets.
 
+Scroll offsets can also be controlled by stable `key`: use
+`ui.scrollTo(key, offset)` for pixels, `ui.scrollToItem(key, index, itemHeight)`
+for fixed-height lists, and `ui.getScrollOffset(key)` to read the current value.
+
 ```lua
 ui.button({
   label = "Drag",

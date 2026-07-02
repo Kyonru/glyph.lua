@@ -15,6 +15,7 @@ local Runtime = require(prefix .. ".runtime")
 local SpriteSheet = require(prefix .. ".sprite_sheet")
 local Style = require(prefix .. ".style")
 local Transitions = require(prefix .. ".transitions")
+local VirtualList = require(prefix .. ".virtual_list")
 local theme = require(prefix .. ".theme")
 
 local Surface = {}
@@ -206,6 +207,22 @@ function Surface.scopedUi(runtime, surface)
 
   function ui.memo(component, deps)
     return runtime:memo(component, deps)
+  end
+
+  function ui.virtualList(props)
+    return VirtualList.build(runtime, Components, props)
+  end
+
+  function ui.scrollTo(target, offset)
+    runtime:setScrollOffset(target, offset)
+  end
+
+  function ui.scrollToItem(target, index, itemHeight, opts)
+    runtime:scrollToItem(target, index, itemHeight, opts)
+  end
+
+  function ui.getScrollOffset(target)
+    return runtime:getScrollOffset(target)
   end
 
   ui.dialogue = {

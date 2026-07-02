@@ -431,6 +431,48 @@ ui.scrollView({
 `scrollSensitivity` is accepted as an alias for `scrollSpeed` when that term
 better matches the setting exposed by your game or tool.
 
+## Virtual List
+
+Use `virtualList` when a list may contain many rows but each row has a fixed
+height. It renders only the visible range plus an overscan buffer, while spacer
+nodes preserve the full scroll height and scrollbar behavior.
+
+Use a numeric `height` when possible. If the surrounding layout is flexible,
+provide `visibleCount` so Glyph can compute the mounted range before layout.
+
+```lua
+ui.virtualList({
+  key = "combat-log",
+  width = "100%",
+  height = 320,
+  itemCount = #events,
+  itemHeight = 28,
+  visibleCount = 12,
+  overscan = 4,
+  itemKey = function(index)
+    return events[index].id
+  end,
+  renderItem = function(index)
+    return EventRow(events[index])
+  end,
+  onRangeChange = function(first, last, info)
+    mountedRows = info.mounted
+  end,
+})
+```
+
+Programmatic scrolling uses the same stable `key`:
+
+```lua
+ui.scrollTo("combat-log", 280)
+ui.scrollToItem("combat-log", 42, 28, { align = "center" })
+local offset = ui.getScrollOffset("combat-log")
+```
+
+> [!TIP]
+> Give virtual lists a stable `key` so the scroll offset can be reused across
+> frames. Use `itemKey` when rows can be inserted, removed, or reordered.
+
 ## Tabs
 
 Uncontrolled tabs:

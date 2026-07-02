@@ -59,7 +59,7 @@ make docs
 
 Glyph should provide primitives and reusable systems:
 
-- Core components: `text`, `image`, `path`, `box`, `stack`, `row`, `column`, `grid`, `portal`, `button`, `input`, `scrollView`, `tabs`, `panel`.
+- Core components: `text`, `image`, `path`, `box`, `stack`, `row`, `column`, `grid`, `portal`, `button`, `input`, `scrollView`, `virtualList`, `tabs`, `panel`.
 - Generic visual primitives: `meter`, vector path drawing, shape descriptors, clipping/stencil masks, nine-slice drawing, and draw context helpers.
 - Layout primitives: flex row/column, uniform grid layout, stack/absolute layout, percent sizing, padding/gap, grow/flex, text wrapping.
 - Runtime systems: hooks, memo/static helpers, event routing, focus/hover/press state, scroll state, callback bus, and offscreen Glyph surfaces.

@@ -111,12 +111,13 @@ local panel = ui.memo(buildPanel, { ui.i18n.version(), dataVersion })
 For large log/table views:
 
 - Keep the dataset outside the UI tree.
-- Mount a visible window of rows.
+- Use `ui.virtualList` for fixed-height rows so only the visible window is
+  mounted.
 - Reuse stable row components where possible.
 - Give each row a stable `key` so its identity — focus, hover, a mid-edit input
   cursor, and cached style — follows the data when rows are inserted, removed, or
   reordered, instead of snapping to whichever sibling now sits at that index.
-- Use `scrollView` bounds and scroll offsets to clamp work.
+- Use plain `scrollView` for small lists or variable-height content.
 - Show coarse live counters such as FPS, render time, layout passes, and mounted
   row counts so performance examples explain their budget at a glance.
 

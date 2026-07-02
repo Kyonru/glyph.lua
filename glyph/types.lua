@@ -619,6 +619,30 @@ local GlyphMeterProps = {}
 ---@field scrollPixelsPerStep? number pixels moved for one wheel unit before speed is applied; defaults to 24
 local GlyphScrollViewProps = {}
 
+---@class GlyphScrollToItemOpts
+---@field align? "start"|"center"|"end" how the item should be positioned in the viewport; defaults to start
+---@field viewportHeight? number optional viewport height override for center/end alignment before layout is known
+local GlyphScrollToItemOpts = {}
+
+---@class GlyphVirtualListRange
+---@field itemCount number
+---@field itemHeight number
+---@field mounted number
+---@field overscan number
+---@field scrollOffset number
+local GlyphVirtualListRange = {}
+
+---@class GlyphVirtualListProps : GlyphScrollViewProps
+---@field itemCount number total number of logical rows/items
+---@field itemHeight number fixed height of each row/item in pixels
+---@field visibleCount? number fallback visible row count when `height` is not numeric
+---@field overscan? number extra rows mounted before and after the visible range; defaults to 2
+---@field renderItem fun(index: number): GlyphNode row renderer for 1-based item index
+---@field itemKey? fun(index: number): string|number|nil stable key resolver, or a table keyed by index
+---@field onRangeChange? fun(first: number, last: number, info: GlyphVirtualListRange)
+---@field scrollOffset? number explicit scroll offset override, mostly useful for custom integrations
+local GlyphVirtualListProps = {}
+
 ---@class GlyphGridProps : GlyphProps
 ---@field columns? number
 ---@field cellWidth? number

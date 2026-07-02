@@ -25,6 +25,7 @@ local SpriteSheet = require(prefix .. ".sprite_sheet")
 local Style = require(prefix .. ".style")
 local Transitions = require(prefix .. ".transitions")
 local ViewportBackend = require(prefix .. ".viewport_backend")
+local VirtualList = require(prefix .. ".virtual_list")
 local theme = require(prefix .. ".theme")
 
 local runtime = Runtime.new()
@@ -50,6 +51,10 @@ local runtime = Runtime.new()
 ---@field input fun(props?: GlyphInputProps): GlyphNode
 ---@field meter fun(props?: GlyphMeterProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field scrollView fun(props?: GlyphScrollViewProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field virtualList fun(props: GlyphVirtualListProps): GlyphNode
+---@field scrollTo fun(target: string|number, offset: number)
+---@field scrollToItem fun(target: string|number, index: number, itemHeight: number, opts?: GlyphScrollToItemOpts)
+---@field getScrollOffset fun(target: string|number): number
 ---@field panel fun(props?: GlyphPanelProps, children?: GlyphNode[]|GlyphNode): GlyphNode
 ---@field static fun(node: GlyphNode): GlyphNode
 ---@field animation GlyphAnimationApi
@@ -302,6 +307,32 @@ end
 ---@return GlyphNode
 function ui.memo(component, deps)
   return runtime:memo(component, deps)
+end
+
+---@param props GlyphVirtualListProps
+---@return GlyphNode
+function ui.virtualList(props)
+  return VirtualList.build(runtime, Components, props)
+end
+
+---@param target string|number stable scrollView/virtualList key or runtime path
+---@param offset number pixel offset from the top
+function ui.scrollTo(target, offset)
+  runtime:setScrollOffset(target, offset)
+end
+
+---@param target string|number stable scrollView/virtualList key or runtime path
+---@param index number 1-based item index
+---@param itemHeight number fixed item height in pixels
+---@param opts? GlyphScrollToItemOpts
+function ui.scrollToItem(target, index, itemHeight, opts)
+  runtime:scrollToItem(target, index, itemHeight, opts)
+end
+
+---@param target string|number stable scrollView/virtualList key or runtime path
+---@return number
+function ui.getScrollOffset(target)
+  return runtime:getScrollOffset(target)
 end
 
 ---@param opts GlyphDragProps

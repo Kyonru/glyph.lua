@@ -43,6 +43,43 @@ local function scrollWheelStep(props)
   return pixels * speed
 end
 
+local function scrollTargetMatches(path, key, target)
+  if target == nil then
+    return false
+  end
+
+  local value = tostring(target)
+  if path and tostring(path) == value then
+    return true
+  end
+  if key ~= nil and tostring(key) == value then
+    return true
+  end
+  if path then
+    return ("." .. tostring(path) .. "."):find(".k:" .. value .. ".", 1, true) ~= nil
+  end
+  return false
+end
+
+local function findScrollPath(root, target)
+  if not root then
+    return nil
+  end
+
+  local props = root.props or {}
+  if root.type == "scrollView" and scrollTargetMatches(root.path, props.key, target) then
+    return root.path, root
+  end
+
+  for _, child in ipairs(root.children or {}) do
+    local path, node = findScrollPath(child, target)
+    if path then
+      return path, node
+    end
+  end
+  return nil
+end
+
 local function orderedChildren(node, reverse)
   local source = node.children or {}
   if #source <= 1 then
@@ -339,6 +376,7 @@ function Runtime.new()
     keyDownPath = nil,
     keyDownKey = nil,
     scrollOffsets = {},
+    pendingScrollOffsets = {},
     layoutCallbackCache = {},
     inputCursors = {},
     focusPath = nil,
@@ -450,6 +488,83 @@ end
 
 function Runtime:markDirty()
   self.needsRender = true
+end
+
+function Runtime:findScrollTarget(target)
+  local path, node = findScrollPath(self.root, target)
+  if path then
+    return path, node
+  end
+
+  for pathKey in pairs(self.scrollOffsets or {}) do
+    if scrollTargetMatches(pathKey, nil, target) then
+      return pathKey, nil
+    end
+  end
+  return nil, nil
+end
+
+function Runtime:applyPendingScrollOffset(node, maxScroll)
+  if not node then
+    return 0
+  end
+
+  local path = node.path
+  local props = node.props or {}
+  local pending = self.pendingScrollOffsets or {}
+  for target, offset in pairs(pending) do
+    if scrollTargetMatches(path, props.key, target) then
+      self.scrollOffsets[path] = math.min(maxScroll or 0, math.max(0, tonumber(offset) or 0))
+      pending[target] = nil
+    end
+  end
+
+  local value = math.min(maxScroll or 0, math.max(0, (path and self.scrollOffsets[path]) or 0))
+  if path then
+    self.scrollOffsets[path] = value
+  end
+  return value
+end
+
+function Runtime:setScrollOffset(target, offset)
+  local value = math.max(0, tonumber(offset) or 0)
+  local path = self:findScrollTarget(target)
+  if path then
+    self.scrollOffsets[path] = value
+  else
+    self.pendingScrollOffsets[tostring(target)] = value
+  end
+  self:markDirty()
+end
+
+function Runtime:getScrollOffset(target)
+  local path = self:findScrollTarget(target)
+  if path and self.scrollOffsets[path] then
+    return self.scrollOffsets[path]
+  end
+  return self.pendingScrollOffsets[tostring(target)] or 0
+end
+
+function Runtime:scrollToItem(target, index, itemHeight, opts)
+  opts = opts or {}
+  local row = math.max(1, math.floor(tonumber(index) or 1))
+  local height = tonumber(itemHeight) or 0
+  local offset = math.max(0, (row - 1) * height)
+
+  local align = opts.align
+  if align == "center" or align == "end" then
+    local _, node = self:findScrollTarget(target)
+    local viewportHeight = tonumber(opts.viewportHeight) or (node and node.layout and node.layout.height) or nil
+    if viewportHeight and height > 0 then
+      if align == "center" then
+        offset = offset - math.max(0, (viewportHeight - height) / 2)
+      elseif align == "end" then
+        offset = offset - math.max(0, viewportHeight - height)
+      end
+    end
+  end
+
+  self:setScrollOffset(target, offset)
 end
 
 function Runtime:useState(initial)
@@ -770,11 +885,7 @@ function Runtime:publishLayoutCallbacks(root, originX, originY)
     local childY = absY
     if node.type == "scrollView" then
       local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - (layout.height or 0)))
-      local scrollKey = node.path
-      local offset = math.min(maxScroll, math.max(0, (scrollKey and self.scrollOffsets[scrollKey]) or 0))
-      if scrollKey then
-        self.scrollOffsets[scrollKey] = offset
-      end
+      local offset = self:applyPendingScrollOffset(node, maxScroll)
       childY = absY - offset
     end
 
@@ -1000,8 +1111,7 @@ local function collectRootZScoped(runtime, node, parentX, parentY, entries)
 
   if node.type == "scrollView" then
     local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - (layout.height or 0)))
-    local scrollKey = node.path
-    local offset = math.min(maxScroll, math.max(0, (scrollKey and runtime.scrollOffsets[scrollKey]) or 0))
+    local offset = runtime:applyPendingScrollOffset(node, maxScroll)
     childY = absY - offset
   end
 
@@ -1033,11 +1143,7 @@ local function hitTestNode(runtime, node, parentX, parentY, x, y, opts)
     hitChildren = contains(node, x, y, absX, absY)
     if hitChildren then
       local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - (layout.height or 0)))
-      local scrollKey = node.path
-      local offset = math.min(maxScroll, math.max(0, (scrollKey and runtime.scrollOffsets[scrollKey]) or 0))
-      if scrollKey then
-        runtime.scrollOffsets[scrollKey] = offset
-      end
+      local offset = runtime:applyPendingScrollOffset(node, maxScroll)
       childY = absY - offset
     end
   end
@@ -1392,7 +1498,8 @@ function Runtime:wheelmoved(dx, dy)
     if node.type == "scrollView" then
       local scrollKey = node.path
       local maxScroll = math.max(0, ((node.layout and node.layout.scrollContentHeight) or 0) - ((node.layout and node.layout.height) or 0))
-      self.scrollOffsets[scrollKey] = math.min(maxScroll, math.max(0, (self.scrollOffsets[scrollKey] or 0) - dy * scrollWheelStep(node.props)))
+      local current = self:applyPendingScrollOffset(node, maxScroll)
+      self.scrollOffsets[scrollKey] = math.min(maxScroll, math.max(0, current - dy * scrollWheelStep(node.props)))
       self:markDirty()
       break
     end
@@ -3463,8 +3570,7 @@ function Runtime:drawNode(node, x, y, stackContext)
         setScissorBounds(love.graphics, boundsFor(absX, absY, width, height), previousScissor, self)
       end
       local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - height))
-      local offset = math.min(maxScroll, math.max(0, self.scrollOffsets[node.path] or 0))
-      self.scrollOffsets[node.path] = offset
+      local offset = self:applyPendingScrollOffset(node, maxScroll)
       runWithRestore(function()
         for _, child in ipairs(orderedChildren(node)) do
           if stackContext and stackContext.promoted and not stackContext.drawingPromoted and isRootZScoped(child) then

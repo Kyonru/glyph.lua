@@ -1158,6 +1158,58 @@ describe("runtime", function()
     assert.are.equal(30, runtime.scrollOffsets["0"])
   end)
 
+  it("sets scroll offsets by stable key before a scroll view has a path", function()
+    local runtime = Runtime.new()
+
+    runtime:setScrollOffset("log", 80)
+
+    local function App()
+      local rows = {}
+      for index = 1, 10 do
+        rows[index] = Components.box({ width = 100, height = 20 })
+      end
+
+      return Components.scrollView({
+        key = "log",
+        width = 100,
+        height = 60,
+        gap = 0,
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:publishLayoutCallbacks(runtime.root)
+
+    assert.are.equal(80, runtime:getScrollOffset("log"))
+    assert.is_nil(runtime.pendingScrollOffsets.log)
+  end)
+
+  it("scrolls fixed-height lists to an item index", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      local rows = {}
+      for index = 1, 20 do
+        rows[index] = Components.box({ width = 100, height = 20 })
+      end
+
+      return Components.scrollView({
+        key = "rows",
+        width = 100,
+        height = 60,
+        gap = 0,
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:scrollToItem("rows", 5, 20)
+    runtime:publishLayoutCallbacks(runtime.root)
+
+    assert.are.equal(80, runtime:getScrollOffset("rows"))
+  end)
+
   it("hit tests scroll view children at their scrolled visual position", function()
     local runtime = Runtime.new()
     local clicked = nil
