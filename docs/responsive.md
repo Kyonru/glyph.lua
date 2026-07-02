@@ -4,13 +4,10 @@ icon: lucide/monitor
 
 # Responsive Helpers
 
-<!-- glyph:feature-gif responsive -->
-![Animated GIF showing Glyph responsive breakpoints, columns, and virtual viewport mapping.](assets/feature-gifs/responsive.gif)
-<!-- /glyph:feature-gif responsive -->
-
 > [!TIP]
-> See it in action: [`examples/viewport`](examples.md) maps a fixed virtual
-> viewport, and [`examples/basic`](examples.md) uses responsive grid columns.
+> See responsive flow in the [Layout](layout.md) docs, fixed virtual viewport
+> mapping in [`examples/viewport`](examples.md), and responsive grid columns in
+> [`examples/basic`](examples.md).
 
 Glyph tracks viewport size and breakpoints for resizable Love2D windows.
 

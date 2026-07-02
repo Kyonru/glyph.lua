@@ -5,7 +5,7 @@ icon: lucide/layout-grid
 # Layout
 
 <!-- glyph:feature-gif layout -->
-![Animated GIF showing Glyph rows, columns, responsive grids, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif)
+![Animated GIF showing Glyph rows, columns, responsive grids, stack layering, absolute positioning, and virtual viewport mapping.](assets/feature-gifs/layout.gif)
 <!-- /glyph:feature-gif layout -->
 
 > [!TIP]

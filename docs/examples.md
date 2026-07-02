@@ -39,6 +39,17 @@ make tour
 Press **Esc** in the Love2D window to close the current example and launch the
 next one.
 
+Run the examples used by documentation GIFs as a manual tour:
+
+```sh
+make docs-tour
+# or
+make doc-tour
+```
+
+This uses the documentation GIF manifest order. Press **Esc** to close each
+capture scene and continue to the next target.
+
 The Makefile uses `LOVE_BIN` when set, otherwise it tries `love` from `PATH` and
 then `/Applications/love.app/Contents/MacOS/love` on macOS.
 
@@ -154,13 +165,12 @@ Large dataset workflow with a visible window of mounted rows, static row reuse, 
 | --- | --- |
 | [Getting Started](getting-started.md) | ![Animated GIF showing a minimal Glyph counter app rendering and updating.](assets/feature-gifs/getting-started.gif) |
 | [Components](components.md) | ![Animated GIF showing Glyph text, image, button, input, meter, tabs, and panel components.](assets/feature-gifs/components.gif) |
-| [Layout](layout.md) | ![Animated GIF showing Glyph rows, columns, responsive grids, stack layering, and absolute positioning.](assets/feature-gifs/layout.gif) |
+| [Layout](layout.md) | ![Animated GIF showing Glyph rows, columns, responsive grids, stack layering, absolute positioning, and virtual viewport mapping.](assets/feature-gifs/layout.gif) |
 | [Styling And Themes](styling.md) | ![Animated GIF showing Glyph theme colors, variants, and state styles.](assets/feature-gifs/styling.gif) |
 | [Runtime, Hooks, And Events](runtime.md) | ![Animated GIF showing Glyph runtime updates, input events, focus, and render callbacks.](assets/feature-gifs/runtime.gif) |
 | [Callback Bus](callback-bus.md) | ![Animated GIF showing Glyph callback bus priority order and event dispatch.](assets/feature-gifs/callback-bus.gif) |
 | [I18n](i18n.md) | ![Animated GIF showing Glyph localized text, labels, placeholders, and cache-aware values.](assets/feature-gifs/i18n.gif) |
 | [Accessibility](accessibility.md) | ![Animated GIF showing Glyph semantic labels, focus events, live announcements, and snapshots.](assets/feature-gifs/accessibility.gif) |
-| [Responsive Helpers](responsive.md) | ![Animated GIF showing Glyph responsive breakpoints, columns, and virtual viewport mapping.](assets/feature-gifs/responsive.gif) |
 | [Custom Draw And Helpers](custom-draw.md) | ![Animated GIF showing Glyph custom draw helpers, vector path reveal, morphing, clipping, and masks.](assets/feature-gifs/custom-draw.gif) |
 | [Animations](animations.md) | ![Animated GIF showing Glyph enter, exit, meter, and movement animations.](assets/feature-gifs/animations.gif) |
 | [Feedback](feedback.md) | ![Animated GIF showing Glyph feedback sequences, visual animation, audio metadata, and emitted events.](assets/feature-gifs/feedback.gif) |

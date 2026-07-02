@@ -1,4 +1,4 @@
-.PHONY: docs docs-gifs test examples-tour tour accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene styles themes typography viewport
+.PHONY: docs docs-gifs docs-tour doc-tour test examples-tour tour accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene styles themes typography viewport
 
 EXAMPLES := accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene styles themes typography viewport
 TOUR_EXAMPLES := accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene themes typography viewport
@@ -9,6 +9,11 @@ docs:
 
 docs-gifs:
 	lua scripts/generate_doc_gifs.lua
+
+docs-tour:
+	lua scripts/doc_gifs/tour.lua
+
+doc-tour: docs-tour
 
 test:
 	busted

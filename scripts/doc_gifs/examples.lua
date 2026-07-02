@@ -292,7 +292,6 @@ local targetModules = {
 	"callback_bus",
 	"i18n",
 	"accessibility",
-	"responsive",
 	"custom_draw",
 	"animations",
 	"feedback",

@@ -33,6 +33,7 @@ local frame = 0
 local totalFrames = 1
 local pendingCapture = false
 local firedActions = {}
+local interactive = false
 
 local function parseArgs(argv)
   local index = 1
@@ -92,9 +93,7 @@ function love.load(argv)
   if not opts.target or opts.target == "" then
     error("missing --target")
   end
-  if not opts.frameDir or opts.frameDir == "" then
-    error("missing --frames")
-  end
+  interactive = not opts.frameDir or opts.frameDir == ""
 
   target = assert(Manifest.find(opts.target), "unknown target: " .. tostring(opts.target))
   opts.fps = target.fps or opts.fps
@@ -145,27 +144,38 @@ function love.load(argv)
   end
 end
 
-function love.update()
-  if not target or frame >= totalFrames then
+function love.update(dt)
+  if not target then
     return
   end
 
   local fixedDt = 1 / opts.fps
-  ctx.time = frame * fixedDt
+  local step = interactive and (dt or fixedDt) or fixedDt
+
+  if not interactive and frame >= totalFrames then
+    return
+  end
+
+  if interactive then
+    ctx.time = (ctx.time or 0) + step
+  else
+    ctx.time = frame * fixedDt
+  end
+
   runActions(ctx.time)
 
   if type(target.update) == "function" then
-    target.update(ctx, ctx.time, fixedDt)
+    target.update(ctx, ctx.time, step)
   end
 
-  ui.update(fixedDt)
+  ui.update(step)
 end
 
 function love.draw()
   if not target or not ctx then
     return
   end
-  if frame >= totalFrames then
+  if not interactive and frame >= totalFrames then
     quit(0)
     return
   end
@@ -184,7 +194,7 @@ function love.draw()
     end)
   end
 
-  if pendingCapture then
+  if interactive or pendingCapture then
     return
   end
 
@@ -198,4 +208,32 @@ function love.draw()
       quit(0)
     end
   end)
+end
+
+function love.keypressed(key)
+  if key == "escape" then
+    quit(0)
+    return
+  end
+  ui.keypressed(key)
+end
+
+function love.keyreleased(key)
+  ui.keyreleased(key)
+end
+
+function love.mousemoved(x, y)
+  ui.mousemoved(x, y)
+end
+
+function love.mousepressed(x, y, button)
+  ui.mousepressed(x, y, button)
+end
+
+function love.mousereleased(x, y, button)
+  ui.mousereleased(x, y, button)
+end
+
+function love.wheelmoved(dx, dy)
+  ui.wheelmoved(dx, dy)
 end

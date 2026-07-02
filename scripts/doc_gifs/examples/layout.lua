@@ -25,7 +25,7 @@ return function(env)
 		id = "layout",
 		title = "Layout",
 		docs = { "docs/layout.md" },
-		alt = "Animated GIF showing Glyph rows, columns, responsive grids, stack layering, and absolute positioning.",
+		alt = "Animated GIF showing Glyph rows, columns, responsive grids, stack layering, absolute positioning, and virtual viewport mapping.",
 		update = function(ctx)
 			ctx.slide = wave(ctx, 2.2)
 			ctx.layoutWidth = math.floor(286 + wave(ctx, 1.55, 0.45) * 110)
@@ -127,25 +127,9 @@ return function(env)
 								}, gridCells),
 							}),
 						}),
-						ui.row({ width = "100%", height = 26, gap = 8, align = "center" }, {
-							ui.text(
-								"percent",
-								{ width = 70, textStyle = "caption", style = { color = palette.muted } }
-							),
-							ui.box({
-								width = "72%",
-								height = 20,
-								style = {
-									background = cloneColor(palette.violet, 0.2),
-									borderColor = palette.violet,
-									borderWidth = 1,
-									radius = 6,
-								},
-							}),
-						}),
 					}),
-					panel("stack and absolute", { flex = 1, height = 292 }, {
-						ui.stack({ width = "100%", height = 214 }, {
+					panel("absolute and viewport", { flex = 1, height = 292 }, {
+						ui.stack({ width = "100%", height = 142 }, {
 							ui.box({
 								position = "absolute",
 								inset = 0,
@@ -182,7 +166,7 @@ return function(env)
 								right = "6%",
 								bottom = "10%",
 								width = "42%",
-								height = 78,
+								height = 58,
 								zIndex = 3,
 								style = {
 									background = cloneColor(palette.coral, 0.24),
@@ -193,8 +177,57 @@ return function(env)
 							}, {
 								ui.text(
 									"percent anchored",
-									{ position = "absolute", left = 18, top = 26, style = { color = palette.text } }
+									{ position = "absolute", left = 18, top = 18, style = { color = palette.text } }
 								),
+							}),
+						}),
+						ui.row({ width = "100%", gap = 10, align = "center" }, {
+							ui.box({
+								width = 188,
+								height = 76,
+								style = {
+									background = cloneColor(palette.blue, 0.15),
+									borderColor = palette.blue,
+									borderWidth = 1,
+									radius = 8,
+								},
+								draw = function(_, x, y, width, height, loveModule)
+									local g = loveModule.graphics
+									g.setColor(1, 1, 1, 0.055)
+									for gx = 18, width - 18, 24 do
+										g.line(x + gx, y + 10, x + gx, y + height - 10)
+									end
+									for gy = 18, height - 18, 18 do
+										g.line(x + 10, y + gy, x + width - 10, y + gy)
+									end
+									g.setColor(palette.teal[1], palette.teal[2], palette.teal[3], 0.18)
+									g.rectangle("fill", x + 50, y + 24, 86, 30, 7, 7)
+								end,
+							}, {
+								ui.box({
+									position = "absolute",
+									left = 40 + wave(ctx, 3.2) * 96,
+									top = 25,
+									width = 22,
+									height = 22,
+									style = {
+										background = palette.teal,
+										borderColor = { 1, 1, 1, 0.58 },
+										borderWidth = 1,
+										radius = 11,
+									},
+								}),
+							}),
+							ui.column({ flex = 1, gap = 5 }, {
+								ui.text(
+									"virtual viewport",
+									{ textStyle = "caption", style = { color = palette.muted } }
+								),
+								ui.text("screen input maps back into a fixed 320x180 frame.", {
+									width = "100%",
+									wrap = true,
+									style = { color = palette.text },
+								}),
 							}),
 						}),
 					}),
