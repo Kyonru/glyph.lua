@@ -910,6 +910,73 @@ describe("ui helpers", function()
     runtime.theme.typography.h1.font = previousH1Font
   end)
 
+  it("draws plain text with a fallback font when the selected font lacks glyphs", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    local bodyFont = {
+      getWidth = function(_, text)
+        return #text * 6
+      end,
+      getHeight = function()
+        return 12
+      end,
+      hasGlyphs = function(_, text)
+        return not tostring(text):find("言", 1, true)
+      end,
+    }
+    local japaneseFont = {
+      getWidth = function(_, text)
+        return #text * 8
+      end,
+      getHeight = function()
+        return 16
+      end,
+      hasGlyphs = function()
+        return true
+      end,
+    }
+    local currentFont = bodyFont
+    local previousBodyFont = runtime.theme.fonts.body
+    local previousJapaneseFont = runtime.theme.fonts.japanese
+    local previousFallbacks = runtime.theme.fontFallbacks
+    local previousCaptionFont = runtime.theme.typography.caption.font
+
+    runtime.theme.fonts.body = bodyFont
+    runtime.theme.fonts.japanese = japaneseFont
+    runtime.theme.fontFallbacks = { "japanese" }
+    runtime.theme.typography.caption.font = "body"
+    runtime:setLove({
+      graphics = {
+        getFont = function()
+          return currentFont
+        end,
+        setFont = function(font)
+          currentFont = font
+          calls[#calls + 1] = { "font", font }
+        end,
+        setColor = function() end,
+        print = function(text)
+          calls[#calls + 1] = { "print", text }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.caption("言語: 日本語")
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "font", japaneseFont }, calls[1])
+    assert.are.same({ "print", "言語: 日本語" }, calls[2])
+    assert.are.equal(bodyFont, currentFont)
+
+    runtime.theme.fonts.body = previousBodyFont
+    runtime.theme.fonts.japanese = previousJapaneseFont
+    runtime.theme.fontFallbacks = previousFallbacks
+    runtime.theme.typography.caption.font = previousCaptionFont
+  end)
+
   it("applies filters to lazily loaded font specs", function()
     local runtime = Runtime.new()
     local filters = {}
@@ -1363,6 +1430,14 @@ describe("ui helpers", function()
     assert.are.equal("Fallback", tree.children[8].value)
 
     ui.i18n.configure({})
+  end)
+
+  it("uses h2 typography for panel titles by default", function()
+    local defaultPanel = ui.panel({ title = "Status" }, {})
+    local customPanel = ui.panel({ title = "Status", titleTextStyle = "caption" }, {})
+
+    assert.are.equal("h2", defaultPanel.children[1].props.textStyle)
+    assert.are.equal("caption", customPanel.children[1].props.textStyle)
   end)
 
   it("describes default accessibility semantics", function()

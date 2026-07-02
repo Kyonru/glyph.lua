@@ -1628,10 +1628,10 @@ local function drawPlainText(runtime, node, value, x, y, width, love, style, opa
     return
   end
 
-  local textStyle = Typography.resolveDrawable(runtime.theme, props, style, defaultStyle or node.type, love)
+  local text = tostring(value or "")
+  local textStyle = Typography.resolveDrawable(runtime.theme, props, style, defaultStyle or node.type, love, text)
   local previousFont = setFont(love, textStyle.font, textStyle.fontFilter)
   color(love, withOpacity(textStyle.color or style.color or runtime.theme.textColor, opacity))
-  local text = tostring(value or "")
   local lineHeight = textStyle.lineHeight or runtime.theme.lineHeight or 18
   local contentHeight = lineHeight
 

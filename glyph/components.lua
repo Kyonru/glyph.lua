@@ -296,7 +296,7 @@ function Components.panel(props, children)
   if title then
     panelChildren[#panelChildren + 1] = Components.text(resolvedTitle, {
       color = props.titleColor,
-      textStyle = props.titleTextStyle,
+      textStyle = props.titleTextStyle or "h2",
     })
   end
 

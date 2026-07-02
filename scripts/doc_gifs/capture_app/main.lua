@@ -16,6 +16,7 @@ package.path = table.concat({
 }, ";") .. ";" .. package.path
 
 local ui = require("glyph")
+local ExampleFonts = require("examples.fonts")
 local Manifest = require("doc_gifs.manifest")
 
 local opts = {
@@ -116,6 +117,7 @@ function love.load(argv)
     breakpoints = { sm = 560, md = 760, lg = 960 },
   })
   ui.resize(opts.width, opts.height)
+  ExampleFonts.install(ui, { love = love })
   ui.setTheme({
     backgroundColor = { 0.035, 0.043, 0.058, 1 },
     surfaceColor = { 0.075, 0.092, 0.118, 0.96 },

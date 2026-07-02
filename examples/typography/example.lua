@@ -1,4 +1,5 @@
 local ui = require("glyph")
+local ExampleFonts = require("fonts")
 
 local scale = 1
 local locale = "en"
@@ -13,52 +14,18 @@ local translations = {
 		briefing = "[font=heading]Senal encontrada[/font][newline]Guia a [color=#7cffae]Vega[/color] por el rele y manten limpia la comunicacion.",
 		status = "Idioma: Espanol",
 	},
-}
-
-local fontFiles = {
-	body = {
-		"fonts/PixelifySans-VariableFont_wght.ttf",
-		"examples/typography/fonts/PixelifySans-VariableFont_wght.ttf",
-	},
-	heading = {
-		"fonts/BlackOpsOne-Regular.ttf",
-		"examples/typography/fonts/BlackOpsOne-Regular.ttf",
-	},
-	display = {
-		"fonts/RubikBubbles-Regular.ttf",
-		"examples/typography/fonts/RubikBubbles-Regular.ttf",
-	},
-	mono = {
-		"fonts/Inconsolata-VariableFont_wdth,wght.ttf",
-		"examples/typography/fonts/Inconsolata-VariableFont_wdth,wght.ttf",
+	ja = {
+		briefing = "[font=japanese]信号を発見[/font][newline][font=japanese]ベガを中継地点へ誘導し、通信を保ってください。[/font]",
+		status = "言語: 日本語",
 	},
 }
-
-local function loadFont(graphics, name, size)
-	local paths = fontFiles[name] or {}
-	if graphics and graphics.newFont then
-		for _, path in ipairs(paths) do
-			local ok, font = pcall(graphics.newFont, path, size)
-			if ok and font then
-				return font
-			end
-		end
-	end
-
-	return graphics and graphics.newFont and graphics.newFont(size) or nil
-end
 
 local function setup()
 	local loveModule = _G.love
-	local graphics = loveModule and loveModule.graphics
-	local fonts = {}
-
-	if graphics and graphics.newFont then
-		fonts.body = loadFont(graphics, "body", 14)
-		fonts.heading = loadFont(graphics, "heading", 24)
-		fonts.display = loadFont(graphics, "display", 30)
-		fonts.mono = loadFont(graphics, "mono", 13)
-	end
+	local fonts = ExampleFonts.load(loveModule, { body = 14, title = 22, subheader = 16, japanese = 14 })
+	fonts.heading = fonts.subheader
+	fonts.display = fonts.title
+	fonts.mono = fonts.body
 
 	local ok, sysl = pcall(require, "sysl_text")
 	if ok then
@@ -94,6 +61,7 @@ local function setup()
 	ui.setTheme({
 		textScale = scale,
 		fonts = fonts,
+		fontFallbacks = { "japanese" },
 		backgroundColor = { 0.035, 0.045, 0.07, 1 },
 		surfaceColor = { 0.075, 0.09, 0.13, 0.96 },
 		borderColor = { 0.25, 0.34, 0.48, 1 },
@@ -117,9 +85,11 @@ local function setup()
 			text = { font = "body", fontSize = 14, lineHeight = 20 },
 			h1 = { font = "display", fontSize = 31, lineHeight = 38, color = { 1, 1, 1, 1 } },
 			h2 = { font = "heading", fontSize = 22, lineHeight = 29, color = { 0.8, 0.9, 1, 1 } },
+			description = { font = "description", fontSize = 14, lineHeight = 21, color = { 0.55, 0.66, 0.78, 1 } },
 			paragraph = { font = "body", fontSize = 14, lineHeight = 22 },
 			caption = { font = "body", fontSize = 11, lineHeight = 16, color = { 0.55, 0.66, 0.78, 1 } },
 			code = { font = "mono", fontSize = 13, lineHeight = 19, color = { 0.75, 1, 0.82, 1 } },
+			japanese = { font = "japanese", fontSize = 14, lineHeight = 22, color = { 0.92, 0.98, 1, 1 } },
 			button = { font = "body", fontSize = 14, lineHeight = 20 },
 			input = { font = "body", fontSize = 14, lineHeight = 20 },
 		},
@@ -167,12 +137,13 @@ local function scaleControls()
 		ui.box({ grow = 1, height = 1, interactive = false }),
 		localeButton("en", "EN"),
 		localeButton("es", "ES"),
+		localeButton("ja", "JA"),
 	})
 end
 
 local function styleSamples()
 	return ui.panel({ title = "Text Styles", titleTextStyle = "h2", gap = 10, padding = 16, flex = 1 }, {
-		ui.h1("Command Typography"),
+		ui.h1("Command Typography", { width = "100%", wrap = true }),
 		ui.h2("Mission Deck"),
 		ui.p(
 			"Typography presets keep headings, body copy, labels, and captions consistent while still using normal Glyph text nodes.",
@@ -181,6 +152,11 @@ local function styleSamples()
 				width = "100%",
 			}
 		),
+		ui.text("日本語サンプル: グリフで描くピクセル文字", {
+			textStyle = "japanese",
+			wrap = true,
+			width = "100%",
+		}),
 		ui.caption("Caption text uses the same layout path, so it wraps and scales with the theme."),
 		ui.text("mono/status/log_0442", { textStyle = "code" }),
 	})

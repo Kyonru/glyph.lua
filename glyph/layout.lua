@@ -271,6 +271,34 @@ local function measureText(context, text, props, theme, nodeType)
   return Typography.measurePlain(text, props, theme, nil, nil, nodeType)
 end
 
+local function utf8Chars(value)
+  local chars = {}
+  local text = tostring(value or "")
+  local index = 1
+  local length = #text
+
+  while index <= length do
+    local byte = text:byte(index)
+    local charLength = 1
+    if byte and byte >= 0xF0 then
+      charLength = 4
+    elseif byte and byte >= 0xE0 then
+      charLength = 3
+    elseif byte and byte >= 0xC0 then
+      charLength = 2
+    end
+
+    if index + charLength - 1 > length then
+      charLength = 1
+    end
+
+    chars[#chars + 1] = text:sub(index, index + charLength - 1)
+    index = index + charLength
+  end
+
+  return chars
+end
+
 local function wrapText(text, maxWidth, context, props, theme)
   local measuredLineHeight = nil
   if context.measureText then
@@ -297,11 +325,11 @@ local function wrapText(text, maxWidth, context, props, theme)
     end
 
     local current = ""
-    for index = 1, #value do
-      local nextValue = current .. value:sub(index, index)
+    for _, char in ipairs(utf8Chars(value)) do
+      local nextValue = current .. char
       if current ~= "" and textWidth(nextValue) > widthLimit then
         lines[#lines + 1] = current
-        current = value:sub(index, index)
+        current = char
       else
         current = nextValue
       end

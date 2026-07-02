@@ -471,7 +471,8 @@ ui.panel({ title = "Logs", width = "100%", flex = 1 }, {
 })
 ```
 
-Use `titleKey` for localized panel titles.
+Panel titles use the `h2` typography preset by default. Use `titleTextStyle` to
+select another preset, and `titleKey` for localized panel titles.
 
 ## Accessibility Props
 

@@ -1,6 +1,31 @@
 local ui = require("glyph")
+local ExampleFonts = require("fonts")
 
 local Runner = {}
+
+local DESCRIPTIONS = {
+	accessibility = "Semantic labels, live-region announcements, focus events, and an adapter log for screen-reader style integrations.",
+	animations = "Visual-only enter, exit, movement, resize, and meter animation powered by Glyph's Flux adapter.",
+	["audio-cues"] = "Button and interaction audio metadata emitted as app-owned cue events.",
+	basic = "Core Glyph primitives, layout, state, tabs, and custom draw in a compact starter screen.",
+	dashboard = "A dense debugger/admin surface with scanning layouts, charts, filters, and operational panels.",
+	dialogue = "A Love-Dialogue bridge that can render the running conversation through Glyph primitives.",
+	["hud-menu"] = "A game-shaped HUD menu with custom drawing, animated selection, and controller-friendly structure.",
+	["hud-primitives"] = "Meters, images, shapes, clipping, stencil masks, and dynamic HUD panels.",
+	i18n = "Backend-agnostic translation, locale switching, cache keys, and semantic text resolution.",
+	inventory = "Grid helpers, drag/drop lifecycles, keyboard carry state, sprite sheets, and tooltip-style details.",
+	juice = "Triggerable feedback sequences for animation, audio metadata, particles, and app-owned game feel.",
+	menori = "Optional Menori scene integration with screen-space HUD and interactive world-space billboard UI.",
+	modal = "Scene-backed modals with input blocking, stacked dialogs, and custom transition styling.",
+	navigate = "Spatial navigation, nav groups, trapped scopes, and keyboard/gamepad activation flows.",
+	["path-feedback"] = "Vector path reveal, morphing, pulse rings, and app-owned feedback targets.",
+	performance = "Large-list rendering patterns with memo/static helpers and bounded per-frame work.",
+	scene = "Scene stacks, overlays, pause layers, transitions, and input routing between layers.",
+	styles = "Theme variants, state styles, shader hooks, and visual styling precedence.",
+	themes = "Theme tokens, density presets, variants, and stateful component styling across a complex UI.",
+	typography = "Font registries, typography presets, text scaling, rich tags, and multilingual fallback behavior.",
+	viewport = "Fixed virtual viewport adapters, input conversion, scaling modes, and scroll behavior.",
+}
 
 local function call(example, name, ...)
 	local fn = example and example[name]
@@ -8,6 +33,48 @@ local function call(example, name, ...)
 		return fn(...)
 	end
 	return nil
+end
+
+local function exampleDescription(example)
+	if example.description ~= nil then
+		return example.description
+	end
+	return DESCRIPTIONS[example.id]
+end
+
+local function exampleTitle(example)
+	return example.title or example.label or example.id or "Example"
+end
+
+local function wrapComponent(example, mode)
+	if not example or type(example.component) ~= "function" then
+		return nil
+	end
+
+	local content = example.component(mode)
+	if example.chrome == false or example.usesScene then
+		return content
+	end
+
+	local headerChildren = {
+		ui.h1(exampleTitle(example)),
+	}
+	local description = exampleDescription(example)
+	if description and description ~= "" then
+		headerChildren[#headerChildren + 1] = ui.p(description, {
+			textStyle = "description",
+			width = "100%",
+			wrap = true,
+			style = { color = ui.theme.mutedTextColor },
+		})
+	end
+
+	return ui.column({ width = "100%", height = "100%", padding = 24, gap = 16 }, {
+		ui.column({ width = "100%", gap = 6 }, headerChildren),
+		ui.stack({ width = "100%", grow = 1 }, {
+			content,
+		}),
+	})
 end
 
 local function captureOptions(example)
@@ -78,7 +145,7 @@ function Runner.run(example)
 			ui.render()
 		else
 			ui.render(function()
-				return example.component("standalone")
+				return wrapComponent(example, "standalone")
 			end)
 		end
 	end
@@ -109,6 +176,7 @@ function Runner.run(example)
 			window = captureWindow(example.window, capture),
 			install = example.install,
 		})
+		ExampleFonts.install(ui)
 		if capture then
 			ui.resize(capture.width, capture.height)
 		end

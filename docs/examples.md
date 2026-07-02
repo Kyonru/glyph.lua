@@ -40,6 +40,10 @@ The command requires Love2D and FFmpeg. Set `LOVE_BIN` or `FFMPEG_BIN` when the
 executables are not on `PATH`; on macOS the script also checks
 `/Applications/love.app/Contents/MacOS/love`.
 
+Standalone examples share a runner shell that renders the example title,
+description, and then the runnable demo surface. Set `chrome = false` on an
+example return table when an example needs to own the entire viewport.
+
 For shop/combat/debug UI patterns that combine these examples, see
 [Game UI Patterns](game-ui-patterns.md).
 

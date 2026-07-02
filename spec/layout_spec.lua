@@ -557,6 +557,29 @@ describe("layout", function()
     assert.are.same({ "abc", "def", "ghi", "j" }, tree.wrappedText.lines)
   end)
 
+  it("hard-wraps multibyte text without splitting characters", function()
+    local tree = ui.text("言語日本語", {
+      width = 20,
+      wrap = true,
+    })
+    local utf8Context = {
+      theme = ui.theme,
+      measureText = function(text)
+        local count = 0
+        for _ in tostring(text):gmatch("[^\128-\191]") do
+          count = count + 1
+        end
+        return count * 10, 20
+      end,
+    }
+
+    Layout.compute(tree, utf8Context)
+
+    assert.are.equal(20, tree.layout.width)
+    assert.are.equal(60, tree.layout.height)
+    assert.are.same({ "言語", "日本", "語" }, tree.wrappedText.lines)
+  end)
+
   it("uses typography font size and text scale when no measurement hook is available", function()
     local theme = {
       fontSize = 10,

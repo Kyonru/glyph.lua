@@ -35,6 +35,7 @@ local GlyphFilterSpec = {}
 local GlyphFontSpec = {}
 
 ---@alias GlyphFontRef any|string|GlyphFontSpec
+---@alias GlyphFontFallbacks GlyphFontRef[]
 
 -- ---------------------------------------------------------------------------
 -- Style
@@ -468,6 +469,7 @@ local GlyphDragProps = {}
 ---@field format? "plain"|"sysl"
 ---@field rich? boolean shorthand for `format = "sysl"` (rich text); ignored when `format` is set explicitly
 ---@field fontFilter? GlyphFilter
+---@field fontFallbacks? GlyphFontFallbacks ordered font refs to try when the selected font lacks glyphs
 local GlyphTextProps = {}
 
 ---@class GlyphImageProps : GlyphProps
@@ -763,6 +765,7 @@ local GlyphI18nApi = {}
 ---@field fontSize? number
 ---@field lineHeight? number
 ---@field fontFilter? GlyphFilter
+---@field fontFallbacks? GlyphFontFallbacks ordered font refs to try when this preset's font lacks glyphs
 ---@field color? GlyphColor
 local GlyphTypographyStyle = {}
 
@@ -955,6 +958,7 @@ local GlyphViewportBackend = {}
 ---@field borderWidth? number
 ---@field font? GlyphFontRef
 ---@field fonts? table<string, GlyphFontRef>
+---@field fontFallbacks? GlyphFontFallbacks ordered font refs to try when the selected text font lacks glyphs
 ---@field typography? table<string, GlyphTypographyStyle>
 ---@field base? GlyphStyle
 ---@field components? table

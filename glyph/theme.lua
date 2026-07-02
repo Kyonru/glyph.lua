@@ -29,6 +29,7 @@ theme.fonts = {
   heading = nil,
   mono = nil,
 }
+theme.fontFallbacks = {}
 
 theme.typography = {
   text = {

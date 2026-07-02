@@ -72,3 +72,84 @@ describe("typography measurement cache", function()
     assert.are.equal(2, calls)
   end)
 end)
+
+describe("typography font resolution", function()
+  it("resolves caption typography through the named theme font", function()
+    local latinFont = {
+      getWidth = function(_, text)
+        return #text
+      end,
+      getHeight = function()
+        return 12
+      end,
+    }
+    local japaneseFont = {
+      getWidth = function(_, text)
+        return #text * 2
+      end,
+      getHeight = function()
+        return 14
+      end,
+    }
+    local theme = {
+      fontSize = 13,
+      lineHeight = 18,
+      typography = {
+        text = { font = "body" },
+        caption = { font = "japanese" },
+      },
+      fonts = {
+        body = latinFont,
+        japanese = japaneseFont,
+      },
+    }
+
+    local resolved = Typography.resolveDrawable(theme, { textStyle = "caption" })
+
+    assert.are.equal(japaneseFont, resolved.font)
+  end)
+
+  it("falls back to a registered font when the selected font lacks glyphs", function()
+    local latinFont = {
+      getWidth = function(_, text)
+        return #text
+      end,
+      getHeight = function()
+        return 12
+      end,
+      hasGlyphs = function(_, text)
+        return not tostring(text):find("言", 1, true)
+      end,
+    }
+    local japaneseFont = {
+      getWidth = function(_, text)
+        return #text * 2
+      end,
+      getHeight = function()
+        return 14
+      end,
+      hasGlyphs = function()
+        return true
+      end,
+    }
+    local theme = {
+      fontSize = 13,
+      lineHeight = 18,
+      typography = {
+        text = { font = "body" },
+        caption = { font = "body" },
+      },
+      fonts = {
+        body = latinFont,
+        japanese = japaneseFont,
+      },
+      fontFallbacks = { "japanese" },
+    }
+
+    local resolved = Typography.resolveDrawable(theme, { textStyle = "caption" }, nil, nil, nil, "言語: 日本語")
+    local width = Typography.measurePlain("言語: 日本語", { textStyle = "caption" }, theme)
+
+    assert.are.equal(japaneseFont, resolved.font)
+    assert.are.equal(#("言語: 日本語") * 2, width)
+  end)
+end)

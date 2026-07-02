@@ -91,7 +91,12 @@ end
 ---@param value any
 ---@return boolean
 local function isFontObject(value)
-  return type(value) == "table" and type(value.getWidth) == "function" and type(value.getHeight) == "function"
+  local valueType = type(value)
+  if valueType ~= "table" and valueType ~= "userdata" then
+    return false
+  end
+
+  return type(value.getWidth) == "function" and type(value.getHeight) == "function"
 end
 
 ---@param value any
@@ -103,6 +108,18 @@ local function resolveFontRef(value, theme)
   end
 
   return value
+end
+
+local function fontHasText(font, text)
+  if text == nil or text == "" or not isFontObject(font) or type(font.hasGlyphs) ~= "function" then
+    return true
+  end
+
+  local ok, hasGlyphs = pcall(font.hasGlyphs, font, tostring(text))
+  if not ok then
+    return true
+  end
+  return hasGlyphs ~= false
 end
 
 ---@param spec table
@@ -133,6 +150,99 @@ local function loadSpecFont(spec, size, graphics, cacheKey, filterSpec)
   end
 
   return nil
+end
+
+local function loadResolvedFont(fontRef, resolved, theme, graphics, fontFilter, allowDefault)
+  if isFontObject(fontRef) then
+    return fontRef, fontFilter
+  end
+
+  if type(fontRef) == "table" then
+    local specSize = resolved.fontSize or fontRef.size or theme.fontSize or 13
+    local size = math.max(1, math.floor(specSize + 0.5))
+    local specFilter = Filter.fromFields(fontRef, fontFilter)
+    local key = table.concat({
+      "spec",
+      tostring(fontRef.path or ""),
+      tostring(size),
+      tostring(fontRef.hinting or ""),
+      Filter.key(specFilter),
+    }, "|")
+    return loadSpecFont(fontRef, size, graphics, key, specFilter), specFilter
+  end
+
+  if allowDefault and graphics and type(graphics.newFont) == "function" then
+    local fontSize = math.max(1, math.floor((resolved.fontSize or theme.fontSize or 13) + 0.5))
+    local key = "default|" .. tostring(fontSize) .. "|" .. Filter.key(fontFilter)
+    return loadSpecFont({}, fontSize, graphics, key, fontFilter), fontFilter
+  end
+
+  return fontRef, fontFilter
+end
+
+local function appendFallback(target, seen, ref)
+  if ref == nil then
+    return
+  end
+
+  local key = tostring(ref)
+  if type(ref) == "table" and ref.path then
+    key = "path:" .. tostring(ref.path)
+  end
+  if seen[key] then
+    return
+  end
+
+  seen[key] = true
+  target[#target + 1] = ref
+end
+
+local function fontFallbacks(theme, props, resolved)
+  local fallbacks = {}
+  local seen = {}
+  local explicit = props and props.fontFallbacks or resolved and resolved.fontFallbacks or theme and theme.fontFallbacks or nil
+
+  if type(explicit) == "string" then
+    appendFallback(fallbacks, seen, explicit)
+  elseif type(explicit) == "table" then
+    for _, ref in ipairs(explicit) do
+      appendFallback(fallbacks, seen, ref)
+    end
+  end
+
+  local fonts = theme and theme.fonts or nil
+  if type(fonts) == "table" then
+    local names = {}
+    for name in pairs(fonts) do
+      names[#names + 1] = name
+    end
+    table.sort(names, function(a, b)
+      return tostring(a) < tostring(b)
+    end)
+    for _, name in ipairs(names) do
+      appendFallback(fallbacks, seen, name)
+    end
+  end
+
+  return fallbacks
+end
+
+local function applyTextFallback(theme, props, resolved, graphics, text)
+  if fontHasText(resolved.font, text) then
+    return resolved
+  end
+
+  for _, ref in ipairs(fontFallbacks(theme, props, resolved)) do
+    local fontRef = resolveFontRef(ref, theme)
+    local font, filter = loadResolvedFont(fontRef, resolved, theme, graphics, resolved.fontFilter, false)
+    if font ~= resolved.font and fontHasText(font, text) then
+      resolved.font = font
+      resolved.fontFilter = filter
+      return resolved
+    end
+  end
+
+  return resolved
 end
 
 ---@param theme table
@@ -175,6 +285,9 @@ function Typography.resolve(theme, props, baseStyle, defaultStyle)
   if props.fontFilter ~= nil then
     resolved.fontFilter = props.fontFilter
   end
+  if props.fontFallbacks ~= nil then
+    resolved.fontFallbacks = props.fontFallbacks
+  end
   if props.color ~= nil then
     resolved.color = props.color
   end
@@ -194,44 +307,19 @@ end
 ---@param baseStyle? table
 ---@param defaultStyle? string
 ---@param loveModule? table
+---@param text? string
 ---@return table
-function Typography.resolveDrawable(theme, props, baseStyle, defaultStyle, loveModule)
+function Typography.resolveDrawable(theme, props, baseStyle, defaultStyle, loveModule, text)
+  theme = theme or {}
   local resolved = Typography.resolve(theme, props, baseStyle, defaultStyle)
   local graphics = loveModule and loveModule.graphics
   local fontRef = resolveFontRef(resolved.font, theme)
-  local fontSize = math.max(1, math.floor((resolved.fontSize or theme.fontSize or 13) + 0.5))
   local fontFilter = Filter.resolve(resolved.fontFilter)
   resolved.fontFilter = fontFilter
 
-  if isFontObject(fontRef) then
-    resolved.font = fontRef
-    return resolved
-  end
+  resolved.font, resolved.fontFilter = loadResolvedFont(fontRef, resolved, theme, graphics, fontFilter, true)
 
-  if type(fontRef) == "table" then
-    local specSize = resolved.fontSize or fontRef.size or theme.fontSize or 13
-    local size = math.max(1, math.floor(specSize + 0.5))
-    local specFilter = Filter.fromFields(fontRef, fontFilter)
-    resolved.fontFilter = specFilter
-    local key = table.concat({
-      "spec",
-      tostring(fontRef.path or ""),
-      tostring(size),
-      tostring(fontRef.hinting or ""),
-      Filter.key(specFilter),
-    }, "|")
-    resolved.font = loadSpecFont(fontRef, size, graphics, key, specFilter)
-    return resolved
-  end
-
-  if graphics and type(graphics.newFont) == "function" then
-    local key = "default|" .. tostring(fontSize) .. "|" .. Filter.key(fontFilter)
-    resolved.font = loadSpecFont({}, fontSize, graphics, key, fontFilter)
-  else
-    resolved.font = fontRef
-  end
-
-  return resolved
+  return applyTextFallback(theme, props, resolved, graphics, text)
 end
 
 ---@param text string
@@ -242,7 +330,7 @@ end
 ---@param defaultStyle? string
 ---@return number, number
 function Typography.measurePlain(text, props, theme, loveModule, baseStyle, defaultStyle)
-  local resolved = Typography.resolveDrawable(theme, props, baseStyle, defaultStyle, loveModule)
+  local resolved = Typography.resolveDrawable(theme, props, baseStyle, defaultStyle, loveModule, text)
   local font = resolved.font
 
   if isFontObject(font) then

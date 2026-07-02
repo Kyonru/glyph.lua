@@ -57,7 +57,9 @@ ui.setTheme({
   fonts = {
     body = love.graphics.newFont(14),
     heading = love.graphics.newFont(24),
+    japanese = love.graphics.newFont("assets/DotGothic16-Regular.ttf", 14),
   },
+  fontFallbacks = { "japanese" },
   typography = {
     text = { font = "body", fontSize = 14, lineHeight = 20 },
     h1 = { font = "heading", fontSize = 30, lineHeight = 36 },
@@ -73,6 +75,12 @@ cached when Love2D font creation is available. Text defaults to
 `fontFilter = "nearest"` for crisp pixel scaling; set `fontFilter = "linear"` or
 use a font spec with `filter = { min = "nearest", mag = "linear" }` when a
 specific text style needs different Love2D filtering.
+
+Use `fontFallbacks` when plain text may contain glyphs outside the selected
+font. Glyph asks fonts that implement Love2D's `hasGlyphs` whether they can draw
+the text; if the selected font cannot, it uses the first fallback that can. A
+text node or typography preset may also set `fontFallbacks` to override the
+theme order for that label.
 
 Text nodes select presets with `textStyle`:
 
