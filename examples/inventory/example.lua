@@ -27,21 +27,25 @@ local CASE_GRID_PROPS = {
 	gap = CASE_GAP,
 	count = CASE_COLUMNS * CASE_ROWS,
 }
+local WORKBENCH_HEADER_HEIGHT = 64
+local TAB_BAR_HEIGHT = 40
 
 local colors = {
-	bg = { 0.025, 0.024, 0.023, 1 },
-	stone = { 0.075, 0.082, 0.088, 0.98 },
-	stoneDark = { 0.035, 0.038, 0.044, 0.98 },
-	leatherDark = { 0.058, 0.038, 0.029, 0.98 },
-	parchment = { 0.92, 0.82, 0.58, 1 },
-	parchmentDim = { 0.66, 0.56, 0.39, 1 },
-	gold = { 0.96, 0.66, 0.22, 1 },
-	bronze = { 0.62, 0.39, 0.18, 1 },
-	iron = { 0.36, 0.39, 0.42, 1 },
-	ink = { 0.1, 0.078, 0.058, 1 },
-	red = { 0.82, 0.19, 0.16, 1 },
-	green = { 0.2, 0.72, 0.42, 1 },
-	blue = { 0.28, 0.54, 0.92, 1 },
+	bg = { 0.018, 0.025, 0.03, 1 },
+	stone = { 0.055, 0.075, 0.082, 0.98 },
+	stoneDark = { 0.025, 0.034, 0.04, 0.98 },
+	leatherDark = { 0.052, 0.038, 0.06, 0.98 },
+	parchment = { 0.9, 0.88, 0.78, 1 },
+	parchmentDim = { 0.62, 0.68, 0.66, 1 },
+	gold = { 0.96, 0.7, 0.28, 1 },
+	bronze = { 0.54, 0.49, 0.34, 1 },
+	iron = { 0.34, 0.42, 0.44, 1 },
+	ink = { 0.025, 0.028, 0.032, 1 },
+	red = { 0.9, 0.22, 0.2, 1 },
+	green = { 0.22, 0.82, 0.56, 1 },
+	blue = { 0.25, 0.68, 0.94, 1 },
+	violet = { 0.64, 0.46, 0.94, 1 },
+	cyan = { 0.2, 0.82, 0.86, 1 },
 }
 
 local rarityColors = {
@@ -85,6 +89,7 @@ local satchelBounds = {}
 local pageBounds = {}
 local caseBoardBounds = nil
 local feedbackNodes = {}
+local inventoryRootBounds = nil
 local inventoryDragStart = nil
 local validCasePlacement = nil
 
@@ -153,33 +158,33 @@ local exampleTheme = {
 	radius = 5,
 	components = {
 		button = {
-			background = { 0.12, 0.078, 0.048, 0.96 },
+			background = { 0.065, 0.082, 0.088, 0.96 },
 			color = colors.parchment,
-			borderColor = { 0.72, 0.48, 0.22, 0.72 },
+			borderColor = { 0.48, 0.6, 0.58, 0.72 },
 			borderWidth = 1,
 			radius = 5,
-			hover = { background = { 0.18, 0.12, 0.07, 0.98 }, borderColor = colors.gold },
-			focused = { background = { 0.18, 0.12, 0.07, 0.98 }, borderColor = colors.gold },
-			pressed = { background = { 0.08, 0.05, 0.035, 0.98 } },
-			active = { background = { 0.28, 0.18, 0.07, 0.98 }, color = { 1, 0.88, 0.55, 1 } },
+			hover = { background = { 0.08, 0.115, 0.12, 0.98 }, borderColor = colors.gold },
+			focused = { background = { 0.08, 0.115, 0.12, 0.98 }, borderColor = colors.gold },
+			pressed = { background = { 0.038, 0.05, 0.056, 0.98 } },
+			active = { background = { 0.16, 0.18, 0.11, 0.98 }, color = { 1, 0.9, 0.62, 1 } },
 		},
 		tab = {
-			background = { 0.08, 0.058, 0.044, 0.96 },
+			background = { 0.052, 0.068, 0.076, 0.96 },
 			color = colors.parchmentDim,
-			borderColor = { 0.54, 0.35, 0.15, 0.76 },
+			borderColor = { 0.34, 0.48, 0.48, 0.76 },
 			borderWidth = 1,
 			radius = 5,
-			hover = { background = { 0.15, 0.1, 0.06, 0.98 }, color = colors.parchment },
-			focused = { background = { 0.15, 0.1, 0.06, 0.98 }, color = colors.parchment, borderColor = colors.gold },
-			pressed = { background = { 0.07, 0.046, 0.032, 0.98 } },
-			active = { background = { 0.33, 0.22, 0.09, 0.98 }, color = { 1, 0.88, 0.56, 1 } },
+			hover = { background = { 0.07, 0.1, 0.104, 0.98 }, color = colors.parchment },
+			focused = { background = { 0.07, 0.1, 0.104, 0.98 }, color = colors.parchment, borderColor = colors.gold },
+			pressed = { background = { 0.036, 0.048, 0.052, 0.98 } },
+			active = { background = { 0.16, 0.18, 0.11, 0.98 }, color = { 1, 0.9, 0.62, 1 } },
 		},
 		scrollBar = {
 			width = 8,
 			padding = 4,
 			radius = 4,
-			trackColor = { 0.025, 0.02, 0.016, 0.8 },
-			thumbColor = { 0.72, 0.48, 0.22, 0.9 },
+			trackColor = { 0.014, 0.02, 0.024, 0.82 },
+			thumbColor = { 0.42, 0.58, 0.54, 0.92 },
 		},
 	},
 	typography = {
@@ -354,6 +359,7 @@ local function resetArrangements()
 	pageBounds = {}
 	caseBoardBounds = nil
 	feedbackNodes = {}
+	inventoryRootBounds = nil
 	setStatus("Drag potions to reorganize the active inventory.", "neutral")
 end
 
@@ -361,13 +367,15 @@ local function metrics(mode)
 	local viewport = ui.viewport()
 	local showcaseInset = mode == "showcase" and 188 or 0
 	local margin = 18
-	local usableHeight = math.max(540, viewport.height - margin * 2)
-	local contentHeight = math.max(420, usableHeight - 72 - 12 - 40)
+	local chromeHeight = mode == "standalone" and 106 or 0
+	local appHeight = math.max(420, viewport.height - chromeHeight)
+	local usableHeight = math.max(360, appHeight - margin * 2)
+	local contentHeight = math.max(260, usableHeight - WORKBENCH_HEADER_HEIGHT - 12 - TAB_BAR_HEIGHT)
 	local contentWidth = math.max(0, viewport.width - (margin + showcaseInset) - margin)
 
 	return {
 		width = viewport.width,
-		height = viewport.height,
+		height = appHeight,
 		margin = margin,
 		left = margin + showcaseInset,
 		right = margin,
@@ -394,24 +402,24 @@ local function drawBackdrop(_, x, y, width, height, loveModule, _, ctx)
 	ctx:color(colors.bg)
 	ctx:rect("fill", x, y, width, height)
 
-	for row = -20, height + 40, 28 do
-		local offset = (row % 56 == 0) and 0 or 18
-		ctx:color({ 1, 0.86, 0.48, 0.026 })
-		ctx:line(x + offset, y + row, x + width, y + row + width * 0.12)
+	ctx:color({ 0.04, 0.075, 0.08, 0.56 })
+	ctx:rect("fill", x, y, width, 88)
+	ctx:color({ 0.03, 0.026, 0.045, 0.44 })
+	ctx:rect("fill", x, y + height - 122, width, 122)
+
+	for row = y + 112, y + height - 118, 44 do
+		ctx:color({ 0.22, 0.36, 0.36, 0.055 })
+		ctx:rect("fill", x + 20, row, width - 40, 1)
 	end
 
-	for column = 0, width + 64, 64 do
-		ctx:color({ 0.3, 0.42, 0.44, 0.04 })
-		ctx:rect("fill", x + column, y, 1, height)
+	for column = x + 36, x + width - 36, 112 do
+		ctx:color({ 0.92, 0.7, 0.36, 0.032 })
+		ctx:rect("fill", column, y + 96, 1, height - 190)
 	end
-
-	ctx:color({ 0, 0, 0, 0.22 })
-	ctx:rect("fill", x, y, width, 82)
-	ctx:rect("fill", x, y + height - 110, width, 110)
 
 	if g.setLineWidth then
 		withLineWidth(g, 2, function()
-			ctx:color({ 0.9, 0.6, 0.22, 0.11 })
+			ctx:color({ 0.92, 0.72, 0.36, 0.16 })
 			ctx:line(x + 18, y + 18, x + width - 18, y + 18)
 			ctx:line(x + 18, y + height - 18, x + width - 18, y + height - 18)
 		end)
@@ -422,24 +430,23 @@ local function drawPanelFrame(_, x, y, width, height, loveModule, _, ctx)
 	local g = loveModule.graphics
 	ctx:color(colors.stoneDark)
 	ctx:rect("fill", x, y, width, height, 7)
-	ctx:color(colors.leatherDark, 0.84)
+	ctx:color(colors.leatherDark, 0.62)
 	ctx:rect("fill", x + 5, y + 5, width - 10, height - 10, 5)
 	ctx:color({ 1, 1, 1, 0.035 })
 	ctx:rect("fill", x + 7, y + 7, width - 14, math.max(0, height * 0.38), 4)
 
 	withLineWidth(g, 2, function()
-		ctx:color(colors.bronze)
+		ctx:color({ 0.42, 0.58, 0.56, 0.82 })
 		ctx:rect("line", x + 1, y + 1, width - 2, height - 2, 7)
-		ctx:color({ 1, 0.78, 0.35, 0.45 })
+		ctx:color({ 1, 0.78, 0.35, 0.34 })
 		ctx:rect("line", x + 5, y + 5, width - 10, height - 10, 5)
 	end)
 
-	local ornament = 12
-	ctx:color(colors.gold, 0.82)
-	ctx:polygon("fill", { x + 12, y + 4, x + 12 + ornament, y + 4, x + 8, y + 4 + ornament })
-	ctx:polygon("fill", { x + width - 12, y + 4, x + width - 12 - ornament, y + 4, x + width - 8, y + 4 + ornament })
-	ctx:polygon("fill", { x + 12, y + height - 4, x + 12 + ornament, y + height - 4, x + 8, y + height - 4 - ornament })
-	ctx:polygon("fill", { x + width - 12, y + height - 4, x + width - 12 - ornament, y + height - 4, x + width - 8, y + height - 4 - ornament })
+	ctx:color(colors.gold, 0.72)
+	ctx:rect("fill", x + 14, y + 4, 38, 2, 1)
+	ctx:rect("fill", x + width - 52, y + 4, 38, 2, 1)
+	ctx:color({ 0.22, 0.38, 0.38, 0.86 })
+	ctx:rect("fill", x + 12, y + height - 6, width - 24, 2, 1)
 end
 
 local function panel(props, children)
@@ -558,6 +565,13 @@ local function boundsCenter(bounds)
 		return pointerX, pointerY
 	end
 	return bounds.x + bounds.width / 2, bounds.y + bounds.height / 2
+end
+
+local function inventoryLocalPoint(x, y)
+	if inventoryRootBounds then
+		return x - (inventoryRootBounds.x or 0), y - (inventoryRootBounds.y or 0)
+	end
+	return x, y
 end
 
 local function pointToBoundsCenter(bounds)
@@ -1096,24 +1110,31 @@ local function slotDraw(store, index, itemId)
 		local isHot = ctx.hot or isTarget
 		local g = loveModule.graphics
 
-		ctx:color(isHot and { 0.18, 0.13, 0.074, 1 } or { 0.052, 0.046, 0.04, 1 })
+		ctx:color(isHot and { 0.085, 0.118, 0.12, 1 } or { 0.034, 0.044, 0.048, 1 })
 		ctx:rect("fill", x, y, width, height, 5)
-		ctx:color({ 0, 0, 0, 0.36 })
+		ctx:color({ 0, 0, 0, item and 0.34 or 0.2 })
 		ctx:rect("fill", x + 4, y + 4, width - 8, height - 8, 4)
-		ctx:color(accent, item and 0.33 or 0.09)
-		ctx:rect("fill", x + 6, y + 6, width - 12, 4, 2)
+		ctx:color(accent, item and (isHot and 0.46 or 0.3) or 0.07)
+		ctx:rect("fill", x + 6, y + 6, width - 12, item and 5 or 2, 2)
+
+		if item then
+			ctx:color({ 1, 1, 1, isHot and 0.055 or 0.035 })
+			ctx:rect("fill", x + 8, y + 12, width - 16, math.max(0, height * 0.36), 4)
+		end
 
 		withLineWidth(g, isTarget and 3 or 1.5, function()
-			ctx:color(isTarget and colors.gold or { 0.54, 0.38, 0.2, 0.92 })
+			ctx:color(isTarget and colors.green or (ctx.focused and colors.gold or { 0.34, 0.52, 0.52, 0.82 }))
 			ctx:rect("line", x + 1, y + 1, width - 2, height - 2, 5)
-			ctx:color(isSource and { 1, 1, 1, 0.42 } or { 1, 0.83, 0.43, 0.24 })
+			ctx:color(isSource and { 1, 1, 1, 0.42 } or { 1, 0.83, 0.43, item and 0.24 or 0.1 })
 			ctx:rect("line", x + 6, y + 6, width - 12, height - 12, 3)
 		end)
 
 		if not item then
-			ctx:color({ 1, 1, 1, 0.055 })
-			ctx:line(x + 18, y + height - 18, x + width - 18, y + 18)
-			ctx:line(x + 18, y + 18, x + width - 18, y + height - 18)
+			local midX = x + width / 2
+			local midY = y + height / 2
+			ctx:color({ 0.7, 0.82, 0.78, isHot and 0.2 or 0.09 })
+			ctx:line(midX - 7, midY, midX + 7, midY)
+			ctx:line(midX, midY - 7, midX, midY + 7)
 		end
 	end
 end
@@ -1122,15 +1143,41 @@ local function countBadge(item, size)
 	if not item or not item.count or item.count <= 1 then
 		return nil
 	end
-	return ui.text(tostring(item.count), {
+	local badgeWidth = size >= 68 and 24 or 20
+	local badgeHeight = size >= 68 and 18 or 16
+	return ui.stack({
 		position = "absolute",
 		right = 5,
 		bottom = 3,
+		width = badgeWidth,
+		height = badgeHeight,
 		interactive = false,
-		style = {
-			color = { 1, 0.9, 0.62, 1 },
-			fontSize = size >= 68 and 12 or 11,
-		},
+	}, {
+		ui.box({
+			width = badgeWidth,
+			height = badgeHeight,
+			interactive = false,
+			draw = function(_, x, y, width, height, _, _, ctx)
+				ctx:color({ 0.02, 0.025, 0.026, 0.92 })
+				ctx:rect("fill", x, y, width, height, 4)
+				ctx:color(colors.gold, 0.82)
+				ctx:rect("line", x + 0.5, y + 0.5, width - 1, height - 1, 4)
+			end,
+		}),
+		ui.text(tostring(item.count), {
+			position = "absolute",
+			left = 0,
+			top = 0,
+			width = badgeWidth,
+			height = badgeHeight,
+			textAlign = "center",
+			interactive = false,
+			style = {
+				color = { 1, 0.9, 0.62, 1 },
+				fontSize = size >= 68 and 12 or 11,
+				lineHeight = badgeHeight,
+			},
+		}),
 	})
 end
 
@@ -1367,34 +1414,355 @@ local function animatedPotionPreview()
 	})
 end
 
+local function occupiedCount(slots)
+	local count = 0
+	for _, itemId in pairs(slots or {}) do
+		if itemId then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+local function activeModelInfo()
+	if activeTab == 1 then
+		return {
+			name = "Satchel",
+			value = string.format("%d / %d", occupiedCount(satchelSlots), SATCHEL_SLOT_COUNT),
+			metric = "Filled slots",
+			rule = "Drop onto any visible slot to swap or move a potion.",
+			accent = colors.cyan,
+		}
+	elseif activeTab == 2 then
+		return {
+			name = "Pages",
+			value = string.format("page %d / %d", currentPage, math.ceil(PAGE_SLOT_COUNT / PAGE_SIZE)),
+			metric = "Current page",
+			rule = "Only the open page accepts drops, so hidden slots stay untouched.",
+			accent = colors.blue,
+		}
+	end
+
+	return {
+		name = "Case",
+		value = string.format("%d pieces", #caseEntries),
+		metric = "Placed items",
+		rule = "Move each footprint into clear space before placing it.",
+		accent = colors.violet,
+	}
+end
+
+local function statusMeta()
+	if statusTone == "good" then
+		return { label = "STOWED", color = colors.green }
+	elseif statusTone == "bad" then
+		return { label = "BLOCKED", color = colors.red }
+	elseif statusTone == "hint" then
+		return { label = "CARRY", color = colors.blue }
+	end
+	return { label = "READY", color = colors.gold }
+end
+
+local function statChip(label, value, accent)
+	return ui.column({
+		grow = 1,
+		height = 46,
+		padding = { x = 9, y = 7 },
+		gap = 2,
+		style = {
+			background = { 0.018, 0.026, 0.03, 0.78 },
+			borderColor = copyColor(accent, 0.55),
+			borderWidth = 1,
+			radius = 5,
+		},
+	}, {
+		ui.text(label, {
+			textStyle = "caption",
+			style = { color = colors.parchmentDim, fontSize = 10, lineHeight = 12 },
+		}),
+		ui.text(value, {
+			textStyle = "caption",
+			style = { color = accent, fontSize = 13, lineHeight = 16 },
+		}),
+	})
+end
+
+local function carrySourceLabel(carry)
+	if not carry then
+		return "No item carried"
+	elseif carry.kind == "satchel" then
+		return "From satchel slot " .. tostring(carry.sourceIndex or "?")
+	elseif carry.kind == "page" then
+		local localSlot = ((carry.sourceIndex or 1) - 1) % PAGE_SIZE + 1
+		return string.format("From page %d, slot %d", carry.page or currentPage, localSlot)
+	elseif carry.kind == "case" then
+		local entry = carry.entry or {}
+		return string.format("From case footprint %dx%d", entry.w or 1, entry.h or 1)
+	end
+	return "Inventory item"
+end
+
+local function carryTargetLabel(carry)
+	if not carry then
+		return "Pick an item"
+	elseif carry.kind == "case" then
+		return "Clear case cells"
+	end
+	return "Open slot"
+end
+
+local function carryInstruction(carry)
+	if carry and carry.keyboard then
+		return "Move focus to a target, then place or cancel."
+	elseif carry and carry.kind == "case" then
+		return "Release over clear case cells to place it."
+	end
+	return "Release over a slot to move or swap it."
+end
+
+local function carriedItemCard(carry)
+	local item = carry and carry.item or nil
+	if not item then
+		return nil
+	end
+
+	local accent = rarityColors[item.rarity] or rarityColors.common
+	return ui.row({
+		width = "100%",
+		height = 86,
+		padding = 10,
+		gap = 10,
+		align = "center",
+		style = {
+			background = { 0.018, 0.026, 0.03, 0.84 },
+			borderColor = copyColor(accent, 0.7),
+			borderWidth = 1,
+			radius = 6,
+		},
+	}, {
+		ui.stack({
+			width = 48,
+			height = 48,
+			draw = function(_, x, y, width, height, loveModule, _, ctx)
+				withLineWidth(loveModule.graphics, 1.5, function()
+					ctx:color(copyColor(accent, 0.2))
+					ctx:rect("fill", x, y, width, height, 5)
+					ctx:color(copyColor(accent, 0.88))
+					ctx:rect("line", x + 1, y + 1, width - 2, height - 2, 5)
+				end)
+			end,
+		}, {
+			itemImageNode(item, {
+				position = "absolute",
+				left = 7,
+				top = 5,
+				width = 34,
+				height = 38,
+			}),
+		}),
+		ui.column({ grow = 1, gap = 3 }, {
+			ui.text(item.name, {
+				textStyle = "caption",
+				style = { color = colors.parchment, fontSize = 14, lineHeight = 16 },
+			}),
+			ui.text(rarityNames[item.rarity] .. " stack x" .. tostring(item.count or 1), {
+				textStyle = "caption",
+				style = { color = accent, fontSize = 11, lineHeight = 14 },
+			}),
+			ui.text(carrySourceLabel(carry), {
+				width = "100%",
+				wrap = true,
+				textStyle = "caption",
+				style = { color = colors.parchmentDim, fontSize = 10, lineHeight = 13 },
+			}),
+			ui.text(carryInstruction(carry), {
+				width = "100%",
+				wrap = true,
+				textStyle = "caption",
+				style = { color = colors.parchmentDim, fontSize = 10, lineHeight = 13 },
+			}),
+		}),
+	})
+end
+
+local function relayActionStrip(carry)
+	local actions = nil
+	if carry and carry.keyboard then
+		actions = {
+			{ "Target", carryTargetLabel(carry), colors.blue },
+			{ "Place", "Enter / A", colors.green },
+			{ "Cancel", "Esc / B", colors.red },
+		}
+	else
+		actions = {
+			{ "Target", carryTargetLabel(carry), colors.blue },
+			{ "Drop", "release", colors.green },
+			{ "Miss", "outside", colors.red },
+		}
+	end
+	local nodes = {}
+	for _, action in ipairs(actions) do
+		nodes[#nodes + 1] = ui.column({
+			grow = 1,
+			height = 40,
+			padding = { x = 8, y = 5 },
+			gap = 1,
+			style = {
+				background = { 0.018, 0.026, 0.03, 0.78 },
+				borderColor = copyColor(action[3], 0.52),
+				borderWidth = 1,
+				radius = 5,
+			},
+		}, {
+			ui.text(action[1], {
+				textStyle = "caption",
+				style = { color = colors.parchmentDim, fontSize = 10, lineHeight = 12 },
+			}),
+			ui.text(action[2], {
+				textStyle = "caption",
+				style = { color = action[3], fontSize = 11, lineHeight = 13 },
+			}),
+		})
+	end
+	return ui.row({ width = "100%", gap = 8 }, nodes)
+end
+
+local function modelSummary(model)
+	return ui.column({
+		width = "100%",
+		gap = 8,
+	}, {
+		ui.row({ width = "100%", gap = 8 }, {
+			statChip("Inventory", model.name, model.accent),
+			statChip(model.metric, model.value, colors.gold),
+		}),
+		bodyText(model.rule, {
+			color = colors.parchmentDim,
+			lineHeight = 16,
+		}),
+	})
+end
+
+local function controlStrip()
+	local controls = {
+		{ "Mouse", "drag/drop" },
+		{ "Enter/A", "pick/place" },
+		{ "Tab", "model" },
+		{ "PgUp/PgDn", "pages" },
+	}
+	local nodes = {}
+	for _, control in ipairs(controls) do
+		nodes[#nodes + 1] = ui.column({
+			width = 86,
+			height = 36,
+			padding = { x = 8, y = 5 },
+			gap = 1,
+			style = {
+				background = { 0.03, 0.04, 0.044, 0.72 },
+				borderColor = { 0.32, 0.48, 0.48, 0.45 },
+				borderWidth = 1,
+				radius = 5,
+			},
+		}, {
+			ui.text(control[1], {
+				textStyle = "caption",
+				style = { color = colors.parchment, fontSize = 10, lineHeight = 12 },
+			}),
+			ui.text(control[2], {
+				textStyle = "caption",
+				style = { color = colors.parchmentDim, fontSize = 9, lineHeight = 11 },
+			}),
+		})
+	end
+
+	return ui.grid({
+		width = "100%",
+		minCellWidth = 86,
+		maxColumns = 2,
+		cellHeight = 36,
+		gap = 6,
+	}, nodes)
+end
+
 local function statusPanel(height, width)
+	local model = activeModelInfo()
+	local meta = statusMeta()
+	local carried = previewDrag()
+	local carriedItem = carried and carried.item or nil
 	local children = {
-		panelLabel("Quartermaster"),
-		ui.text(status, {
+		ui.row({ width = "100%", align = "center", gap = 8 }, {
+			panelLabel("Quartermaster Relay"),
+			ui.box({ grow = 1, interactive = false }),
+			ui.text(meta.label, {
+				textStyle = "caption",
+				style = { color = meta.color, fontSize = 11, lineHeight = 14 },
+			}),
+		}),
+		ui.row({
 			width = "100%",
-			wrap = true,
-			style = { color = toneColor(), fontSize = 13, lineHeight = 17 },
+			minHeight = 56,
+			padding = 10,
+			gap = 10,
+			align = "center",
+			style = {
+				background = { 0.018, 0.026, 0.03, 0.88 },
+				borderColor = copyColor(meta.color, 0.62),
+				borderWidth = 1,
+				radius = 6,
+			},
+		}, {
+			ui.box({
+				width = 12,
+				height = 36,
+				interactive = false,
+				style = { background = meta.color, radius = 3 },
+			}),
+			ui.text(status, {
+				width = "100%",
+				wrap = true,
+				style = { color = toneColor(), fontSize = 13, lineHeight = 17 },
+			}),
 		}),
 	}
-	local preview = animatedPotionPreview()
-	if preview then
-		children[#children + 1] = preview
+	if carriedItem then
+		children[#children + 1] = carriedItemCard(carried)
+		children[#children + 1] = relayActionStrip(carried)
+	else
+		children[#children + 1] = modelSummary(model)
+		local preview = animatedPotionPreview()
+		if preview then
+			children[#children + 1] = preview
+		end
+		children[#children + 1] = ui.box({
+			width = "100%",
+			height = 1,
+			interactive = false,
+			style = { background = { 0.9, 0.68, 0.34, 0.24 } },
+		})
+		children[#children + 1] = legend()
+		if not height or height >= 430 then
+			children[#children + 1] = controlStrip()
+		end
 	end
-	children[#children + 1] = ui.box({
-		width = "100%",
-		height = 1,
-		interactive = false,
-		style = { background = { 0.9, 0.68, 0.34, 0.24 } },
-	})
-	children[#children + 1] = legend()
 
 	return panel({
 		width = width or "100%",
 		height = height,
 		padding = 14,
 		display = "column",
-		gap = 8,
+		gap = 9,
 	}, children)
+end
+
+local function sideStatusHeight(m)
+	if m.contentHeight < 380 then
+		return m.contentHeight
+	end
+	return math.max(370, math.floor(m.contentHeight * 0.72))
+end
+
+local function canShowSideNotes(m)
+	return m.contentHeight >= 380
 end
 
 local function satchelPanel(m)
@@ -1402,7 +1770,24 @@ local function satchelPanel(m)
 	local gridWidth = SATCHEL_COLUMNS * SATCHEL_SLOT_SIZE + (SATCHEL_COLUMNS - 1) * SLOT_GAP
 	local leftWidth = gridWidth + 28
 	local sideWidth = math.max(280, m.contentWidth - leftWidth - 16)
-	local scrollHeight = math.max(260, m.contentHeight - 106)
+	local scrollHeight = math.max(160, m.contentHeight - 106)
+	local sideChildren = {
+		statusPanel(sideStatusHeight(m), sideWidth),
+	}
+	if canShowSideNotes(m) then
+		sideChildren[#sideChildren + 1] = panel({
+			width = "100%",
+			grow = 1,
+			padding = 14,
+			display = "column",
+			gap = 10,
+		}, {
+			panelLabel("Satchel Pattern"),
+			bodyText("A long bag should stay quick to scan. The scroll view keeps 72 slots dense while `onLayout` records every live drop target.", {
+				lineHeight = 17,
+			}),
+		})
+	end
 
 	return ui.row({ width = "100%", height = m.contentHeight, gap = 16 }, {
 		panel({
@@ -1433,26 +1818,13 @@ local function satchelPanel(m)
 				gap = SLOT_GAP,
 			}, slotNodes("satchel", satchelBounds, satchelSlots, 1, SATCHEL_SLOT_COUNT, SATCHEL_SLOT_SIZE))),
 		}),
-		ui.column({ width = sideWidth, gap = 14 }, {
-			statusPanel(math.max(222, math.floor(m.contentHeight * 0.52)), sideWidth),
-			panel({
-				width = "100%",
-				grow = 1,
-				padding = 14,
-				display = "column",
-				gap = 10,
-			}, {
-				panelLabel("Satchel Notes"),
-				bodyText("Large potion bags stay compact. Drop onto an occupied slot to swap, or onto an empty slot to move.", {
-					lineHeight = 17,
-				}),
-			}),
-		}),
+		ui.column({ width = sideWidth, gap = 14 }, sideChildren),
 	})
 end
 
-local function pageButton(label, enabled, onClick)
+local function pageButton(key, label, enabled, onClick)
 	return ui.button({
+		key = key,
 		label = label,
 		width = 44,
 		height = 32,
@@ -1466,15 +1838,38 @@ local function pageButton(label, enabled, onClick)
 			release = "inventory.slot.release",
 			activate = "inventory.nav.change",
 		},
+		onLayout = function(bounds, node)
+			recordFeedbackNode(node, bounds)
+		end,
 		style = {
-			background = enabled and { 0.14, 0.09, 0.052, 0.96 } or { 0.06, 0.05, 0.044, 0.82 },
+			background = enabled and { 0.06, 0.084, 0.092, 0.96 } or { 0.034, 0.044, 0.048, 0.82 },
 			color = enabled and colors.parchment or { 0.5, 0.45, 0.36, 1 },
-			borderColor = enabled and { 0.72, 0.5, 0.22, 0.72 } or { 0.3, 0.25, 0.18, 0.42 },
+			borderColor = enabled and { 0.42, 0.58, 0.56, 0.72 } or { 0.22, 0.3, 0.3, 0.42 },
 			borderWidth = 1,
 			radius = 5,
-			hover = { background = { 0.2, 0.13, 0.066, 0.98 } },
+			hover = { background = { 0.08, 0.118, 0.124, 0.98 }, borderColor = colors.gold },
 		},
 	})
+end
+
+local function pageGridWell(children)
+	local gridWidth = PAGE_COLUMNS * PAGE_SLOT_SIZE + (PAGE_COLUMNS - 1) * SLOT_GAP
+	local gridHeight = PAGE_ROWS * PAGE_SLOT_SIZE + (PAGE_ROWS - 1) * SLOT_GAP
+
+	return ui.stack({
+		width = gridWidth + 16,
+		height = gridHeight + 16,
+		draw = function(_, x, y, width, height, loveModule, _, ctx)
+			withLineWidth(loveModule.graphics, 1.5, function()
+				ctx:color({ 0.018, 0.026, 0.03, 0.78 })
+				ctx:rect("fill", x, y, width, height, 6)
+				ctx:color({ 0.34, 0.52, 0.52, 0.72 })
+				ctx:rect("line", x + 1, y + 1, width - 2, height - 2, 6)
+				ctx:color(colors.gold, 0.26)
+				ctx:rect("line", x + 5, y + 5, width - 10, height - 10, 4)
+			end)
+		end,
+	}, children)
 end
 
 local function pagesPanel(m)
@@ -1482,8 +1877,25 @@ local function pagesPanel(m)
 	local pageCount = math.ceil(PAGE_SLOT_COUNT / PAGE_SIZE)
 	local first = (currentPage - 1) * PAGE_SIZE + 1
 	local gridWidth = PAGE_COLUMNS * PAGE_SLOT_SIZE + (PAGE_COLUMNS - 1) * SLOT_GAP
-	local leftWidth = gridWidth + 28
+	local leftWidth = gridWidth + 44
 	local sideWidth = math.max(280, m.contentWidth - leftWidth - 16)
+	local sideChildren = {
+		statusPanel(sideStatusHeight(m), sideWidth),
+	}
+	if canShowSideNotes(m) then
+		sideChildren[#sideChildren + 1] = panel({
+			width = "100%",
+			grow = 1,
+			padding = 14,
+			display = "column",
+			gap = 10,
+		}, {
+			panelLabel("Page Pattern"),
+			bodyText("Paged inventories keep focus predictable for controllers. Drops only resolve against the current page, so hidden slots never surprise the player.", {
+				lineHeight = 17,
+			}),
+		})
+	end
 
 	return ui.row({ width = "100%", height = m.contentHeight, gap = 16 }, {
 		panel({
@@ -1496,7 +1908,7 @@ local function pagesPanel(m)
 			ui.row({ align = "center", width = "100%" }, {
 				sectionTitle("Pages", "fixed pages for controller browsing", { flex = 1 }),
 				ui.row({ gap = 8, align = "center" }, {
-					pageButton("<", currentPage > 1, function()
+					pageButton("page-prev", "<", currentPage > 1, function()
 						currentPage = math.max(1, currentPage - 1)
 						keyboardCarry = nil
 						pendingDrag = nil
@@ -1508,7 +1920,7 @@ local function pagesPanel(m)
 						textAlign = "center",
 						style = { color = colors.parchment },
 					}),
-					pageButton(">", currentPage < pageCount, function()
+					pageButton("page-next", ">", currentPage < pageCount, function()
 						currentPage = math.min(pageCount, currentPage + 1)
 						keyboardCarry = nil
 						pendingDrag = nil
@@ -1517,28 +1929,19 @@ local function pagesPanel(m)
 					end),
 				}),
 			}),
-			ui.grid({
-				columns = PAGE_COLUMNS,
-				cellWidth = PAGE_SLOT_SIZE,
-				cellHeight = PAGE_SLOT_SIZE,
-				gap = SLOT_GAP,
-			}, slotNodes("page", pageBounds, pageSlots, first, PAGE_SIZE, PAGE_SLOT_SIZE)),
-		}),
-		ui.column({ width = sideWidth, gap = 14 }, {
-			statusPanel(math.max(222, math.floor(m.contentHeight * 0.52)), sideWidth),
-			panel({
-				width = "100%",
-				grow = 1,
-				padding = 14,
-				display = "column",
-				gap = 10,
-			}, {
-				panelLabel("Page Model"),
-				bodyText("Only the current page accepts drops. Hidden pages stay untouched, which keeps controller play predictable.", {
-					lineHeight = 17,
-				}),
+			pageGridWell({
+				ui.grid({
+					position = "absolute",
+					left = 8,
+					top = 8,
+					columns = PAGE_COLUMNS,
+					cellWidth = PAGE_SLOT_SIZE,
+					cellHeight = PAGE_SLOT_SIZE,
+					gap = SLOT_GAP,
+				}, slotNodes("page", pageBounds, pageSlots, first, PAGE_SIZE, PAGE_SLOT_SIZE)),
 			}),
 		}),
+		ui.column({ width = sideWidth, gap = 14 }, sideChildren),
 	})
 end
 
@@ -1553,16 +1956,16 @@ local function drawCaseBoard(_, x, y, width, height, loveModule, _, ctx)
 		height = CASE_ROWS * CASE_CELL + (CASE_ROWS - 1) * CASE_GAP,
 	}
 
-	ctx:color({ 0.022, 0.022, 0.02, 0.86 })
+	ctx:color({ 0.016, 0.024, 0.028, 0.9 })
 	ctx:rect("fill", boardBounds.x, boardBounds.y, boardBounds.width, boardBounds.height, 4)
 
 	for row = 1, CASE_ROWS do
 		for col = 1, CASE_COLUMNS do
 			local cx = boardBounds.x + (col - 1) * (CASE_CELL + CASE_GAP)
 			local cy = boardBounds.y + (row - 1) * (CASE_CELL + CASE_GAP)
-			ctx:color((row + col) % 2 == 0 and { 0.085, 0.076, 0.064, 0.8 } or { 0.058, 0.053, 0.048, 0.8 })
+			ctx:color((row + col) % 2 == 0 and { 0.048, 0.068, 0.072, 0.86 } or { 0.034, 0.052, 0.056, 0.86 })
 			ctx:rect("fill", cx, cy, CASE_CELL, CASE_CELL, 3)
-			ctx:color({ 0.82, 0.58, 0.28, 0.18 })
+			ctx:color({ 0.42, 0.58, 0.56, 0.18 })
 			ctx:rect("line", cx + 0.5, cy + 0.5, CASE_CELL - 1, CASE_CELL - 1, 3)
 		end
 	end
@@ -1577,6 +1980,8 @@ local function drawCaseBoard(_, x, y, width, height, loveModule, _, ctx)
 		local ch = candidate.entry.h * CASE_CELL + (candidate.entry.h - 1) * CASE_GAP
 		ctx:color(overlay, valid and 0.26 or 0.34)
 		ctx:rect("fill", cx, cy, cw, ch, 4)
+		ctx:color({ 1, 1, 1, valid and 0.08 or 0.04 })
+		ctx:rect("fill", cx + 5, cy + 5, math.max(0, cw - 10), math.max(0, ch * 0.32), 3)
 		withLineWidth(g, 3, function()
 			ctx:color(overlay, 0.95)
 			ctx:rect("line", cx + 1, cy + 1, cw - 2, ch - 2, 4)
@@ -1701,7 +2106,7 @@ local function caseItemNode(entry)
 		draw = function(_, x, y, nodeWidth, nodeHeight, loveModule, _, ctx)
 			local g = loveModule.graphics
 			local hot = ctx.hot or ctx.focused
-			ctx:color(hot and { 0.085, 0.058, 0.038, isDragging and 0.52 or 0.98 } or { 0.055, 0.043, 0.034, isDragging and 0.52 or 0.96 })
+			ctx:color(hot and { 0.06, 0.092, 0.096, isDragging and 0.52 or 0.98 } or { 0.035, 0.05, 0.055, isDragging and 0.52 or 0.96 })
 			ctx:rect("fill", x, y, nodeWidth, nodeHeight, 5)
 			ctx:color(accent, hot and 0.4 or (isDragging and 0.18 or 0.32))
 			ctx:rect("fill", x + 5, y + 5, nodeWidth - 10, nodeHeight - 10, 4)
@@ -1749,8 +2154,8 @@ local function caseRulesPanel(props)
 		display = "column",
 		gap = 10,
 	}, {
-		panelLabel("Case Rules"),
-		bodyText("Items keep rectangular spans. Green previews fit; red previews collide or leave the case.", {
+		panelLabel("Case Pattern"),
+		bodyText("Variable-size items keep rectangular spans. The board previews the candidate footprint before committing a move.", {
 			lineHeight = 17,
 		}),
 	})
@@ -1760,6 +2165,12 @@ local function casePanel(m)
 	local boardPanelWidth = m.caseBoardWidth + 28
 	local compact = m.contentWidth < boardPanelWidth + 16 + 320
 	local sideWidth = math.max(280, m.contentWidth - boardPanelWidth - 16)
+	local sideChildren = {
+		statusPanel(sideStatusHeight(m), sideWidth),
+	}
+	if canShowSideNotes(m) then
+		sideChildren[#sideChildren + 1] = caseRulesPanel({ grow = 1 })
+	end
 
 	if compact then
 		local compactPanelWidth = math.max(280, math.min(boardPanelWidth, m.contentWidth - 10))
@@ -1787,8 +2198,8 @@ local function casePanel(m)
 				sectionTitle("Case", "variable-size placement with collision checks"),
 				caseBoard(m),
 			}),
-			statusPanel(214, compactPanelWidth),
-			caseRulesPanel({ width = compactPanelWidth, height = 132 }),
+			statusPanel(m.contentHeight < 380 and 318 or 390, compactPanelWidth),
+			canShowSideNotes(m) and caseRulesPanel({ width = compactPanelWidth, height = 132 }) or nil,
 		})
 	end
 
@@ -1803,10 +2214,7 @@ local function casePanel(m)
 			sectionTitle("Case", "variable-size placement with collision checks"),
 			caseBoard(m),
 		}),
-		ui.column({ width = sideWidth, gap = 14 }, {
-			statusPanel(math.max(222, math.floor(m.contentHeight * 0.52)), sideWidth),
-			caseRulesPanel({ grow = 1 }),
-		}),
+		ui.column({ width = sideWidth, gap = 14 }, sideChildren),
 	})
 end
 
@@ -1820,8 +2228,9 @@ local function dragPreview()
 	local item = visibleDrag.item
 	local accent = rarityColors[item.rarity] or rarityColors.common
 	local previewBounds = visibleDrag.keyboard and carryBounds(visibleDrag) or nil
-	local previewX = previewBounds and (previewBounds.x + previewBounds.width / 2) or pointerX
-	local previewY = previewBounds and (previewBounds.y + previewBounds.height / 2) or pointerY
+	local previewScreenX = previewBounds and (previewBounds.x + previewBounds.width / 2) or pointerX
+	local previewScreenY = previewBounds and (previewBounds.y + previewBounds.height / 2) or pointerY
+	local previewX, previewY = inventoryLocalPoint(previewScreenX, previewScreenY)
 
 	return ui.portal({
 		left = previewX - size / 2,
@@ -1857,20 +2266,22 @@ end
 local function header()
 	return ui.box({
 		width = "100%",
-		height = 72,
+		height = WORKBENCH_HEADER_HEIGHT,
 		padding = { x = 18, y = 12 },
 		display = "row",
 		align = "center",
 		draw = drawHeader,
 	}, {
-		ui.column({ gap = 2 }, {
-			ui.text("ALCHEMIST'S INVENTORY", {
-				textStyle = "h1",
-				style = { color = colors.parchment },
+		ui.row({ gap = 10, align = "center" }, {
+			ui.box({
+				width = 8,
+				height = 34,
+				interactive = false,
+				style = { background = colors.gold, radius = 3 },
 			}),
-			ui.text("MMO inventory patterns built with Glyph primitives", {
-				textStyle = "caption",
-				style = { color = colors.parchmentDim },
+			ui.text("POTION WORKBENCH", {
+				textStyle = "h2",
+				style = { color = colors.parchment },
 			}),
 		}),
 		ui.box({ grow = 1, interactive = false }),
@@ -1887,8 +2298,8 @@ local function header()
 				gap = 8,
 				align = "center",
 				style = {
-					background = { 0.055, 0.041, 0.032, 0.96 },
-					borderColor = { 0.8, 0.55, 0.25, 0.68 },
+					background = { 0.03, 0.044, 0.05, 0.96 },
+					borderColor = { 0.42, 0.58, 0.56, 0.68 },
 					borderWidth = 1,
 					radius = 5,
 				},
@@ -1950,16 +2361,16 @@ local function tabs(m)
 			background = { 0, 0, 0, 0 },
 		},
 		tabStyle = {
-			background = { 0.08, 0.058, 0.044, 0.96 },
+			background = { 0.052, 0.068, 0.076, 0.96 },
 			color = colors.parchmentDim,
-			borderColor = { 0.54, 0.35, 0.15, 0.76 },
+			borderColor = { 0.34, 0.48, 0.48, 0.76 },
 			borderWidth = 1,
 			radius = 5,
-			hover = { background = { 0.15, 0.1, 0.06, 0.98 }, color = colors.parchment },
-			focused = { background = { 0.15, 0.1, 0.06, 0.98 }, color = colors.parchment, borderColor = colors.gold },
-			pressed = { background = { 0.07, 0.046, 0.032, 0.98 } },
+			hover = { background = { 0.07, 0.1, 0.104, 0.98 }, color = colors.parchment },
+			focused = { background = { 0.07, 0.1, 0.104, 0.98 }, color = colors.parchment, borderColor = colors.gold },
+			pressed = { background = { 0.036, 0.048, 0.052, 0.98 } },
 			active = {
-				background = { 0.33, 0.22, 0.09, 0.98 },
+				background = { 0.16, 0.18, 0.11, 0.98 },
 				color = { 1, 0.88, 0.56, 1 },
 				borderColor = colors.gold,
 			},
@@ -2002,6 +2413,9 @@ local function App(mode)
 	return ui.stack({
 		width = m.width,
 		height = m.height,
+		onLayout = function(bounds)
+			inventoryRootBounds = bounds
+		end,
 	}, children)
 end
 
@@ -2032,6 +2446,7 @@ local function teardown()
 	satchelBounds = {}
 	pageBounds = {}
 	caseBoardBounds = nil
+	inventoryRootBounds = nil
 	feedbackBounds = {}
 	feedbackNodes = {}
 	feedbackParticles = {}
