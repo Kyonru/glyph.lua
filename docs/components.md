@@ -405,6 +405,22 @@ ui.scrollView({ width = "100%", height = 300 }, rows)
 
 Scroll views clamp scrolling to content bounds and support optional scroll indicators.
 
+Wheel scrolling defaults to 24 pixels per wheel unit. Tune the feel per scroll
+view with `scrollPixelsPerStep` for the base distance and `scrollSpeed` for a
+multiplier:
+
+```lua
+ui.scrollView({
+  width = "100%",
+  height = 300,
+  scrollPixelsPerStep = 16,
+  scrollSpeed = 1.5,
+}, rows)
+```
+
+`scrollSensitivity` is accepted as an alias for `scrollSpeed` when that term
+better matches the setting exposed by your game or tool.
+
 ## Tabs
 
 Uncontrolled tabs:

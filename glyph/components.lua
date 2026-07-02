@@ -227,7 +227,7 @@ function Components.meter(props, children)
   return createNode("meter", props, children)
 end
 
----@param props? GlyphProps
+---@param props? GlyphScrollViewProps
 ---@param children? GlyphNode[]|GlyphNode
 ---@return GlyphNode
 function Components.scrollView(props, children)

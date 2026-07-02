@@ -31,6 +31,17 @@ local runtimeCallbacks = {
 local Runtime = {}
 Runtime.__index = Runtime
 
+local function scrollWheelStep(props)
+  props = props or {}
+  local pixels = tonumber(props.scrollPixelsPerStep) or 24
+  local speed = props.scrollSpeed
+  if speed == nil then
+    speed = props.scrollSensitivity
+  end
+  speed = tonumber(speed) or 1
+  return pixels * speed
+end
+
 local function orderedChildren(node, reverse)
   local source = node.children or {}
   if #source <= 1 then
@@ -1380,7 +1391,7 @@ function Runtime:wheelmoved(dx, dy)
     if node.type == "scrollView" then
       local scrollKey = node.path
       local maxScroll = math.max(0, ((node.layout and node.layout.scrollContentHeight) or 0) - ((node.layout and node.layout.height) or 0))
-      self.scrollOffsets[scrollKey] = math.min(maxScroll, math.max(0, (self.scrollOffsets[scrollKey] or 0) - dy * 24))
+      self.scrollOffsets[scrollKey] = math.min(maxScroll, math.max(0, (self.scrollOffsets[scrollKey] or 0) - dy * scrollWheelStep(node.props)))
       self:markDirty()
       break
     end

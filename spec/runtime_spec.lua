@@ -1059,6 +1059,57 @@ describe("runtime", function()
     assert.are.equal(0, runtime.scrollOffsets["0"])
   end)
 
+  it("applies scroll view speed to wheel movement", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      local rows = {}
+      for index = 1, 10 do
+        rows[index] = Components.box({ width = 100, height = 20 })
+      end
+
+      return Components.scrollView({
+        width = 100,
+        height = 60,
+        gap = 0,
+        scrollSpeed = 2,
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:setHover(runtime.root)
+    runtime:wheelmoved(0, -1)
+
+    assert.are.equal(48, runtime.scrollOffsets["0"])
+  end)
+
+  it("uses custom scroll pixels per step and sensitivity alias", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      local rows = {}
+      for index = 1, 10 do
+        rows[index] = Components.box({ width = 100, height = 20 })
+      end
+
+      return Components.scrollView({
+        width = 100,
+        height = 60,
+        gap = 0,
+        scrollPixelsPerStep = 10,
+        scrollSensitivity = 3,
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:setHover(runtime.root)
+    runtime:wheelmoved(0, -1)
+
+    assert.are.equal(30, runtime.scrollOffsets["0"])
+  end)
+
   it("hit tests scroll view children at their scrolled visual position", function()
     local runtime = Runtime.new()
     local clicked = nil

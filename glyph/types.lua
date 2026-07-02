@@ -555,6 +555,12 @@ local GlyphInputProps = {}
 ---@field labelCacheKey? string|number
 local GlyphMeterProps = {}
 
+---@class GlyphScrollViewProps : GlyphProps
+---@field scrollSpeed? number multiplier applied to wheel scrolling; defaults to 1
+---@field scrollSensitivity? number alias for `scrollSpeed`
+---@field scrollPixelsPerStep? number pixels moved for one wheel unit before speed is applied; defaults to 24
+local GlyphScrollViewProps = {}
+
 ---@class GlyphGridProps : GlyphProps
 ---@field columns? number
 ---@field cellWidth? number
