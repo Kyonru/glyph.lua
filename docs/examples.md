@@ -91,7 +91,7 @@ Custom-drawn game UI with d-pad navigation, `ui.spring` hover/focus command butt
 
 ## I18n
 
-Responsive game-console localization demo with locale switching, keyed command/status UI, meters, tabs, fallback text, cached parameter translations, and `ui.i18n.version()` in memo deps.
+Responsive game-console localization demo with Latin, Japanese, Arabic, Armenian, Georgian, Hebrew, Mahajani, Thai, Korean, and Amharic samples, keyed command/status UI, font fallbacks, cached parameter translations, and `ui.i18n.version()` in memo deps.
 
 ## Inventory
 

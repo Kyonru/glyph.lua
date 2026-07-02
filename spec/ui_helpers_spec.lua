@@ -987,6 +987,77 @@ describe("ui helpers", function()
     runtime.theme.typography.caption.font = previousCaptionFont
   end)
 
+  it("draw context text uses a fallback font when the selected font lacks glyphs", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    local bodyFont = {
+      getWidth = function(_, text)
+        return #text * 6
+      end,
+      getHeight = function()
+        return 12
+      end,
+      hasGlyphs = function(_, text)
+        return not tostring(text):find("信", 1, true)
+      end,
+    }
+    local japaneseFont = {
+      getWidth = function(_, text)
+        return #text * 8
+      end,
+      getHeight = function()
+        return 16
+      end,
+      hasGlyphs = function()
+        return true
+      end,
+    }
+    local currentFont = bodyFont
+    local previousBodyFont = runtime.theme.fonts.body
+    local previousJapaneseFont = runtime.theme.fonts.japanese
+    local previousFallbacks = runtime.theme.fontFallbacks
+
+    runtime.theme.fonts.body = bodyFont
+    runtime.theme.fonts.japanese = japaneseFont
+    runtime.theme.fontFallbacks = { "japanese" }
+    runtime:setLove({
+      graphics = {
+        getFont = function()
+          return currentFont
+        end,
+        setFont = function(font)
+          currentFont = font
+          calls[#calls + 1] = { "font", font }
+        end,
+        setColor = function() end,
+        rectangle = function() end,
+        print = function(text)
+          calls[#calls + 1] = { "print", text, currentFont }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.box({
+        width = 120,
+        height = 24,
+        draw = function(_, _, _, _, _, _, _, ctx)
+          ctx:text("信号", 4, 4)
+        end,
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "font", japaneseFont }, calls[1])
+    assert.are.same({ "print", "信号", japaneseFont }, calls[2])
+    assert.are.equal(bodyFont, currentFont)
+
+    runtime.theme.fonts.body = previousBodyFont
+    runtime.theme.fonts.japanese = previousJapaneseFont
+    runtime.theme.fontFallbacks = previousFallbacks
+  end)
+
   it("applies filters to lazily loaded font specs", function()
     local runtime = Runtime.new()
     local filters = {}

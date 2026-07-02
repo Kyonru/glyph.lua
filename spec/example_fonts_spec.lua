@@ -48,16 +48,25 @@ end
 
 describe("example fonts", function()
 	it("loads the configured font for each example role", function()
-		local fonts = ExampleFonts.load(fakeLove(), { body = 13, title = 31, subheader = 23, description = 17, japanese = 37 })
+		local fonts = ExampleFonts.load(fakeLove(), { body = 13, title = 31, subheader = 23, description = 17, japanese = 37, arabic = 19 })
 
 		assert.are.equal("dev/assets/fonts/Inconsolata/Inconsolata-Regular.ttf", fonts.body.source)
 		assert.are.equal("dev/assets/fonts/Sekuya/Sekuya-Regular.ttf", fonts.title.source)
 		assert.are.equal("dev/assets/fonts/Sekuya/Sekuya-Regular.ttf", fonts.subheader.source)
 		assert.are.equal("dev/assets/fonts/Acme/Acme-Regular.ttf", fonts.description.source)
 		assert.are.equal("dev/assets/fonts/DotGothic16/DotGothic16-Regular.ttf", fonts.japanese.source)
+		assert.are.equal("dev/assets/fonts/Noto_Sans_Arabic/NotoSansArabic-Regular.ttf", fonts.arabic.source)
+		assert.are.equal("dev/assets/fonts/Noto_Sans_Armenian/NotoSansArmenian-Regular.ttf", fonts.armenian.source)
+		assert.are.equal("dev/assets/fonts/Noto_Sans_Georgian/NotoSansGeorgian-Regular.ttf", fonts.georgian.source)
+		assert.are.equal("dev/assets/fonts/Noto_Sans_Hebrew/NotoSansHebrew-Regular.ttf", fonts.hebrew.source)
+		assert.are.equal("dev/assets/fonts/Noto_Sans_Mahajani/NotoSansMahajani-Regular.ttf", fonts.mahajani.source)
+		assert.are.equal("dev/assets/fonts/Google_Sans/GoogleSans-Regular.ttf", fonts.thai.source)
+		assert.are.equal("dev/assets/fonts/Noto_Serif_KR/NotoSerifKR-Regular.ttf", fonts.korean.source)
+		assert.are.equal("dev/assets/fonts/Google_Sans/GoogleSans-Regular.ttf", fonts.amharic.source)
 		assert.is_true(fonts.japanese.dataLength > 1000)
 		assert.are.equal("nearest", fonts.japanese.min)
 		assert.are.equal("nearest", fonts.japanese.mag)
+		assert.are.equal(19, fonts.arabic.size)
 	end)
 
 	it("maps example typography to role-specific fonts", function()
@@ -72,10 +81,24 @@ describe("example fonts", function()
 		assert.are.equal("title", theme.typography.h1.font)
 		assert.are.equal("subheader", theme.typography.h2.font)
 		assert.are.equal("description", theme.typography.description.font)
+		assert.are.equal("arabic", theme.typography.arabic.font)
+		assert.are.equal("korean", theme.typography.korean.font)
 		assert.are.equal("dev/assets/fonts/Inconsolata/Inconsolata-Regular.ttf", theme.fonts.body.source)
 		assert.are.equal("dev/assets/fonts/Sekuya/Sekuya-Regular.ttf", theme.fonts.title.source)
 		assert.are.equal("dev/assets/fonts/Acme/Acme-Regular.ttf", theme.fonts.description.source)
 		assert.are.equal("dev/assets/fonts/DotGothic16/DotGothic16-Regular.ttf", theme.fonts.japanese.source)
+		assert.are.equal("dev/assets/fonts/Google_Sans/GoogleSans-Regular.ttf", theme.fonts.amharic.source)
+		assert.are.same({
+			"japanese",
+			"arabic",
+			"armenian",
+			"georgian",
+			"hebrew",
+			"mahajani",
+			"thai",
+			"korean",
+			"amharic",
+		}, theme.fontFallbacks)
 	end)
 
 	it("does not cache a default fallback as the dev font", function()

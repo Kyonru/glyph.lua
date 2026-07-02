@@ -70,8 +70,8 @@ Useful methods:
 - `ctx:meter(bounds, opts)`
 - `ctx:nineSlice(image, bounds, opts)`
 - `ctx:path(mode, path, bounds, opts)`
-- `ctx:text(value, x, y)`
-- `ctx:printf(value, x, y, limit, align)`
+- `ctx:text(value, x, y, opts?)`
+- `ctx:printf(value, x, y, limit, align, opts?)`
 - `ctx:pulse(speed, phase)`
 - `ctx:skewBox(opts)`
 
@@ -87,6 +87,13 @@ A few methods are worth spelling out:
   ctx:color({ 1, 1, 1, 0.3 + 0.4 * ctx:pulse(3) })
   ctx:rect("line", ctx.x, ctx.y, ctx.width, ctx.height, 6)
   ```
+
+- `ctx:text` and `ctx:printf` resolve typography through the node/theme before
+  drawing, including `fontFallbacks` for scripts the selected font cannot
+  render. Pass `opts` such as `{ textStyle = "caption" }` or
+  `{ font = "japanese" }` when a custom-drawn label should use a different
+  preset than the node itself. The current color still comes from `ctx:color` or
+  Love2D graphics state.
 
 - `ctx:skewBox(opts?)` — returns the four corner points of the node's box,
   optionally sheared, for `ctx:polygon`. `opts.skew` is the horizontal shear in

@@ -191,8 +191,8 @@ local GlyphPathDrawOpts = {}
 ---@field meter fun(self: GlyphDrawContext, bounds?: GlyphBounds, opts?: GlyphMeterProps)
 ---@field nineSlice fun(self: GlyphDrawContext, image: any, bounds: GlyphBounds, opts?: GlyphNineSliceOpts)
 ---@field path fun(self: GlyphDrawContext, mode: "line"|"fill"|"both"|string, path: GlyphPathInput, bounds?: GlyphBounds, opts?: GlyphPathDrawOpts)
----@field text fun(self: GlyphDrawContext, value: any, x: number, y: number)
----@field printf fun(self: GlyphDrawContext, value: any, x: number, y: number, limit: number, align?: string)
+---@field text fun(self: GlyphDrawContext, value: any, x: number, y: number, opts?: table)
+---@field printf fun(self: GlyphDrawContext, value: any, x: number, y: number, limit: number, align?: string, opts?: table)
 ---@field skewBox fun(self: GlyphDrawContext, opts?: table): number[]
 ---@field blob fun(self: GlyphDrawContext, bounds?: GlyphBounds, opts?: table): number[]
 local GlyphDrawContext = {}

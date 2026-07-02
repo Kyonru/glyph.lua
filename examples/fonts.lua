@@ -2,7 +2,14 @@ local ExampleFonts = {}
 
 local acme = "dev/assets/fonts/Acme/Acme-Regular.ttf"
 local dotGothic16 = "dev/assets/fonts/DotGothic16/DotGothic16-Regular.ttf"
+local googleSans = "dev/assets/fonts/Google_Sans/GoogleSans-Regular.ttf"
 local inconsolata = "dev/assets/fonts/Inconsolata/Inconsolata-Regular.ttf"
+local notoSansArabic = "dev/assets/fonts/Noto_Sans_Arabic/NotoSansArabic-Regular.ttf"
+local notoSansArmenian = "dev/assets/fonts/Noto_Sans_Armenian/NotoSansArmenian-Regular.ttf"
+local notoSansGeorgian = "dev/assets/fonts/Noto_Sans_Georgian/NotoSansGeorgian-Regular.ttf"
+local notoSansHebrew = "dev/assets/fonts/Noto_Sans_Hebrew/NotoSansHebrew-Regular.ttf"
+local notoSansMahajani = "dev/assets/fonts/Noto_Sans_Mahajani/NotoSansMahajani-Regular.ttf"
+local notoSerifKr = "dev/assets/fonts/Noto_Serif_KR/NotoSerifKR-Regular.ttf"
 local sekuya = "dev/assets/fonts/Sekuya/Sekuya-Regular.ttf"
 
 local fontFiles = {
@@ -11,6 +18,26 @@ local fontFiles = {
 	subheader = sekuya,
 	description = acme,
 	japanese = dotGothic16,
+	arabic = notoSansArabic,
+	armenian = notoSansArmenian,
+	georgian = notoSansGeorgian,
+	hebrew = notoSansHebrew,
+	mahajani = notoSansMahajani,
+	thai = googleSans,
+	korean = notoSerifKr,
+	amharic = googleSans,
+}
+
+local fallbackFontIds = {
+	"japanese",
+	"arabic",
+	"armenian",
+	"georgian",
+	"hebrew",
+	"mahajani",
+	"thai",
+	"korean",
+	"amharic",
 }
 
 local cache = {}
@@ -158,13 +185,19 @@ function ExampleFonts.load(loveModule, sizes)
 	local graphics = loveModule and loveModule.graphics
 	sizes = sizes or {}
 
-	return {
+	local fonts = {
 		body = loadFont(graphics, loveModule, "body", sizes.body or 14),
 		title = loadFont(graphics, loveModule, "title", sizes.title or 22),
 		subheader = loadFont(graphics, loveModule, "subheader", sizes.subheader or 16),
 		description = loadFont(graphics, loveModule, "description", sizes.description or sizes.body or 14),
 		japanese = loadFont(graphics, loveModule, "japanese", sizes.japanese or sizes.body or 14),
 	}
+	for _, id in ipairs(fallbackFontIds) do
+		if not fonts[id] then
+			fonts[id] = loadFont(graphics, loveModule, id, sizes[id] or sizes.body or 14)
+		end
+	end
+	return fonts
 end
 
 function ExampleFonts.theme(base, opts)
@@ -182,18 +215,23 @@ function ExampleFonts.theme(base, opts)
 	typography.h2 = capTypographySize(mergeInto(copy(typography.h2 or {}), { font = "subheader", color = colors.subheader }), 18, 24)
 	typography.h3 = capTypographySize(mergeInto(copy(typography.h3 or {}), { font = "subheader", color = colors.subheader }), 16, 22)
 	typography.description = mergeInto(copy(typography.description or {}), { font = "description" })
-	typography.japanese = mergeInto({ font = "japanese" }, typography.japanese)
+	for _, id in ipairs(fallbackFontIds) do
+		typography[id] = mergeInto({ font = id }, typography[id])
+	end
 
-	base.fonts = mergeInto(copy(base.fonts or {}), {
+	local themeFonts = {
 		body = fonts.body,
 		heading = fonts.subheader,
 		display = fonts.title,
 		title = fonts.title,
 		subheader = fonts.subheader,
 		description = fonts.description,
-		japanese = fonts.japanese,
-	})
-	base.fontFallbacks = base.fontFallbacks or { "japanese" }
+	}
+	for _, id in ipairs(fallbackFontIds) do
+		themeFonts[id] = fonts[id]
+	end
+	base.fonts = mergeInto(copy(base.fonts or {}), themeFonts)
+	base.fontFallbacks = base.fontFallbacks or copy(fallbackFontIds)
 
 	base.typography = typography
 

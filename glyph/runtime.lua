@@ -2847,6 +2847,21 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
 
   ctx.hot = ctx.hovered or ctx.pressed or ctx.focused or ctx.active
 
+  local function resolveContextTextStyle(value, opts)
+    local textProps = props
+    if type(opts) == "table" then
+      textProps = {}
+      for key, propValue in pairs(props) do
+        textProps[key] = propValue
+      end
+      for key, propValue in pairs(opts) do
+        textProps[key] = propValue
+      end
+    end
+
+    return Typography.resolveDrawable(runtime.theme, textProps, style, node and node.type or "text", love, tostring(value))
+  end
+
   ---@param speed? number
   ---@param phase? number
   ---@return number
@@ -3075,10 +3090,15 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
   ---@param value any
   ---@param tx number
   ---@param ty number
+  ---@param opts? table
   ---@return nil
-  function ctx:text(value, tx, ty)
+  function ctx:text(value, tx, ty, opts)
     if graphics and graphics.print then
-      graphics.print(tostring(value), tx, ty)
+      local text = tostring(value)
+      local textStyle = resolveContextTextStyle(text, opts)
+      local previousFont = setFont(love, textStyle.font, textStyle.fontFilter)
+      graphics.print(text, tx, ty)
+      restoreFont(love, previousFont)
     end
   end
 
@@ -3087,13 +3107,22 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
   ---@param ty number
   ---@param limit number
   ---@param align? string
+  ---@param opts? table
   ---@return nil
-  function ctx:printf(value, tx, ty, limit, align)
-    if graphics and graphics.printf then
-      graphics.printf(tostring(value), tx, ty, limit, align or "left")
-    elseif graphics and graphics.print then
-      graphics.print(tostring(value), tx, ty)
+  function ctx:printf(value, tx, ty, limit, align, opts)
+    if type(align) == "table" and opts == nil then
+      opts = align
+      align = nil
     end
+    local text = tostring(value)
+    local textStyle = resolveContextTextStyle(text, opts)
+    local previousFont = setFont(love, textStyle.font, textStyle.fontFilter)
+    if graphics and graphics.printf then
+      graphics.printf(text, tx, ty, limit, align or "left")
+    elseif graphics and graphics.print then
+      graphics.print(text, tx, ty)
+    end
+    restoreFont(love, previousFont)
   end
 
   ---@param opts? table
