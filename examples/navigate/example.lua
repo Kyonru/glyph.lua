@@ -4,6 +4,19 @@ local borderPulseShader = nil
 local backgroundWaveShader = nil
 local activeItemShader = nil
 
+local palette = {
+	surface = { 0.075, 0.086, 0.11, 1 },
+	surface2 = { 0.105, 0.118, 0.148, 1 },
+	surface3 = { 0.13, 0.16, 0.2, 1 },
+	border = { 0.23, 0.29, 0.37, 1 },
+	text = { 0.92, 0.95, 0.98, 1 },
+	muted = { 0.58, 0.66, 0.74, 1 },
+	accent = { 0.28, 0.82, 0.66, 1 },
+	accentSoft = { 0.12, 0.26, 0.22, 1 },
+	blue = { 0.4, 0.62, 0.95, 1 },
+	classicBlue = { 0.035, 0.075, 0.25, 1 },
+}
+
 local function shaderTime(speed)
 	return ui.time() * (speed or 1)
 end
@@ -27,55 +40,75 @@ local function activeItemShaderStyle(node, runtime)
 end
 
 local buttonStyle = ui.style({
-	background = { 0.12, 0.13, 0.16, 1 },
-	borderColor = { 0.27, 0.3, 0.36, 1 },
+	background = palette.surface2,
+	borderColor = palette.border,
 	borderWidth = 1,
+	radius = 5,
+	color = palette.text,
+	hover = {
+		background = palette.surface3,
+		borderColor = { 0.34, 0.44, 0.54, 1 },
+	},
+	pressed = {
+		background = { 0.06, 0.07, 0.09, 1 },
+	},
 	focused = {
-		background = { 0.18, 0.36, 0.62, 1 },
-		borderColor = { 0.62, 0.82, 1, 1 },
+		background = { 0.14, 0.24, 0.34, 1 },
+		borderColor = palette.blue,
 		borderWidth = 2,
-		color = { 0.96, 0.98, 1, 1 },
+		color = palette.text,
 	},
 })
 
 local selectedButtonStyle = ui.style({
-	background = { 0.16, 0.28, 0.22, 1 },
-	borderColor = { 0.32, 0.58, 0.43, 1 },
+	background = palette.accentSoft,
+	borderColor = { 0.32, 0.72, 0.6, 1 },
 	borderWidth = 1,
+	radius = 5,
+	color = { 0.86, 1, 0.94, 1 },
+	hover = {
+		background = { 0.16, 0.32, 0.27, 1 },
+		borderColor = palette.accent,
+	},
 	focused = {
-		background = { 0.18, 0.36, 0.62, 1 },
-		borderColor = { 0.62, 0.82, 1, 1 },
+		background = { 0.16, 0.32, 0.36, 1 },
+		borderColor = palette.blue,
 		borderWidth = 2,
-		color = { 0.96, 0.98, 1, 1 },
+		color = palette.text,
 	},
 })
 
 local panelStyle = ui.style({
-	background = { 0.08, 0.09, 0.11, 1 },
-	borderColor = { 0.25, 0.28, 0.34, 1 },
+	background = palette.surface,
+	borderColor = palette.border,
 	borderWidth = 1,
 	radius = 6,
 })
 
 local accentPanelStyle = ui.style({
-	background = { 0.1, 0.13, 0.12, 1 },
-	borderColor = { 0.26, 0.48, 0.38, 1 },
+	background = { 0.075, 0.11, 0.105, 1 },
+	borderColor = { 0.28, 0.62, 0.52, 1 },
 	borderWidth = 1,
 	radius = 6,
 })
 
 local classicPanelStyle = ui.style({
-	background = { 0.04, 0.08, 0.25, 1 },
-	borderColor = { 0.82, 0.88, 1, 1 },
+	background = palette.classicBlue,
+	borderColor = { 0.62, 0.76, 1, 1 },
 	borderWidth = 2,
 	radius = 4,
 })
 
 local classicButtonStyle = ui.style({
-	background = { 0.06, 0.12, 0.34, 1 },
-	borderColor = { 0.32, 0.42, 0.72, 1 },
+	background = { 0.055, 0.11, 0.32, 1 },
+	borderColor = { 0.28, 0.42, 0.78, 1 },
 	borderWidth = 1,
 	color = { 0.94, 0.96, 1, 1 },
+	radius = 4,
+	hover = {
+		background = { 0.08, 0.16, 0.42, 1 },
+		borderColor = { 0.52, 0.68, 1, 1 },
+	},
 	focused = {
 		background = { 0.82, 0.86, 1, 1 },
 		borderColor = { 1, 1, 1, 1 },
@@ -89,6 +122,7 @@ local classicSelectedButtonStyle = ui.style({
 	borderColor = { 0.68, 0.78, 1, 1 },
 	borderWidth = 1,
 	color = { 0.94, 0.96, 1, 1 },
+	radius = 4,
 	shader = activeItemShaderStyle,
 	focused = {
 		background = { 0.82, 0.86, 1, 1 },
@@ -182,6 +216,22 @@ local function App()
 		setLastAction(label)
 	end
 
+	local function labelText(text)
+		return ui.text(text, {
+			style = {
+				color = palette.muted,
+			},
+		})
+	end
+
+	local function brightText(text, color)
+		return ui.text(text, {
+			style = {
+				color = color or palette.text,
+			},
+		})
+	end
+
 	local function btn(label, opts)
 		opts = opts or {}
 		return ui.button({
@@ -199,7 +249,7 @@ local function App()
 
 	local function tab(label)
 		return btn(label, {
-			width = 92,
+			width = 84,
 			selected = activeTab == label,
 			navGroup = "top-tabs",
 			onClick = function()
@@ -211,7 +261,7 @@ local function App()
 
 	local function category(label)
 		return btn(label, {
-			width = 126,
+			width = 112,
 			selected = activeCategory == label,
 			navGroup = "categories",
 			onClick = function()
@@ -239,7 +289,7 @@ local function App()
 		local node
 		node = ui.button({
 			label = label,
-			width = 108,
+			width = 94,
 			height = 28,
 			navGroup = "battle-commands",
 			style = activeCommand == label and classicSelectedButtonStyle or classicButtonStyle,
@@ -262,7 +312,7 @@ local function App()
 		opts = opts or {}
 		return ui.button({
 			label = label,
-			width = opts.width or 154,
+			width = opts.width or 140,
 			height = 32,
 			navGroup = "battle-submenu",
 			style = opts.selected and classicSelectedButtonStyle or classicButtonStyle,
@@ -282,7 +332,8 @@ local function App()
 	local flyout = nil
 
 	moreButton = btn("More", {
-		width = 92,
+		width = 82,
+		height = 30,
 		navGroup = "bottom-actions",
 		selected = submenuOpen,
 		onClick = function()
@@ -294,11 +345,11 @@ local function App()
 	if submenuOpen then
 		flyout = ui.panel({
 			position = "absolute",
-			right = 24,
-			bottom = 70,
-			width = 190,
-			gap = 8,
-			padding = 10,
+			right = 18,
+			bottom = 58,
+			width = 174,
+			gap = 7,
+			padding = 9,
 			navScope = true,
 			navTrap = true,
 			zIndex = 10,
@@ -311,10 +362,10 @@ local function App()
 				return false
 			end,
 		}, {
-			ui.text("Actions", { style = { color = ui.theme.mutedTextColor } }),
-			btn("Compare", { width = 168, onClick = function() setLastAction("Compare " .. selected) end }),
-			btn("Favorite", { width = 168, onClick = function() setLastAction("Favorite " .. selected) end }),
-			btn("Salvage", { width = 168, onClick = function() setLastAction("Salvage " .. selected) end }),
+			labelText("More actions"),
+			btn("Compare", { width = 152, onClick = function() setLastAction("Compare " .. selected) end }),
+			btn("Favorite", { width = 152, onClick = function() setLastAction("Favorite " .. selected) end }),
+			btn("Salvage", { width = 152, onClick = function() setLastAction("Salvage " .. selected) end }),
 		})
 	end
 
@@ -345,7 +396,7 @@ local function App()
 
 	if battleSubmenuChoices then
 		local choices = {
-			ui.text(battleSubmenuTitle, { style = { color = { 0.94, 0.96, 1, 1 } } }),
+			brightText(battleSubmenuTitle, { 0.94, 0.96, 1, 1 }),
 		}
 		for _, label in ipairs(battleSubmenuChoices) do
 			local selectedChoice = label == selectedSpell or label == selectedBattleItem or label == selectedTarget
@@ -367,11 +418,11 @@ local function App()
 			})
 		end
 
-			battleSubmenu = ui.column({
-				position = "absolute",
-				left = 332,
-				bottom = 118,
-				width = 180,
+		battleSubmenu = ui.column({
+			position = "absolute",
+			left = 284,
+			bottom = 100,
+			width = 166,
 			gap = 6,
 			padding = 8,
 			zIndex = 8,
@@ -398,20 +449,27 @@ local function App()
 	end
 
 	return ui.stack({ width = "100%", height = "100%" }, {
-		ui.column({ padding = 24, gap = 14, width = "100%", height = "100%" }, {
-			ui.row({ gap = 8, navGroup = "top-tabs" }, {
+		ui.column({ padding = { x = 18, y = 16 }, gap = 12, width = "100%", height = "100%" }, {
+			ui.row({ width = "100%", gap = 8, navGroup = "top-tabs" }, {
 				tab("Gear"),
 				tab("Stats"),
 				tab("Map"),
 				tab("Codex"),
 				ui.box({ grow = 1, height = 1, interactive = false }),
-				btn("Sort", { width = 78, navGroup = "top-tools", onClick = function() setLastAction("Sort") end }),
-				btn("Filter", { width = 86, navGroup = "top-tools", onClick = function() setLastAction("Filter") end }),
+				btn("Sort", { width = 68, navGroup = "top-tools", onClick = function() setLastAction("Sort") end }),
+				btn("Filter", { width = 76, navGroup = "top-tools", onClick = function() setLastAction("Filter") end }),
 			}),
 
-			ui.row({ gap = 14, grow = 1 }, {
-				ui.panel({ width = 150, height = "100%", gap = 8, navGroup = "categories", style = panelStyle }, {
-					ui.text("Vault", { style = { color = ui.theme.mutedTextColor } }),
+			ui.row({ width = "100%", gap = 10, grow = 1 }, {
+				ui.panel({
+					width = 132,
+					height = "100%",
+					gap = 7,
+					padding = { x = 10, y = 10 },
+					navGroup = "categories",
+					style = panelStyle,
+				}, {
+					labelText("Routes"),
 					category("Weapons"),
 					category("Armor"),
 					category("Relics"),
@@ -419,65 +477,94 @@ local function App()
 					category("Quest"),
 				}),
 
-				ui.panel({ grow = 1, height = "100%", gap = 10, style = panelStyle }, {
-					ui.row({ gap = 8, navGroup = "inventory-grid" }, {
-						item("Rift Blade", 124),
-						item("Echo Wand", 116),
-						item("Iron Pike", 108),
+				ui.panel({
+					grow = 1,
+					height = "100%",
+					gap = 10,
+					padding = { x = 10, y = 10 },
+					style = panelStyle,
+				}, {
+					ui.row({ width = "100%", gap = 8 }, {
+						brightText("Cargo bay"),
+						ui.box({ grow = 1, height = 1, interactive = false }),
+						labelText(activeCategory),
 					}),
-					ui.row({ gap = 8, navGroup = "inventory-grid" }, {
-						item("Pulse Shield", 142),
-						item("Wayfinder", 118),
+					ui.row({ gap = 7, navGroup = "inventory-grid" }, {
+						item("Rift Blade", 108),
+						item("Echo Wand", 102),
+						item("Iron Pike", 96),
 					}),
-					ui.row({ gap = 8, navGroup = "inventory-grid" }, {
-						item("Mist Boots", 112),
-						item("Sun Charm", 118),
-						item("Field Kit", 100),
-						item("Old Key", 88),
+					ui.row({ gap = 7, navGroup = "inventory-grid" }, {
+						item("Pulse Shield", 122),
+						item("Wayfinder", 104),
 					}),
-						ui.row({ gap = 8, navGroup = "battle-commands" }, {
-							ui.column({ width = 136, gap = 4, padding = 6, style = classicPanelStyle, draw = drawBorderPulsePanel }, {
-								ui.text("Command", { style = { color = { 0.94, 0.96, 1, 1 } } }),
-								attackCommand,
-								magicCommand,
+					ui.row({ gap = 7, navGroup = "inventory-grid" }, {
+						item("Mist Boots", 98),
+						item("Sun Charm", 104),
+						item("Field Kit", 92),
+						item("Old Key", 78),
+					}),
+					ui.row({ width = "100%", gap = 8, navGroup = "battle-commands" }, {
+						ui.column({
+							width = 112,
+							gap = 4,
+							padding = 6,
+							style = classicPanelStyle,
+							draw = drawBorderPulsePanel,
+						}, {
+							brightText("Command", { 0.94, 0.96, 1, 1 }),
+							attackCommand,
+							magicCommand,
 							itemCommand,
 							guardCommand,
 							runCommand,
 						}),
-							ui.panel({ grow = 1, gap = 6, padding = 8, style = ui.composeStyles(classicPanelStyle, { shader = backgroundShaderStyle }) }, {
-								ui.text("Party", { style = { color = { 0.94, 0.96, 1, 1 } } }),
-							ui.row({ gap = 8 }, {
-								ui.text("Ari", { style = { color = { 0.94, 0.96, 1, 1 } } }),
-								ui.text("HP  482/520", { style = { color = { 0.72, 0.9, 1, 1 } } }),
-								ui.text("MP  44/60", { style = { color = { 0.72, 0.9, 1, 1 } } }),
+						ui.panel({
+							grow = 1,
+							gap = 6,
+							padding = { x = 8, y = 7 },
+							style = ui.composeStyles(classicPanelStyle, { shader = backgroundShaderStyle }),
+						}, {
+							brightText("Party relay", { 0.94, 0.96, 1, 1 }),
+							ui.row({ gap = 10 }, {
+								brightText("Ari", { 0.94, 0.96, 1, 1 }),
+								brightText("HP 482", { 0.72, 0.9, 1, 1 }),
+								brightText("MP 44", { 0.72, 0.9, 1, 1 }),
 							}),
-							ui.row({ gap = 8 }, {
-								ui.text("Noa", { style = { color = { 0.94, 0.96, 1, 1 } } }),
-								ui.text("HP  391/410", { style = { color = { 0.72, 0.9, 1, 1 } } }),
-								ui.text("MP  78/88", { style = { color = { 0.72, 0.9, 1, 1 } } }),
+							ui.row({ gap = 10 }, {
+								brightText("Noa", { 0.94, 0.96, 1, 1 }),
+								brightText("HP 391", { 0.72, 0.9, 1, 1 }),
+								brightText("MP 78", { 0.72, 0.9, 1, 1 }),
 							}),
-							ui.text("Queued: " .. queuedBattle, { style = { color = { 1, 0.94, 0.68, 1 } } }),
+							brightText("Queued: " .. queuedBattle, { 1, 0.94, 0.68, 1 }),
 						}),
 					}),
-					}),
-
-				ui.panel({ width = 210, height = "100%", gap = 10, navGroup = "inspector", style = panelStyle }, {
-					ui.text("Inspector", { style = { color = ui.theme.mutedTextColor } }),
-					ui.text(selected),
-					ui.text("Power  142", { style = { color = ui.theme.mutedTextColor } }),
-					ui.text("Weight  7.4", { style = { color = ui.theme.mutedTextColor } }),
-					btn("Equip", { width = 188, navGroup = "inspector", onClick = function() setLastAction("Equip " .. selected) end }),
-					btn("Upgrade", { width = 188, navGroup = "inspector", onClick = function() setLastAction("Upgrade " .. selected) end }),
-					btn("Inspect", { width = 188, navGroup = "inspector", onClick = function() setLastAction("Inspect " .. selected) end }),
+				}),
+				ui.panel({
+					width = 184,
+					height = "100%",
+					gap = 9,
+					padding = { x = 10, y = 10 },
+					navGroup = "inspector",
+					style = panelStyle,
+				}, {
+					labelText("Intel"),
+					brightText(selected),
+					labelText("Power 142"),
+					labelText("Weight 7.4"),
+					labelText("Bind: " .. activeTab),
+					btn("Equip", { width = 162, navGroup = "inspector", onClick = function() setLastAction("Equip " .. selected) end }),
+					btn("Upgrade", { width = 162, navGroup = "inspector", onClick = function() setLastAction("Upgrade " .. selected) end }),
+					btn("Inspect", { width = 162, navGroup = "inspector", onClick = function() setLastAction("Inspect " .. selected) end }),
 				}),
 			}),
 
-			ui.row({ gap = 8, navGroup = "bottom-actions" }, {
-				btn("Confirm", { width = 116, onClick = function() setLastAction("Confirm " .. selected) end }),
-				btn("Cancel", { width = 96, onClick = function() setLastAction("Cancel") end }),
+			ui.row({ width = "100%", gap = 8, navGroup = "bottom-actions" }, {
+				btn("Confirm", { width = 104, height = 30, onClick = function() setLastAction("Confirm " .. selected) end }),
+				btn("Cancel", { width = 84, height = 30, onClick = function() setLastAction("Cancel") end }),
 				moreButton,
 				ui.box({ grow = 1, height = 1, interactive = false }),
-				ui.text(lastAction, { style = { color = ui.theme.mutedTextColor } }),
+				labelText(lastAction),
 			}),
 		}),
 
