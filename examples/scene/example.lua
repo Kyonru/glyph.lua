@@ -57,10 +57,6 @@ local function screen(title, subtitle, accent, navTarget)
 			},
 			draw = function(_, x, y, width, height, love, _, ctx)
 				ctx:color({ accent[1], accent[2], accent[3], 0.12 })
-				for index = 0, 10 do
-					local lx = x + index * width / 10
-					ctx:line(lx, y, lx + 80, y + height)
-				end
 
 				local trackY = y + height * 0.64
 				local trackLeft = x + 42
@@ -80,22 +76,22 @@ local function screen(title, subtitle, accent, navTarget)
 				love.graphics.circle("fill", px + 3, trackY - 3, 3)
 			end,
 		}, {
-				ui.text("Bridge deck is the active scene layer.", { style = { color = TEXT } }),
-				ui.text("Swap to the cargo bay, open an overlay, or pause into a blocking modal.", {
-					wrap = true,
-					width = 520,
-					style = { color = MUTED },
-				}),
-				ui.text("The moving probe pauses with the modal, but keeps sweeping under the debug overlay.", {
-					wrap = true,
-					width = 520,
-					style = { color = MUTED },
+			ui.text("Bridge deck is the active scene layer.", { style = { color = TEXT } }),
+			ui.text("Swap to the cargo bay, open an overlay, or pause into a blocking modal.", {
+				wrap = true,
+				width = 520,
+				style = { color = MUTED },
+			}),
+			ui.text("The moving probe pauses with the modal, but keeps sweeping under the debug overlay.", {
+				wrap = true,
+				width = 520,
+				style = { color = MUTED },
 			}),
 		}),
 
 		ui.row({ gap = 10 }, {
 			ui.button({
-					label = navTarget == "home" and "Return To Bridge" or "Open Cargo Bay",
+				label = navTarget == "home" and "Return To Bridge" or "Open Cargo Bay",
 				onClick = function()
 					local targetName = navTarget or "home"
 					local targetScene = targetName == "home" and HomeScene or InventoryScene
@@ -130,7 +126,12 @@ function HomeScene()
 end
 
 function InventoryScene()
-	return screen("Cargo Bay", "Replacement scene with the same overlay and modal hooks.", { 0.68, 0.50, 1.0, 1 }, "home")
+	return screen(
+		"Cargo Bay",
+		"Replacement scene with the same overlay and modal hooks.",
+		{ 0.68, 0.50, 1.0, 1 },
+		"home"
+	)
 end
 
 function PauseMenu()
@@ -147,10 +148,10 @@ function PauseMenu()
 		},
 	}, {
 		ui.text("Paused", { style = { color = TEXT } }),
-			ui.text("Backdrop and input blocking come from the modal scene layer.", {
-				wrap = true,
-				width = 360,
-				style = { color = MUTED },
+		ui.text("Backdrop and input blocking come from the modal scene layer.", {
+			wrap = true,
+			width = 360,
+			style = { color = MUTED },
 		}),
 		ui.box({ flex = 1 }),
 		ui.button({
@@ -164,19 +165,31 @@ function PauseMenu()
 end
 
 function DebugOverlay()
-	return ui.box({
-		width = 220,
-		height = 70,
-		style = {
-			background = { 0, 0, 0, 0.46 },
-			borderColor = { 1, 1, 1, 0.12 },
-			borderWidth = 1,
-			radius = 8,
-		},
+	return ui.stack({
+		width = "100%",
+		height = "100%",
+		interactive = false,
 	}, {
-		ui.column({ padding = 10, gap = 4 }, {
-			ui.text("Debug Overlay", { style = { color = TEXT } }),
-			ui.text("Non-blocking layer", { style = { color = MUTED } }),
+		ui.column({
+			position = "absolute",
+			bottom = 18,
+			right = 18,
+			width = 240,
+			padding = { x = 12, y = 10 },
+			gap = 5,
+			style = {
+				background = { 0.02, 0.024, 0.032, 0.82 },
+				borderColor = { ACCENT[1], ACCENT[2], ACCENT[3], 0.32 },
+				borderWidth = 1,
+				radius = 8,
+			},
+		}, {
+			ui.row({ width = "100%", gap = 8, align = "center" }, {
+				ui.text("Debug Overlay", { flex = 1, style = { color = TEXT } }),
+				ui.text("HUD", { textStyle = "caption", style = { color = ACCENT } }),
+			}),
+			ui.text("Non-blocking scene layer", { textStyle = "caption", style = { color = MUTED } }),
+			ui.text("Esc closes this overlay", { textStyle = "caption", style = { color = MUTED } }),
 		}),
 	})
 end
@@ -210,7 +223,7 @@ end
 return {
 	id = "scene",
 	label = "Scene",
-		description = "Bridge/cargo scene replacement with a debug overlay and pause modal showing layer input routing.",
+	description = "Bridge/cargo scene replacement with a debug overlay and pause modal showing layer input routing.",
 	window = {
 		width = 900,
 		height = 580,

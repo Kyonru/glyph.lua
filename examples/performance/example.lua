@@ -61,6 +61,7 @@ ui.on("afterRender", function()
 end)
 
 local header = ui.static(ui.row({
+  width = "100%",
   gap = 8,
   padding = { x = 8, y = 4 },
   backgroundColor = { 0.08, 0.095, 0.11, 1 },
@@ -68,7 +69,7 @@ local header = ui.static(ui.row({
 }, {
   ui.text("#", { width = 64, color = ui.theme.mutedTextColor }),
   ui.text("level", { width = 64, color = ui.theme.mutedTextColor }),
-  ui.text("message", { width = 560, color = ui.theme.mutedTextColor }),
+  ui.text("message", { flex = 1, color = ui.theme.mutedTextColor }),
 }))
 
 local function clamp(value, minValue, maxValue)
@@ -105,13 +106,14 @@ local function getRow(event)
   metrics.rowBuilds = metrics.rowBuilds + 1
 
   cached = ui.static(ui.row({
+    width = "100%",
     gap = 8,
     padding = { x = 8, y = 3 },
     backgroundColor = rowColor(event),
   }, {
     ui.text(string.format("%05d", event.index), { width = 64, color = ui.theme.mutedTextColor }),
     ui.text(event.level, { width = 64 }),
-    ui.text(event.message, { width = 560 }),
+    ui.text(event.message, { flex = 1 }),
   }))
 
   rowCache[event.index] = cached
@@ -196,7 +198,8 @@ local function App()
   return ui.column({
     gap = 10,
     padding = 12,
-    width = 820,
+    width = "100%",
+    height = "100%",
     backgroundColor = ui.theme.backgroundColor,
   }, {
     ui.row({ gap = 8, align = "center", width = "100%" }, {
@@ -250,9 +253,25 @@ local function App()
     }),
 
     header,
-    ui.memo(VisibleRows, { windowStart, filter }),
+    ui.scrollView({
+      width = "100%",
+      flex = 1,
+      gap = 1,
+      padding = 0,
+      style = {
+        background = { 0.045, 0.052, 0.064, 1 },
+        borderColor = ui.theme.borderColor,
+        borderWidth = 1,
+        radius = 4,
+      },
+    }, {
+      ui.memo(VisibleRows, { windowStart, filter }),
+    }),
 
-    ui.text("Mouse wheel moves the virtual window. Only visible rows are mounted; rows are reused from a static cache."),
+    ui.text("Mouse wheel moves the virtual window. Only visible rows are mounted; rows are reused from a static cache.", {
+      width = "100%",
+      wrap = true,
+    }),
   })
 end
 
