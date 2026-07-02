@@ -113,10 +113,16 @@ ui.image({
   valign = "center",
   tint = { 1, 1, 1, 1 },
   opacity = 1,
+  filter = "nearest",
   clip = { kind = "circle" },
   interactive = false,
 })
 ```
+
+`filter` may be `"linear"` or `"nearest"` for both min/mag filtering, or a
+table such as `{ min = "nearest", mag = "linear", anisotropy = 2 }`. Glyph
+applies image filters only for the draw and restores the image's previous
+filter afterward.
 
 Use `quad` for atlas cells:
 

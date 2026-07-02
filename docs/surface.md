@@ -32,6 +32,7 @@ local panel = ui.surface.new({
 | `component` | fun(ui, ctx)? | builds the tree; receives the surface's scoped `ui` and a context (`{ surface, runtime, width, height }`). Can be passed to `:render` instead |
 | `theme` | GlyphTheme? | theme for this surface (defaults to the global theme) |
 | `clearColor` | GlyphColor? | canvas clear color each render (default transparent `{0,0,0,0}`) |
+| `filter` | `"linear"`/`"nearest"` or table? | canvas texture filtering; table form accepts `min`, `mag`, and `anisotropy` |
 | `stencil` | boolean? | request a stencil-enabled canvas (default on) so clips/masks work |
 | `love` | table? | Love2D module (defaults to the global `love`) |
 | `canvas`, `canvasOptions` | any? | bring your own canvas / `newCanvas` options |

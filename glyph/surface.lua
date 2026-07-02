@@ -3,6 +3,8 @@ local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
 local Accessibility = require(prefix .. ".accessibility")
 local Animation = require(prefix .. ".animation")
 local Components = require(prefix .. ".components")
+local Dialogue = require(prefix .. ".dialogue")
+local Filter = require(prefix .. ".filter")
 local Feedback = require(prefix .. ".feedback")
 local GridMath = require(prefix .. ".grid_math")
 local I18n = require(prefix .. ".i18n")
@@ -69,11 +71,19 @@ local function surfaceCanvasConfig(opts)
   local source = opts and opts.canvasOptions or nil
   local canvasOptions = {}
   local stencil = true
+  local reserved = {
+    filter = true,
+    min = true,
+    mag = true,
+    minFilter = true,
+    magFilter = true,
+    anisotropy = true,
+  }
   if type(source) == "table" then
     for key, value in pairs(source) do
       if key == "stencil" then
         stencil = value ~= false
-      else
+      elseif not reserved[key] then
         canvasOptions[key] = value
       end
     end
@@ -198,6 +208,12 @@ function Surface.scopedUi(runtime, surface)
     return runtime:memo(component, deps)
   end
 
+  ui.dialogue = {
+    new = function(opts)
+      return Dialogue.new(ui, opts)
+    end,
+  }
+
   function ui.drag(opts)
     return runtime:drag(opts)
   end
@@ -316,11 +332,13 @@ function SurfaceInstance:ensureCanvas()
 
   local currentWidth, currentHeight = canvasSize(self.canvas)
   if self.canvas and currentWidth == self.width and currentHeight == self.height then
+    Filter.apply(self.canvas, self.filter)
     return self.canvas
   end
 
   local ok, canvas = pcall(graphics.newCanvas, self.width, self.height, self.canvasOptions)
   if ok then
+    Filter.apply(canvas, self.filter)
     self.canvas = canvas
   end
   return self.canvas
@@ -381,6 +399,12 @@ function SurfaceInstance:render(component)
     self.runtime:draw(self.runtime.root)
   end
 
+  if self.runtime.scene then
+    for _, layer in ipairs(self.runtime.scene.layers) do
+      self.runtime:renderLayer(layer, self.width, self.height)
+    end
+  end
+
   if graphics and self.canvas and graphics.setCanvas then
     graphics.setCanvas()
   end
@@ -400,8 +424,16 @@ function SurfaceInstance:mousereleased(x, y, button)
   return self.runtime:mousereleased(x, y, button)
 end
 
+function SurfaceInstance:wheelmoved(dx, dy)
+  return self.runtime:wheelmoved(dx, dy)
+end
+
 function SurfaceInstance:keypressed(key)
   return self.runtime:keypressed(key)
+end
+
+function SurfaceInstance:textinput(text)
+  return self.runtime:textinput(text)
 end
 
 function SurfaceInstance:keyreleased(key)
@@ -423,6 +455,7 @@ function Surface.new(opts)
   runtime:setLove(loveModule)
   runtime.theme = opts.theme or theme
   local canvasOptions, stencil = surfaceCanvasConfig(opts)
+  local filter = Filter.fromFields(opts) or Filter.fromFields(opts.canvasOptions)
 
   local self = setmetatable({
     runtime = runtime,
@@ -433,6 +466,7 @@ function Surface.new(opts)
     clearColor = opts.clearColor or { 0, 0, 0, 0 },
     canvasOptions = canvasOptions,
     stencil = stencil,
+    filter = filter,
     canvas = opts.canvas,
     ctx = {},
   }, SurfaceInstance)

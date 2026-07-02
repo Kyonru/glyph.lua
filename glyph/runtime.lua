@@ -2,6 +2,7 @@ local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
 local Accessibility = require(prefix .. ".accessibility")
 local Animation = require(prefix .. ".animation")
 local CallbackBus = require(prefix .. ".callback_bus")
+local Filter = require(prefix .. ".filter")
 local Feedback = require(prefix .. ".feedback")
 local Layout = require(prefix .. ".layout")
 local Path = require(prefix .. ".path")
@@ -1557,10 +1558,18 @@ end
 
 ---@param love table
 ---@param font any
----@return any
-local function setFont(love, font)
+---@param filter? table|string
+---@return table|nil
+local function setFont(love, font, filter)
   if love and love.graphics and font and love.graphics.setFont then
-    local previous = love.graphics.getFont and love.graphics.getFont() or nil
+    local previous = {
+      font = love.graphics.getFont and love.graphics.getFont() or nil,
+    }
+    local previousFilter = Filter.applyTemporary(font, filter)
+    if previousFilter then
+      previous.filterTarget = font
+      previous.filter = previousFilter
+    end
     love.graphics.setFont(font)
     return previous
   end
@@ -1569,11 +1578,14 @@ local function setFont(love, font)
 end
 
 ---@param love table
----@param previous any
+---@param previous table|nil
 ---@return nil
 local function restoreFont(love, previous)
-  if previous and love and love.graphics and love.graphics.setFont then
-    love.graphics.setFont(previous)
+  if previous then
+    Filter.restore(previous.filterTarget, previous.filter)
+  end
+  if previous and previous.font and love and love.graphics and love.graphics.setFont then
+    love.graphics.setFont(previous.font)
   end
 end
 
@@ -1617,7 +1629,7 @@ local function drawPlainText(runtime, node, value, x, y, width, love, style, opa
   end
 
   local textStyle = Typography.resolveDrawable(runtime.theme, props, style, defaultStyle or node.type, love)
-  local previousFont = setFont(love, textStyle.font)
+  local previousFont = setFont(love, textStyle.font, textStyle.fontFilter)
   color(love, withOpacity(textStyle.color or style.color or runtime.theme.textColor, opacity))
   local text = tostring(value or "")
   local lineHeight = textStyle.lineHeight or runtime.theme.lineHeight or 18
@@ -1813,9 +1825,11 @@ local function drawImage(runtime, node, x, y, width, height, love, style, opacit
   local tint = props.tint or style.color or { 1, 1, 1, 1 }
   local imageOpacity = opacity or 1
   local previousColor
+  local previousFilter
   if graphics.getColor then
     previousColor = { graphics.getColor() }
   end
+  previousFilter = Filter.applyTemporary(plan.source, Filter.fromFields(props))
 
   color(love, withOpacity(tint, imageOpacity))
   if plan.quad then
@@ -1824,6 +1838,9 @@ local function drawImage(runtime, node, x, y, width, height, love, style, opacit
     graphics.draw(plan.source, x + plan.offsetX, y + plan.offsetY, 0, plan.scaleX, plan.scaleY)
   end
 
+  if previousFilter then
+    Filter.restore(plan.source, previousFilter)
+  end
   if previousColor and graphics.setColor then
     graphics.setColor(previousColor[1], previousColor[2], previousColor[3], previousColor[4])
   end
@@ -2766,10 +2783,12 @@ local function drawNineSlice(runtime, love, image, bounds, opts)
   local destWidths = { destBorder.left, destCenterWidth, destBorder.right }
   local destHeights = { destBorder.top, destCenterHeight, destBorder.bottom }
   local previousColor
+  local previousFilter
 
   if graphics.getColor then
     previousColor = { graphics.getColor() }
   end
+  previousFilter = Filter.applyTemporary(image, Filter.fromFields(opts))
   color(love, withOpacity(opts.tint or { 1, 1, 1, 1 }, opts.opacity or 1))
 
   for row = 1, 3 do
@@ -2787,6 +2806,9 @@ local function drawNineSlice(runtime, love, image, bounds, opts)
     end
   end
 
+  if previousFilter then
+    Filter.restore(image, previousFilter)
+  end
   if previousColor and graphics.setColor then
     graphics.setColor(previousColor[1], previousColor[2], previousColor[3], previousColor[4])
   end
@@ -3156,11 +3178,19 @@ local function applyDrawState(love, style, node, runtime)
     previous.font = graphics.getFont()
     local textStyle = Typography.resolveDrawable(runtime.theme, node and node.props or {}, style, node and node.type or "text", love)
     if textStyle.font then
+      local previousFontFilter = Filter.applyTemporary(textStyle.font, textStyle.fontFilter)
+      if previousFontFilter then
+        previous.fontFilterTarget = textStyle.font
+        previous.fontFilter = previousFontFilter
+      end
       graphics.setFont(textStyle.font)
     end
   end
 
   return function()
+    if previous.fontFilterTarget then
+      Filter.restore(previous.fontFilterTarget, previous.fontFilter)
+    end
     if previous.font then
       graphics.setFont(previous.font)
     end

@@ -16,6 +16,7 @@ local theme = {
   fontSize = 13,
   lineHeight = 18,
   textScale = 1,
+  fontFilter = "nearest",
   radius = 4,
   borderWidth = 1,
   inputCursorWidth = 1,

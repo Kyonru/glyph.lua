@@ -62,13 +62,17 @@ ui.setTheme({
     text = { font = "body", fontSize = 14, lineHeight = 20 },
     h1 = { font = "heading", fontSize = 30, lineHeight = 36 },
     caption = { font = "body", fontSize = 11, lineHeight = 15 },
+    pixel = { font = { path = "assets/pixel.ttf" }, fontSize = 12, fontFilter = "nearest" },
   },
 })
 ```
 
 `font` may be a Love2D font object, a registered font name, or a font spec table
 such as `{ path = "assets/ui.ttf", size = 14 }`. Font specs are loaded lazily and
-cached when Love2D font creation is available.
+cached when Love2D font creation is available. Text defaults to
+`fontFilter = "nearest"` for crisp pixel scaling; set `fontFilter = "linear"` or
+use a font spec with `filter = { min = "nearest", mag = "linear" }` when a
+specific text style needs different Love2D filtering.
 
 Text nodes select presets with `textStyle`:
 

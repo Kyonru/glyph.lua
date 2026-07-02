@@ -7,6 +7,7 @@ local function fakeLove()
   local currentCanvas = nil
   local newCanvasCalls = {}
   local setCanvasCalls = {}
+  local filterCalls = {}
   local font = {
     getWidth = function(_, text)
       return #(tostring(text or "")) * 8
@@ -30,6 +31,15 @@ local function fakeLove()
       end,
       getDimensions = function(self)
         return self.width, self.height
+      end,
+      getFilter = function(self)
+        return self.min or "linear", self.mag or "linear", self.anisotropy
+      end,
+      setFilter = function(self, min, mag, anisotropy)
+        self.min = min
+        self.mag = mag
+        self.anisotropy = anisotropy
+        filterCalls[#filterCalls + 1] = { min, mag, anisotropy }
       end,
     }
   end
@@ -75,6 +85,7 @@ local function fakeLove()
     graphics = graphics,
     newCanvasCalls = newCanvasCalls,
     setCanvasCalls = setCanvasCalls,
+    filterCalls = filterCalls,
   }
 end
 
@@ -156,6 +167,22 @@ describe("surface", function()
 
     assert.are.equal(4, love.newCanvasCalls[1].options.msaa)
     assert.are.equal(surface.canvas, love.setCanvasCalls[1])
+  end)
+
+  it("applies configured filters to owned canvases", function()
+    local love = fakeLove()
+    local surface = Surface.new({
+      width = 32,
+      height = 32,
+      love = love,
+      filter = { min = "nearest", mag = "linear" },
+      component = function(ui)
+        return ui.box({ width = "100%", height = "100%" })
+      end,
+    })
+    surface:render()
+
+    assert.are.same({ "nearest", "linear", nil }, love.filterCalls[1])
   end)
 
   it("routes pointer input to the surface runtime", function()

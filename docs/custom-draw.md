@@ -296,7 +296,9 @@ ui.box({
 
 Pass `border = 8` for an even border, or `center = false` to draw only the
 frame. V1 stretches edges and center patches; tiled/repeated edges are left to
-app-specific custom draw.
+app-specific custom draw. `filter = "nearest"` or
+`filter = { min = "nearest", mag = "linear" }` temporarily changes the frame
+image's Love2D filter for the nine-slice draw and restores it afterward.
 
 ## Public Helper APIs
 

@@ -9,10 +9,29 @@
 ---@class GlyphColor
 local GlyphColor = {}
 
+---@alias GlyphFilterMode "linear"|"nearest"
+
+---@class GlyphFilterSpec
+---@field filter? GlyphFilterMode shared min/mag filter
+---@field mode? GlyphFilterMode alias for `filter`
+---@field type? GlyphFilterMode alias for `filter`
+---@field min? GlyphFilterMode minification filter
+---@field mag? GlyphFilterMode magnification filter
+---@field minFilter? GlyphFilterMode alias for `min`
+---@field magFilter? GlyphFilterMode alias for `mag`
+---@field anisotropy? number
+local GlyphFilterSpec = {}
+
+---@alias GlyphFilter GlyphFilterMode|GlyphFilterSpec
+
 ---@class GlyphFontSpec
 ---@field path? string
 ---@field size? number
 ---@field hinting? string
+---@field filter? GlyphFilter
+---@field minFilter? GlyphFilterMode
+---@field magFilter? GlyphFilterMode
+---@field anisotropy? number
 local GlyphFontSpec = {}
 
 ---@alias GlyphFontRef any|string|GlyphFontSpec
@@ -31,6 +50,7 @@ local GlyphFontSpec = {}
 ---@field fontSize? number
 ---@field lineHeight? number
 ---@field font? GlyphFontRef
+---@field fontFilter? GlyphFilter
 ---@field opacity? number
 local GlyphStateStyle = {}
 
@@ -88,6 +108,10 @@ local GlyphNineSliceBorder = {}
 ---@field tint? GlyphColor
 ---@field opacity? number
 ---@field center? boolean
+---@field filter? GlyphFilter
+---@field minFilter? GlyphFilterMode
+---@field magFilter? GlyphFilterMode
+---@field anisotropy? number
 local GlyphNineSliceOpts = {}
 
 ---@class GlyphShape
@@ -358,6 +382,7 @@ local GlyphPadding = {}
 ---@field interactive? boolean
 ---@field feedback? GlyphFeedbackProps|false
 ---@field font? GlyphFontRef
+---@field fontFilter? GlyphFilter
 ---@field fontSize? number
 ---@field lineHeight? number
 ---@field textStyle? string
@@ -442,6 +467,7 @@ local GlyphDragProps = {}
 ---@field textVerticalAlign? "top"|"center"|"middle"|"bottom"|"start"|"end"
 ---@field format? "plain"|"sysl"
 ---@field rich? boolean shorthand for `format = "sysl"` (rich text); ignored when `format` is set explicitly
+---@field fontFilter? GlyphFilter
 local GlyphTextProps = {}
 
 ---@class GlyphImageProps : GlyphProps
@@ -452,6 +478,10 @@ local GlyphTextProps = {}
 ---@field valign? "start"|"center"|"end"
 ---@field tint? GlyphColor
 ---@field opacity? number
+---@field filter? GlyphFilter
+---@field minFilter? GlyphFilterMode
+---@field magFilter? GlyphFilterMode
+---@field anisotropy? number
 local GlyphImageProps = {}
 
 ---@class GlyphPathProps : GlyphProps
@@ -732,6 +762,7 @@ local GlyphI18nApi = {}
 ---@field font? GlyphFontRef
 ---@field fontSize? number
 ---@field lineHeight? number
+---@field fontFilter? GlyphFilter
 ---@field color? GlyphColor
 local GlyphTypographyStyle = {}
 
@@ -919,6 +950,7 @@ local GlyphViewportBackend = {}
 ---@field fontSize? number
 ---@field lineHeight? number
 ---@field textScale? number
+---@field fontFilter? GlyphFilter
 ---@field radius? number
 ---@field borderWidth? number
 ---@field font? GlyphFontRef
@@ -1032,6 +1064,10 @@ local GlyphModalApi = {}
 ---@field theme? GlyphTheme
 ---@field love? table
 ---@field clearColor? GlyphColor
+---@field filter? GlyphFilter
+---@field minFilter? GlyphFilterMode
+---@field magFilter? GlyphFilterMode
+---@field anisotropy? number
 ---@field canvasOptions? table
 ---@field stencil? boolean
 ---@field canvas? any

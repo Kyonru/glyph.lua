@@ -1,3 +1,6 @@
+local prefix = (...):match("^(.*)%.[^%.]+$") or "glyph"
+local Filter = require(prefix .. ".filter")
+
 local Typography = {}
 
 local fontCache = {}
@@ -107,7 +110,7 @@ end
 ---@param graphics table
 ---@param cacheKey string
 ---@return any
-local function loadSpecFont(spec, size, graphics, cacheKey)
+local function loadSpecFont(spec, size, graphics, cacheKey, filterSpec)
   if not graphics or type(graphics.newFont) ~= "function" then
     return nil
   end
@@ -124,6 +127,7 @@ local function loadSpecFont(spec, size, graphics, cacheKey)
   end
 
   if ok then
+    Filter.apply(font, filterSpec or Filter.fromFields(spec))
     fontCache[cacheKey] = font
     return font
   end
@@ -168,6 +172,9 @@ function Typography.resolve(theme, props, baseStyle, defaultStyle)
   if props.lineHeight ~= nil then
     resolved.lineHeight = props.lineHeight
   end
+  if props.fontFilter ~= nil then
+    resolved.fontFilter = props.fontFilter
+  end
   if props.color ~= nil then
     resolved.color = props.color
   end
@@ -176,6 +183,7 @@ function Typography.resolve(theme, props, baseStyle, defaultStyle)
   resolved.fontSize = (resolved.fontSize or theme.fontSize or 13) * textScale
   resolved.lineHeight = (resolved.lineHeight or theme.lineHeight or resolved.fontSize or 18) * textScale
   resolved.font = resolved.font or theme.font
+  resolved.fontFilter = resolved.fontFilter or theme.fontFilter
   resolved.color = resolved.color or theme.textColor
 
   return resolved
@@ -192,6 +200,8 @@ function Typography.resolveDrawable(theme, props, baseStyle, defaultStyle, loveM
   local graphics = loveModule and loveModule.graphics
   local fontRef = resolveFontRef(resolved.font, theme)
   local fontSize = math.max(1, math.floor((resolved.fontSize or theme.fontSize or 13) + 0.5))
+  local fontFilter = Filter.resolve(resolved.fontFilter)
+  resolved.fontFilter = fontFilter
 
   if isFontObject(fontRef) then
     resolved.font = fontRef
@@ -201,19 +211,22 @@ function Typography.resolveDrawable(theme, props, baseStyle, defaultStyle, loveM
   if type(fontRef) == "table" then
     local specSize = resolved.fontSize or fontRef.size or theme.fontSize or 13
     local size = math.max(1, math.floor(specSize + 0.5))
+    local specFilter = Filter.fromFields(fontRef, fontFilter)
+    resolved.fontFilter = specFilter
     local key = table.concat({
       "spec",
       tostring(fontRef.path or ""),
       tostring(size),
       tostring(fontRef.hinting or ""),
+      Filter.key(specFilter),
     }, "|")
-    resolved.font = loadSpecFont(fontRef, size, graphics, key)
+    resolved.font = loadSpecFont(fontRef, size, graphics, key, specFilter)
     return resolved
   end
 
   if graphics and type(graphics.newFont) == "function" then
-    local key = "default|" .. tostring(fontSize)
-    resolved.font = loadSpecFont({}, fontSize, graphics, key)
+    local key = "default|" .. tostring(fontSize) .. "|" .. Filter.key(fontFilter)
+    resolved.font = loadSpecFont({}, fontSize, graphics, key, fontFilter)
   else
     resolved.font = fontRef
   end

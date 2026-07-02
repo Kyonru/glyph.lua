@@ -155,6 +155,54 @@ describe("ui helpers", function()
     assert.are.same({ "color", 0.2, 0.3, 0.4, 0.5 }, calls[3])
   end)
 
+  it("applies image filters during draw and restores them", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    local source = {
+      min = "linear",
+      mag = "linear",
+      anisotropy = 2,
+      getWidth = function() return 40 end,
+      getHeight = function() return 20 end,
+      getFilter = function(self)
+        return self.min, self.mag, self.anisotropy
+      end,
+      setFilter = function(self, min, mag, anisotropy)
+        self.min = min
+        self.mag = mag
+        self.anisotropy = anisotropy
+        calls[#calls + 1] = { "filter", min, mag, anisotropy }
+      end,
+    }
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getColor = function() return 1, 1, 1, 1 end,
+        setColor = function() end,
+        draw = function(image)
+          calls[#calls + 1] = { "draw", image.min, image.mag, image.anisotropy }
+        end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.image({
+        source = source,
+        width = 80,
+        height = 40,
+        filter = { min = "nearest", mag = "linear" },
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "filter", "nearest", "linear", nil }, calls[1])
+    assert.are.same({ "draw", "nearest", "linear", nil }, calls[2])
+    assert.are.same({ "filter", "linear", "linear", 2 }, calls[3])
+  end)
+
   it("draws image quads with cover fit and alignment offsets", function()
     local runtime = Runtime.new()
     local drawCall
@@ -860,6 +908,105 @@ describe("ui helpers", function()
 
     runtime.theme.fonts.heading = previousHeadingFont
     runtime.theme.typography.h1.font = previousH1Font
+  end)
+
+  it("applies filters to lazily loaded font specs", function()
+    local runtime = Runtime.new()
+    local filters = {}
+    local loadedFont
+
+    runtime:setLove({
+      graphics = {
+        newFont = function(path, size)
+          loadedFont = {
+            path = path,
+            size = size,
+            min = "linear",
+            mag = "linear",
+            getWidth = function(_, text)
+              return #text * 8
+            end,
+            getHeight = function()
+              return 16
+            end,
+            getFilter = function(self)
+              return self.min, self.mag
+            end,
+            setFilter = function(self, min, mag, anisotropy)
+              self.min = min
+              self.mag = mag
+              filters[#filters + 1] = { min, mag, anisotropy }
+            end,
+          }
+          return loadedFont
+        end,
+        getFont = function()
+          return nil
+        end,
+        setFont = function() end,
+        setColor = function() end,
+        print = function() end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.text("Pixel", {
+        font = { path = "pixel-filter-spec-test.ttf", filter = "nearest" },
+        fontSize = 15,
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal("pixel-filter-spec-test.ttf", loadedFont.path)
+    assert.are.equal(15, loadedFont.size)
+    assert.are.same({ "nearest", "nearest", nil }, filters[1])
+  end)
+
+  it("defaults lazily loaded text fonts to nearest filtering", function()
+    local runtime = Runtime.new()
+    local filters = {}
+
+    runtime:setLove({
+      graphics = {
+        newFont = function(size)
+          return {
+            size = size,
+            min = "linear",
+            mag = "linear",
+            getWidth = function(_, text)
+              return #text * 8
+            end,
+            getHeight = function()
+              return 16
+            end,
+            getFilter = function(self)
+              return self.min, self.mag
+            end,
+            setFilter = function(self, min, mag, anisotropy)
+              self.min = min
+              self.mag = mag
+              filters[#filters + 1] = { min, mag, anisotropy }
+            end,
+          }
+        end,
+        getFont = function()
+          return nil
+        end,
+        setFont = function() end,
+        setColor = function() end,
+        print = function() end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.text("Default", { fontSize = 17 })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.same({ "nearest", "nearest", nil }, filters[1])
+    assert.are.equal(1, #filters)
   end)
 
   it("vertically aligns plain text inside an explicit text box height", function()
