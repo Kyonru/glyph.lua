@@ -79,7 +79,7 @@ scrollable activity, meters, custom draw, and keyboard/gamepad navigation.
 
 ## Dashboard
 
-A dense ops dashboard translated into Glyph primitives with muted contrast, immediate sidebar selection, a live diagnostics strip, memoized stable panels, a virtualized scroll table, feedback-backed controls, metric cards, chart drawing, and filters.
+A dense ops dashboard translated into Glyph primitives with muted contrast, immediate sidebar selection, a live diagnostics strip, memoized stable panels, an animated data-driven chart, a virtualized scroll table, feedback-backed controls, metric cards, and filters.
 
 ## Dialogue
 

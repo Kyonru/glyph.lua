@@ -1325,6 +1325,61 @@ describe("runtime", function()
     assert.is_true(rects[2].height < 56)
   end)
 
+  it("scrolls when clicking the scrollbar track", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      local rows = {}
+      for index = 1, 10 do
+        rows[index] = Components.box({ width = 100, height = 20 })
+      end
+
+      return Components.scrollView({
+        key = "track",
+        width = 100,
+        height = 60,
+        gap = 0,
+        scrollbar = { width = 10, padding = 0, minThumbSize = 18 },
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(95, 30, 1)
+    runtime:mousereleased(95, 30, 1)
+
+    assert.is_true(math.abs(runtime:getScrollOffset("track") - 70) < 0.001)
+  end)
+
+  it("drags the scrollbar thumb", function()
+    local runtime = Runtime.new()
+
+    local function App()
+      local rows = {}
+      for index = 1, 10 do
+        rows[index] = Components.box({ width = 100, height = 20 })
+      end
+
+      return Components.scrollView({
+        key = "drag",
+        width = 100,
+        height = 60,
+        gap = 0,
+        scrollbar = { width = 10, padding = 0, minThumbSize = 18 },
+      }, rows)
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(95, 5, 1)
+    assert.is_not_nil(runtime.activeScrollbar)
+    runtime:mousemoved(95, 26)
+    runtime:mousereleased(95, 26, 1)
+
+    assert.is_true(math.abs(runtime:getScrollOffset("drag") - 70) < 0.001)
+    assert.is_nil(runtime.activeScrollbar)
+  end)
+
   it("routes overlapping stack clicks to the topmost child", function()
     local runtime = Runtime.new()
     local clicked = nil

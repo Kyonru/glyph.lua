@@ -414,6 +414,9 @@ ui.scrollView({ width = "100%", height = 300 }, rows)
 ```
 
 Scroll views clamp scrolling to content bounds and support optional scroll indicators.
+When content overflows, the indicator track is clickable and the thumb is
+draggable; the thumb uses a small visual press/release animation without
+changing layout or hit-test geometry.
 
 Wheel scrolling defaults to 24 pixels per wheel unit. Tune the feel per scroll
 view with `scrollPixelsPerStep` for the base distance and `scrollSpeed` for a

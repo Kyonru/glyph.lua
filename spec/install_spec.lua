@@ -201,6 +201,38 @@ describe("install", function()
     ui.keyreleased = previousKeyreleased
   end)
 
+  it("refreshes hover from the mouse position before wheel scrolling", function()
+    local fakeLove = {
+      mouse = {
+        getPosition = function()
+          return 10, 10
+        end,
+      },
+    }
+    local unregister = ui.install(fakeLove)
+
+    ui.runtime:build(function()
+      local rows = {}
+      for index = 1, 10 do
+        rows[index] = ui.box({ width = 100, height = 20 })
+      end
+      return ui.scrollView({
+        key = "wheel-list",
+        width = 100,
+        height = 60,
+        gap = 0,
+      }, rows)
+    end)
+    ui.runtime:layoutRoot(ui.runtime.root)
+
+    fakeLove.wheelmoved(0, -1)
+
+    assert.are.equal(24, ui.getScrollOffset("wheel-list"))
+
+    unregister()
+    ui.runtime:setLove(nil)
+  end)
+
   it("does not activate disabled focused buttons through gamepad helpers", function()
     local clicks = 0
 

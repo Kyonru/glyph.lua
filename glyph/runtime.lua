@@ -321,6 +321,53 @@ local function contains(node, x, y, absX, absY)
   return x >= absX and y >= absY and x <= absX + (layout.width or 0) and y <= absY + (layout.height or 0)
 end
 
+local mergeScrollbarStyle
+local scrollbarGeometry
+
+local function scrollbarHit(runtime, node, parentX, parentY, x, y)
+  if not node then
+    return nil
+  end
+
+  local layout = node.layout or {}
+  local absX = parentX + (layout.x or 0)
+  local absY = parentY + (layout.y or 0)
+
+  for _, child in ipairs(orderedChildren(node, true)) do
+    local hit = scrollbarHit(runtime, child, absX, absY, x, y)
+    if hit then
+      return hit
+    end
+  end
+
+  if node.type ~= "scrollView" or not contains(node, x, y, absX, absY) then
+    return nil
+  end
+
+  local props = node.props or {}
+  if props.showScrollbar == false then
+    return nil
+  end
+
+  local style = Style.resolve(node, runtime)
+  local scrollbar = mergeScrollbarStyle(runtime.theme, style or {}, props)
+  local geometry = scrollbarGeometry(runtime.theme, node, absX, absY, scrollbar, runtime:applyPendingScrollOffset(node, math.max(0, ((layout.scrollContentHeight or 0) - (layout.height or 0)))))
+  if not geometry then
+    return nil
+  end
+
+  if x < geometry.trackX or x > geometry.trackX + geometry.barWidth or y < geometry.trackY or y > geometry.trackY + geometry.trackHeight then
+    return nil
+  end
+
+  geometry.absX = absX
+  geometry.absY = absY
+  geometry.scrollbar = scrollbar
+  geometry.hitThumb = y >= geometry.thumbY and y <= geometry.thumbY + geometry.thumbHeight
+  geometry.node = node
+  return geometry
+end
+
 local function isActivationKey(key)
   return key == "return" or key == "kpenter" or key == "space"
 end
@@ -377,6 +424,8 @@ function Runtime.new()
     keyDownKey = nil,
     scrollOffsets = {},
     pendingScrollOffsets = {},
+    activeScrollbar = nil,
+    scrollbarFeedback = {},
     layoutCallbackCache = {},
     inputCursors = {},
     focusPath = nil,
@@ -488,6 +537,57 @@ end
 
 function Runtime:markDirty()
   self.needsRender = true
+end
+
+function Runtime:findScrollbarAt(x, y)
+  if self.scene then
+    local layers = self.scene.layers or {}
+    for index = #layers, 1, -1 do
+      local layer = layers[index]
+      if layer and layer.root and layer.blocking ~= false then
+        local hit = scrollbarHit(self, layer.root, layer.x or 0, layer.y or 0, x, y)
+        if hit then
+          return hit
+        end
+      end
+    end
+  end
+  return scrollbarHit(self, self.root, 0, 0, x, y)
+end
+
+function Runtime:scrollbarFeedbackValue(path)
+  local feedback = self.scrollbarFeedback[path]
+  if not feedback then
+    feedback = { value = 0, target = 0, velocity = 0 }
+    self.scrollbarFeedback[path] = feedback
+  end
+  return feedback
+end
+
+function Runtime:setScrollbarPressed(path, pressed)
+  if not path then
+    return
+  end
+  local feedback = self:scrollbarFeedbackValue(path)
+  feedback.target = pressed and 1 or 0
+  self:markDirty()
+end
+
+function Runtime:setScrollFromScrollbar(hit, y, dragOffset)
+  if not hit or not hit.node or not hit.node.path then
+    return
+  end
+  local trackY = hit.trackY
+  local travel = hit.thumbTravel
+  local thumbY
+  if travel <= 0 then
+    thumbY = trackY
+  else
+    thumbY = math.min(trackY + travel, math.max(trackY, y - (dragOffset or hit.thumbHeight / 2)))
+  end
+  local ratio = travel > 0 and ((thumbY - trackY) / travel) or 0
+  self.scrollOffsets[hit.node.path] = math.min(hit.maxScroll, math.max(0, ratio * hit.maxScroll))
+  self:markDirty()
 end
 
 function Runtime:findScrollTarget(target)
@@ -904,6 +1004,22 @@ function Runtime:update(dt)
     self:markDirty()
   end
   Feedback.update(self, dt or 0)
+  local delta = dt or 0
+  for path, feedback in pairs(self.scrollbarFeedback or {}) do
+    local value = feedback.value or 0
+    local velocity = feedback.velocity or 0
+    local target = feedback.target or 0
+    local force = (target - value) * 70
+    velocity = (velocity + force * delta) * math.max(0, 1 - 12 * delta)
+    value = math.min(1.35, math.max(-0.1, value + velocity * delta))
+    feedback.value = value
+    feedback.velocity = velocity
+    if math.abs(value - target) > 0.001 or math.abs(velocity) > 0.001 then
+      self:markDirty()
+    elseif target == 0 and value < 0.001 then
+      self.scrollbarFeedback[path] = nil
+    end
+  end
   for index = #self.exitAnimations, 1, -1 do
     if self.exitAnimations[index].done then
       table.remove(self.exitAnimations, index)
@@ -1416,6 +1532,21 @@ function Runtime:cancelDrag(reason)
 end
 
 function Runtime:mousemoved(x, y)
+  if self.activeScrollbar then
+    local state = self.activeScrollbar
+    if state.node and state.node.layout then
+      local layout = state.node.layout
+      local maxScroll = math.max(0, ((layout.scrollContentHeight or 0) - (layout.height or 0)))
+      local geometry = scrollbarGeometry(self.theme, state.node, state.absX or 0, state.absY or 0, state.scrollbar, self:applyPendingScrollOffset(state.node, maxScroll))
+      if geometry then
+        geometry.node = state.node
+        self:setScrollFromScrollbar(geometry, y, state.dragOffset)
+      end
+    end
+    self.bus:dispatch("event", "mousemoved", x, y, state.node)
+    return
+  end
+
   local node = self:hitTest(x, y)
   self:handleDragMove(x, y, node)
   self:setHover(node)
@@ -1423,6 +1554,30 @@ function Runtime:mousemoved(x, y)
 end
 
 function Runtime:mousepressed(x, y, button)
+  if button == 1 then
+    local hit = self:findScrollbarAt(x, y)
+    if hit and hit.node then
+      local dragOffset = hit.hitThumb and (y - hit.thumbY) or (hit.thumbHeight / 2)
+      self.activeScrollbar = {
+        absX = hit.absX,
+        absY = hit.absY,
+        button = button,
+        dragOffset = dragOffset,
+        node = hit.node,
+        path = hit.node.path,
+        scrollbar = hit.scrollbar,
+      }
+      self:setScrollbarPressed(hit.node.path, true)
+      self:setScrollFromScrollbar(hit, y, dragOffset)
+      self.mouseDownNode = nil
+      self.mouseDownPath = nil
+      self:setHover(hit.node)
+      self.bus:dispatch("event", "mousepressed", x, y, button, hit.node)
+      self:markDirty()
+      return
+    end
+  end
+
   local node, activeLayer = nil, nil
 
   if self.scene then
@@ -1466,6 +1621,15 @@ function Runtime:mousepressed(x, y, button)
 end
 
 function Runtime:mousereleased(x, y, button)
+  if self.activeScrollbar and self.activeScrollbar.button == button then
+    local state = self.activeScrollbar
+    self.activeScrollbar = nil
+    self:setScrollbarPressed(state.path, false)
+    self.bus:dispatch("event", "mousereleased", x, y, button, state.node)
+    self:markDirty()
+    return
+  end
+
   local node = self:hitTest(x, y)
   local down = self.mouseDownNode
   local downPath = self.mouseDownPath
@@ -2108,7 +2272,7 @@ end
 ---@param style table
 ---@param props table
 ---@return table
-local function mergeScrollbarStyle(theme, style, props)
+function mergeScrollbarStyle(theme, style, props)
   local result = {}
   local defaults = theme.components and theme.components.scrollBar or {}
 
@@ -2129,6 +2293,44 @@ local function mergeScrollbarStyle(theme, style, props)
   end
 
   return result
+end
+
+function scrollbarGeometry(theme, node, absX, absY, scrollbar, offset)
+  local layout = node and node.layout or {}
+  local width = layout.width or 0
+  local height = layout.height or 0
+  local contentHeight = layout.scrollContentHeight or height
+  local maxScroll = math.max(0, contentHeight - height)
+  if maxScroll <= 0 or width <= 0 or height <= 0 then
+    return nil
+  end
+
+  scrollbar = scrollbar or {}
+  local barWidth = scrollbar.width or theme.scrollbarWidth
+  local padding = scrollbar.padding or 0
+  local trackX = absX + width - barWidth - padding
+  local trackY = absY + padding
+  local trackHeight = math.max(0, height - padding * 2)
+  if trackHeight <= 0 then
+    return nil
+  end
+
+  local thumbHeight = math.max(scrollbar.minThumbSize or 18, trackHeight * (height / contentHeight))
+  thumbHeight = math.min(trackHeight, thumbHeight)
+  local thumbTravel = math.max(0, trackHeight - thumbHeight)
+  local clampedOffset = math.min(maxScroll, math.max(0, offset or 0))
+  local thumbY = trackY + (maxScroll > 0 and (clampedOffset / maxScroll) * thumbTravel or 0)
+
+  return {
+    barWidth = barWidth,
+    maxScroll = maxScroll,
+    thumbHeight = thumbHeight,
+    thumbTravel = thumbTravel,
+    thumbY = thumbY,
+    trackHeight = trackHeight,
+    trackX = trackX,
+    trackY = trackY,
+  }
 end
 
 ---@param x number
@@ -3596,25 +3798,31 @@ function Runtime:drawNode(node, x, y, stackContext)
       local scrollbar = mergeScrollbarStyle(self.theme, style, props)
       local showScrollbar = props.showScrollbar ~= false and maxScroll > 0
       if showScrollbar then
-        local barWidth = scrollbar.width or self.theme.scrollbarWidth
-        local padding = scrollbar.padding or 0
-        local trackX = absX + width - barWidth - padding
-        local trackY = absY + padding
-        local trackHeight = math.max(0, height - padding * 2)
-        local contentHeight = layout.scrollContentHeight or height
-        local thumbHeight = math.max(scrollbar.minThumbSize or 18, trackHeight * (height / contentHeight))
-        thumbHeight = math.min(trackHeight, thumbHeight)
-        local thumbTravel = math.max(0, trackHeight - thumbHeight)
-        local thumbY = trackY + (maxScroll > 0 and (offset / maxScroll) * thumbTravel or 0)
-        local barRadius = scrollbar.radius or barWidth / 2
+        local geometry = scrollbarGeometry(self.theme, node, absX, absY, scrollbar, offset)
+        local feedback = geometry and node.path and self.scrollbarFeedback[node.path] or nil
+        local juice = feedback and (feedback.value or 0) or 0
+        local barWidth = geometry and geometry.barWidth or (scrollbar.width or self.theme.scrollbarWidth)
+        local thumbInflate = barWidth * 0.45 * juice
+        local thumbX = geometry and geometry.trackX - thumbInflate / 2 or absX + width - barWidth
+        local thumbWidth = barWidth + thumbInflate
+        local thumbY = geometry and geometry.thumbY or absY
+        local thumbHeight = geometry and math.max(0, geometry.thumbHeight - juice * 2) or height
+        local thumbRadius = scrollbar.radius or barWidth / 2
+        local trackRadius = scrollbar.radius or barWidth / 2
 
-        if scrollbar.trackColor then
+        if geometry and scrollbar.trackColor then
           color(love, withOpacity(scrollbar.trackColor, opacity))
-          drawRect(love, "fill", trackX, trackY, barWidth, trackHeight, barRadius)
+          drawRect(love, "fill", geometry.trackX, geometry.trackY, barWidth, geometry.trackHeight, trackRadius)
         end
 
-        color(love, withOpacity(scrollbar.thumbColor or self.theme.scrollbarColor, opacity))
-        drawRect(love, "fill", trackX, thumbY, barWidth, thumbHeight, barRadius)
+        if geometry then
+          local thumbColor = scrollbar.thumbPressedColor or scrollbar.thumbColor or self.theme.scrollbarColor
+          if juice > 0 and scrollbar.thumbColor and not scrollbar.thumbPressedColor then
+            thumbColor = lerpColor(scrollbar.thumbColor, { 1, 1, 1, scrollbar.thumbColor[4] or 1 }, math.min(0.35, juice * 0.35))
+          end
+          color(love, withOpacity(thumbColor, opacity))
+          drawRect(love, "fill", thumbX, thumbY + juice, thumbWidth, thumbHeight, thumbRadius)
+        end
       end
     else
       for _, child in ipairs(orderedChildren(node)) do

@@ -653,6 +653,25 @@ function ui.mousemoved(x, y, dx, dy)
   return result
 end
 
+local function refreshHoverFromMouse()
+  local loveModule = runtime.love or _G.love
+  local mouse = loveModule and loveModule.mouse
+  if not mouse or type(mouse.getPosition) ~= "function" then
+    return nil
+  end
+
+  local x, y = mouse.getPosition()
+  local inside, viewX, viewY = viewportPoint(x, y)
+  if not inside then
+    runtime:setHover(nil)
+    return nil
+  end
+
+  local node = runtime:hitTest(viewX, viewY)
+  runtime:setHover(node)
+  return node
+end
+
 ---@param x number
 ---@param y number
 ---@param button number
@@ -691,6 +710,7 @@ end
 ---@param dx number
 ---@param dy number
 function ui.wheelmoved(dx, dy)
+  refreshHoverFromMouse()
   return runtime:wheelmoved(dx, dy)
 end
 
