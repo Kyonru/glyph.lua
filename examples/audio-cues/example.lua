@@ -118,12 +118,6 @@ local function App()
 
   return ui.stack({ width = "100%", height = "100%" }, {
     ui.column({ padding = 20, gap = 12, width = 460 }, {
-      ui.text("Audio Cues"),
-      ui.text("Glyph emits cue events; the app decides how to play them.", {
-        width = 400,
-        wrap = true,
-        style = { color = ui.theme.mutedTextColor },
-      }),
       ui.row({ gap = 8 }, {
         ui.button({ label = "Default", width = 104, navGroup = "audio-cues", onClick = function() end }),
         ui.button({ label = "Primary", width = 104, variant = "primary", navGroup = "audio-cues", onClick = function() end }),
@@ -175,6 +169,7 @@ end
 return {
   id = "audio-cues",
   label = "Audio Cues",
+  description = "Press button variants and watch Glyph emit cue metadata while the app plays tiny Love2D tones.",
   setup = setup,
   teardown = teardown,
   window = {

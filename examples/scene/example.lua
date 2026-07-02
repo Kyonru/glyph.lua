@@ -80,22 +80,22 @@ local function screen(title, subtitle, accent, navTarget)
 				love.graphics.circle("fill", px + 3, trackY - 3, 3)
 			end,
 		}, {
-			ui.text("This is a native Glyph scene layer.", { style = { color = TEXT } }),
-			ui.text("Scenes, overlays, and modals share the same stack and transition pipeline.", {
-				wrap = true,
-				width = 520,
-				style = { color = MUTED },
-			}),
-			ui.text("The moving probe pauses with the modal, but keeps running under the debug overlay.", {
-				wrap = true,
-				width = 520,
-				style = { color = MUTED },
+				ui.text("Bridge deck is the active scene layer.", { style = { color = TEXT } }),
+				ui.text("Swap to the cargo bay, open an overlay, or pause into a blocking modal.", {
+					wrap = true,
+					width = 520,
+					style = { color = MUTED },
+				}),
+				ui.text("The moving probe pauses with the modal, but keeps sweeping under the debug overlay.", {
+					wrap = true,
+					width = 520,
+					style = { color = MUTED },
 			}),
 		}),
 
 		ui.row({ gap = 10 }, {
 			ui.button({
-				label = "Go To Inventory",
+					label = navTarget == "home" and "Return To Bridge" or "Open Cargo Bay",
 				onClick = function()
 					local targetName = navTarget or "home"
 					local targetScene = targetName == "home" and HomeScene or InventoryScene
@@ -126,11 +126,11 @@ local function screen(title, subtitle, accent, navTarget)
 end
 
 function HomeScene()
-	return screen("Home Scene", "Main scene replacement with ui.scene.set.", ACCENT, "inventory")
+	return screen("Bridge Deck", "Root scene driven by ui.scene.set.", ACCENT, "inventory")
 end
 
 function InventoryScene()
-	return screen("Inventory Scene", "This screen replaced the previous root scene.", { 0.68, 0.50, 1.0, 1 }, "home")
+	return screen("Cargo Bay", "Replacement scene with the same overlay and modal hooks.", { 0.68, 0.50, 1.0, 1 }, "home")
 end
 
 function PauseMenu()
@@ -147,10 +147,10 @@ function PauseMenu()
 		},
 	}, {
 		ui.text("Paused", { style = { color = TEXT } }),
-		ui.text("This modal is just a scene layer with backdrop and blocking input.", {
-			wrap = true,
-			width = 360,
-			style = { color = MUTED },
+			ui.text("Backdrop and input blocking come from the modal scene layer.", {
+				wrap = true,
+				width = 360,
+				style = { color = MUTED },
 		}),
 		ui.box({ flex = 1 }),
 		ui.button({
@@ -210,6 +210,7 @@ end
 return {
 	id = "scene",
 	label = "Scene",
+		description = "Bridge/cargo scene replacement with a debug overlay and pause modal showing layer input routing.",
 	window = {
 		width = 900,
 		height = 580,

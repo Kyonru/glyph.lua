@@ -1,90 +1,90 @@
 local ui = require("glyph")
 
-local activeNav = "Dashboard"
+local activeNav = "Overview"
 local chartRange = "3m"
 local selectedView = "Overview"
 local search = ""
 
 local rows = {
 	{
-		title = "Cover page",
-		section = "Cover page",
-		status = "In Process",
+		title = "Relay handoff",
+		section = "Signal",
+		status = "Routing",
 		target = 18,
 		limit = 5,
-		reviewer = "Eddie Lake",
+		reviewer = "Mara Voss",
 	},
 	{
-		title = "Table of contents",
-		section = "Table of contents",
+		title = "Drone camera scrub",
+		section = "Review",
 		status = "Done",
 		target = 29,
 		limit = 24,
-		reviewer = "Eddie Lake",
+		reviewer = "Mara Voss",
 	},
 	{
-		title = "Executive summary",
-		section = "Narrative",
+		title = "North gate ping",
+		section = "Watch",
 		status = "Done",
 		target = 10,
 		limit = 13,
-		reviewer = "Eddie Lake",
+		reviewer = "Ilya Chen",
 	},
 	{
-		title = "Technical approach",
-		section = "Narrative",
+		title = "Beacon drift fix",
+		section = "Repair",
 		status = "Done",
 		target = 27,
 		limit = 23,
-		reviewer = "Jamik Tashpulatov",
+		reviewer = "Ilya Chen",
 	},
 	{
-		title = "Design",
-		section = "Narrative",
-		status = "In Process",
+		title = "Cargo route audit",
+		section = "Ops",
+		status = "Routing",
 		target = 2,
 		limit = 16,
-		reviewer = "Jamik Tashpulatov",
+		reviewer = "Noa Faye",
 	},
 	{
-		title = "Capabilities",
-		section = "Narrative",
-		status = "In Process",
+		title = "Coolant variance",
+		section = "Safety",
+		status = "Routing",
 		target = 20,
 		limit = 8,
-		reviewer = "Jamik Tashpulatov",
+		reviewer = "Noa Faye",
 	},
 	{
-		title = "Integration with existing systems",
-		section = "Narrative",
-		status = "In Process",
+		title = "Patrol overlap",
+		section = "Schedule",
+		status = "Routing",
 		target = 19,
 		limit = 21,
-		reviewer = "Assign reviewer",
+		reviewer = "Assign operator",
 	},
 	{
-		title = "Innovation and Advantages",
-		section = "Narrative",
+		title = "Outpost packet replay",
+		section = "Forensics",
 		status = "Done",
 		target = 25,
 		limit = 26,
-		reviewer = "Assign reviewer",
+		reviewer = "Assign operator",
 	},
 	{
-		title = "Overview of EMR's Innovative Solutions",
-		section = "Technical content",
+		title = "Beacon array checksum",
+		section = "Signal",
 		status = "Done",
 		target = 7,
 		limit = 23,
-		reviewer = "Assign reviewer",
+		reviewer = "Assign operator",
 	},
 	{
-		title = "Advanced Algorithms and Machine Learning",
-		section = "Narrative",
+		title = "Fuel lane conflict",
+		section = "Ops",
 		status = "Done",
 		target = 30,
 		limit = 28,
-		reviewer = "Assign reviewer",
+		reviewer = "Assign operator",
 	},
 }
 
@@ -95,7 +95,7 @@ for cycle = 1, 8 do
 		rows[#rows + 1] = {
 			title = row.title .. " " .. cycle,
 			section = row.section,
-			status = (cycle + row.target) % 3 == 0 and "In Process" or row.status,
+			status = (cycle + row.target) % 3 == 0 and "Routing" or row.status,
 			target = row.target + cycle,
 			limit = row.limit + (cycle % 4),
 			reviewer = cycle % 3 == 0 and "Assign reviewer" or row.reviewer,
@@ -360,16 +360,16 @@ local function dataTable(m)
 	if not m.compact then
 		header[#header + 1] = ui.text("", { width = m.dragWidth })
 	end
-	header[#header + 1] = ui.text("Header", { width = m.titleWidth, style = muted })
+	header[#header + 1] = ui.text("Packet", { width = m.titleWidth, style = muted })
 	if not m.compact then
-		header[#header + 1] = ui.text("Section Type", { width = m.sectionWidth, style = muted })
+		header[#header + 1] = ui.text("Lane", { width = m.sectionWidth, style = muted })
 	end
 	header[#header + 1] = ui.text("Status", { width = m.statusWidth, style = muted })
 	if not m.compact then
-		header[#header + 1] = ui.text("Target", { width = m.targetWidth, style = muted })
-		header[#header + 1] = ui.text("Limit", { width = m.limitWidth, style = muted })
+		header[#header + 1] = ui.text("ETA", { width = m.targetWidth, style = muted })
+		header[#header + 1] = ui.text("SLA", { width = m.limitWidth, style = muted })
 	end
-	header[#header + 1] = ui.text("Reviewer", { flex = 1, style = muted })
+	header[#header + 1] = ui.text("Operator", { flex = 1, style = muted })
 
 	local bodyRows = {}
 	for index, row in ipairs(filteredRows()) do
@@ -414,10 +414,10 @@ end
 local function App()
 	local m = metrics()
 	local cards = {
-		metricCard("Total Revenue", "$1,250.00", "+12.5%", "Visitors for the last 6 months", true, m.cardWidth),
-		metricCard("New Customers", "1,234", "-20%", "Acquisition needs attention", false, m.cardWidth),
-		metricCard("Active Accounts", "45,678", "+12.5%", "Engagement exceed targets", true, m.cardWidth),
-		metricCard("Growth Rate", "4.5%", "+4.5%", "Meets growth projections", true, m.cardWidth),
+		metricCard("Routed Today", "1,250", "+12.5%", "Packets cleared before handoff", true, m.cardWidth),
+		metricCard("SLA Breaches", "12", "-20%", "Escalations need attention", false, m.cardWidth),
+		metricCard("Open Signals", "45", "+12.5%", "Queues inside active targets", true, m.cardWidth),
+		metricCard("Drift Rate", "4.5%", "+4.5%", "Beacon variance within range", true, m.cardWidth),
 	}
 	local cardRows = {}
 	for index = 1, #cards, m.cardsPerRow do
@@ -443,24 +443,24 @@ local function App()
 				borderWidth = 1,
 			},
 		}, {
-			ui.text("Acme Inc.", { style = { color = ui.theme.textColor } }),
-			ui.text("Documents", { style = muted }),
-			navButton("Dashboard", m.sidebarWidth - 28),
-			navButton("Lifecycle", m.sidebarWidth - 28),
-			navButton("Analytics", m.sidebarWidth - 28),
-			navButton("Projects", m.sidebarWidth - 28),
-			navButton("Team", m.sidebarWidth - 28),
+			ui.text("Northstar Ops", { style = { color = ui.theme.textColor } }),
+			ui.text("Dispatch Flow", { style = muted }),
+			navButton("Overview", m.sidebarWidth - 28),
+			navButton("Intake", m.sidebarWidth - 28),
+			navButton("SLA", m.sidebarWidth - 28),
+			navButton("Queues", m.sidebarWidth - 28),
+			navButton("Operators", m.sidebarWidth - 28),
 			ui.box({ height = math.max(24, m.height - 440) }),
 			ui.text("Kyonru", { style = muted }),
 		})
 	end
 
 	local headerChildren = {
-		ui.text("Documents", { flex = 1 }),
+		ui.text("Dispatch Queue", { flex = 1 }),
 		ui.input({
 			width = m.compact and 150 or 184,
 			value = search,
-			placeholder = "Filter documents...",
+			placeholder = "Filter packets...",
 			onChange = function(value)
 				search = value
 			end,
@@ -512,6 +512,7 @@ end
 return {
 	id = "dashboard",
 	label = "Dashboard",
+	description = "A dispatch ops board with sidebar filters, metrics, charts, and a scrollable queue built from Glyph primitives.",
 	setup = setup,
 	window = {
 		width = 928,

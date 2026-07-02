@@ -1,7 +1,6 @@
 local ui = require("glyph")
 
 local colors = {
-  bg = { 0.026, 0.032, 0.046, 1 },
   panel = { 0.055, 0.068, 0.092, 0.96 },
   panelDeep = { 0.028, 0.036, 0.054, 0.98 },
   border = { 1, 1, 1, 0.14 },
@@ -62,38 +61,6 @@ local function pushLog(logs, entry)
   end
 
   return nextLogs
-end
-
-local function drawBackground(_, x, y, width, height, _, _, ctx)
-  ctx:color(colors.bg)
-  ctx:rect("fill", x, y, width, height)
-
-  ctx:color({ 1, 1, 1, 0.035 })
-  for ix = -80, width + 80, 38 do
-    ctx:line(x + ix, y, x + ix + 160, y + height)
-  end
-
-  ctx:color(alpha(colors.teal, 0.07))
-  ctx:polygon("fill", {
-    x,
-    y + 70,
-    x + 240,
-    y + 28,
-    x + 360,
-    y + height,
-    x,
-    y + height,
-  })
-
-  ctx:color(alpha(colors.coral, 0.06))
-  ctx:polygon("fill", {
-    x + width * 0.72,
-    y + height,
-    x + width,
-    y + height * 0.5,
-    x + width,
-    y + height,
-  })
 end
 
 local function drawSparkline(count)
@@ -307,111 +274,74 @@ local function App()
     }),
   })
 
-  return ui.stack({ width = "100%", height = "100%" }, {
-    ui.box({
-      position = "absolute",
-      inset = 0,
-      interactive = false,
-      accessibilityHidden = true,
-      draw = drawBackground,
-    }),
-    ui.scrollView({
-      position = "absolute",
-      inset = 0,
-      padding = { left = 28, right = 28, top = 24, bottom = 24 },
-      gap = 14,
-      align = "center",
+  return ui.scrollView({
+    width = "100%",
+    height = "100%",
+    padding = { left = 28, right = 28, top = 24, bottom = 24 },
+    gap = 14,
+    align = "center",
+  }, {
+    ui.panel({
+      title = "Mission Console",
+      width = "100%",
+      maxWidth = 860,
+      padding = 14,
+      gap = 12,
+      style = {
+        background = colors.panel,
+        borderColor = colors.border,
+        borderWidth = 1,
+        radius = 8,
+      },
     }, {
-      ui.row({ width = "100%", maxWidth = 860, align = "center", gap = 12 }, {
-        ui.column({ flex = 1, gap = 3 }, {
-          ui.text("Glyph Basic", {
-            textStyle = "h1",
-            style = { color = colors.text },
-          }),
-          ui.text("Responsive state, input, tabs, and custom drawing.", {
-            wrap = true,
-            width = "100%",
-            style = { color = colors.muted },
-          }),
+      ui.row({ width = "100%", gap = 10, align = "center" }, {
+        ui.button({
+          label = "Increment",
+          onClick = function()
+            local nextCount = count + 1
+            setCount(nextCount)
+            record("state", "Counter changed to " .. tostring(nextCount), colors.teal)
+          end,
         }),
-        ui.box({
-          width = 126,
-          height = 30,
-          display = "column",
-          align = "center",
-          justify = "center",
-          style = {
-            background = alpha(colors.teal, 0.14),
-            borderColor = alpha(colors.teal, 0.72),
-            borderWidth = 1,
-            radius = 8,
-          },
-        }, {
-          ui.text("starter app", { textStyle = "caption", style = { color = colors.text } }),
+        ui.button({
+          label = "Reset",
+          onClick = function()
+            setCount(0)
+            setFilter("")
+            setLogs(copyLogs())
+          end,
+        }),
+        ui.text("Count: " .. tostring(count), {
+          flex = 1,
+          style = { color = colors.text },
         }),
       }),
-      ui.panel({
-        title = "Mission Console",
+      ui.tabs({
         width = "100%",
-        maxWidth = 860,
-        padding = 14,
-        gap = 12,
-        style = {
-          background = colors.panel,
+        active = activeTab,
+        onChange = function(index)
+          setActiveTab(index)
+          record("input", "Switched to tab " .. tostring(index), colors.gold)
+        end,
+        tabWidth = 96,
+        tabHeight = 34,
+        tabStyle = {
+          background = { 1, 1, 1, 0.055 },
+          color = colors.muted,
           borderColor = colors.border,
           borderWidth = 1,
           radius = 8,
+          hover = { background = { 1, 1, 1, 0.09 }, color = colors.text },
+          active = {
+            background = alpha(colors.teal, 0.22),
+            color = colors.text,
+            borderColor = alpha(colors.teal, 0.78),
+          },
         },
       }, {
-        ui.row({ width = "100%", gap = 10, align = "center" }, {
-          ui.button({
-            label = "Increment",
-            onClick = function()
-              local nextCount = count + 1
-              setCount(nextCount)
-              record("state", "Counter changed to " .. tostring(nextCount), colors.teal)
-            end,
-          }),
-          ui.button({
-            label = "Reset",
-            onClick = function()
-              setCount(0)
-              setFilter("")
-              setLogs(copyLogs())
-            end,
-          }),
-          ui.text("Count: " .. tostring(count), {
-            flex = 1,
-            style = { color = colors.text },
-          }),
-        }),
-        ui.tabs({
-          width = "100%",
-          active = activeTab,
-          onChange = function(index)
-            setActiveTab(index)
-            record("input", "Switched to tab " .. tostring(index), colors.gold)
-          end,
-          tabWidth = 96,
-          tabHeight = 34,
-          tabStyle = {
-            background = { 1, 1, 1, 0.055 },
-            color = colors.muted,
-            borderColor = colors.border,
-            borderWidth = 1,
-            radius = 8,
-            hover = { background = { 1, 1, 1, 0.09 }, color = colors.text },
-            active = {
-              background = alpha(colors.teal, 0.22),
-              color = colors.text,
-              borderColor = alpha(colors.teal, 0.78),
-            },
-          },
-        }, {
-          { label = "Overview", content = overview },
-          { label = "Activity", content = activity },
-          { label = "Custom", content = custom },
-        }),
+        { label = "Overview", content = overview },
+        { label = "Activity", content = activity },
+        { label = "Custom", content = custom },
       }),
     }),
   })
@@ -420,6 +350,7 @@ end
 return {
   id = "basic",
   label = "Basic",
+  description = "A mission-console starter with state, tabs, a controlled input, a meter, an event log, and a custom sparkline.",
   window = {
     width = 840,
     height = 560,

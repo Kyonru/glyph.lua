@@ -239,10 +239,6 @@ local function App()
 		}),
 		ui.scrollView({ width = "100%", height = "100%", padding = compact and 14 or 24 }, {
 			ui.column({ gap = 14, width = "100%" }, {
-				ui.row({ gap = 12, width = "100%", align = "center" }, {
-					ui.h1("Typography Lab", { flex = 1 }),
-					ui.caption("fonts / scale / tags"),
-				}),
 				scaleControls(),
 				sampleContent,
 				componentSamples(),
@@ -254,6 +250,7 @@ end
 return {
 	id = "typography",
 	label = "Typography",
+	description = "Font registry lab: Inconsolata body, Sekuya headings, Acme descriptions, rich tags, and Japanese fallback.",
 	setup = setup,
 	window = {
 		width = 900,

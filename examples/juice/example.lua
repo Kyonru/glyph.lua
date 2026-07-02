@@ -674,7 +674,6 @@ local function App()
       ui.scrollView({ width = "100%", height = "100%", padding = compact and 12 or 22 }, {
         ui.column({ gap = 14, width = "100%" }, {
           ui.row({ gap = 10, width = "100%", align = "center" }, {
-            ui.text("Juice Lab", { style = { color = { 0.78, 0.25, 1, 1 } } }),
             ui.box({ grow = 1, height = 1, interactive = false }),
             ui.text(status, { style = { color = { 1, 0.86, 0.24, 1 } } }),
           }),
@@ -696,6 +695,7 @@ end
 return {
   id = "juice",
   label = "Juice",
+  description = "A pattern-repeat minigame showing feedback sequences, particles, shake, and emitted audio cues.",
   setup = setup,
   teardown = teardown,
   update = update,

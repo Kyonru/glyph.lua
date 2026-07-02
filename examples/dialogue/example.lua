@@ -281,6 +281,7 @@ end
 return {
 	id = "dialogue",
 	label = "Dialogue",
+	description = "Run the vendored Love-Dialogue demo and toggle between library drawing and Glyph's dialogue adapter.",
 	window = {
 		width = 1024,
 		height = 768,

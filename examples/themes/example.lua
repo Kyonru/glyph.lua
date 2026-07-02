@@ -847,6 +847,7 @@ end
 return {
   id = "themes",
   label = "Themes",
+  description = "Switch density and color tokens across a dense ops UI with variants, tabs, and stateful controls.",
   window = {
     width = 1180,
     height = 760,

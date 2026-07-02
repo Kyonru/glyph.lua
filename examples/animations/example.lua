@@ -432,6 +432,7 @@ end
 return {
   id = "animations",
   label = "Animations",
+  description = "Toggle a squad card, move a marker, resize a panel, and animate meters without changing layout or hit targets.",
   window = {
     width = 980,
     height = 590,

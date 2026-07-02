@@ -2146,6 +2146,7 @@ end
 return {
 	id = "inventory",
 	label = "Inventory",
+	description = "Potion satchel, paged slots, and a variable-size case grid with drag, keyboard carry, and sprite-sheet items.",
 	install = {
 		gamepad = false,
 	},

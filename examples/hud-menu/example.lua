@@ -209,6 +209,7 @@ end
 return {
 	id = "hud-menu",
 	label = "HUD Menu",
+	description = "A neon command deck with custom drawing, animated selection, and d-pad friendly menu structure.",
 	setup = setup,
 	window = {
 		width = 920,

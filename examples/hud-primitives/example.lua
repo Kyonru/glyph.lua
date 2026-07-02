@@ -263,6 +263,18 @@ local function portraitPanel()
 		clip = frameShape,
 	}, {
 		ui.box({ position = "absolute", inset = 0, interactive = false, draw = drawGridBackground }),
+		ui.text("CLIPPED STATUS FRAME", {
+			position = "absolute",
+			left = 22,
+			top = 24,
+			style = { color = { 1, 1, 1, 1 } },
+		}),
+		ui.text("circle stencil mask", {
+			position = "absolute",
+			left = 22,
+			top = 50,
+			style = { color = { 0.72, 0.86, 1, 1 } },
+		}),
 		ui.stack({
 			position = "absolute",
 			right = 24,
@@ -272,18 +284,6 @@ local function portraitPanel()
 			stencil = { shape = { kind = "circle" }, mode = "inside" },
 		}, {
 			portraitImageNode(),
-		}),
-		ui.text("CLIPPED STATUS FRAME", {
-			position = "absolute",
-			left = 22,
-			top = 24,
-			style = { color = { 1, 1, 1, 1 } },
-		}),
-		ui.text("polygon clip + circle stencil", {
-			position = "absolute",
-			left = 22,
-			top = 50,
-			style = { color = { 0.72, 0.86, 1, 1 } },
 		}),
 		ui.meter({
 			position = "absolute",
@@ -360,10 +360,6 @@ local function App()
 	return ui.stack({ width = viewport.width, height = viewport.height }, {
 		ui.box({ position = "absolute", inset = 0, interactive = false, draw = drawGridBackground }),
 		ui.column({ padding = 24, gap = 16, width = "100%", height = "100%" }, {
-			ui.row({ gap = 12, align = "center" }, {
-				ui.text("HUD PRIMITIVES", { style = { color = { 1, 1, 1, 1 } } }),
-				ui.text("meter + shape + clip + stencil", { style = { color = { 0.72, 0.82, 0.9, 1 } } }),
-			}),
 			ui.row({ gap = 18, grow = 1 }, {
 				cardRows,
 				rightPanel,
@@ -398,6 +394,7 @@ end
 return {
 	id = "hud-primitives",
 	label = "HUD Primitives",
+	description = "HUD building blocks: meters, portraits, clipping, stencil masks, shape gauges, and selection feedback.",
 	setup = setup,
 	teardown = teardown,
 	window = {

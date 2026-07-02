@@ -736,6 +736,7 @@ end
 return {
 	id = "path-feedback",
 	label = "Path Feedback",
+	description = "Trace a vector relay with path reveal, a morphing sigil, pulse rings, particles, and feedback targets.",
 	setup = setup,
 	teardown = teardown,
 	update = update,

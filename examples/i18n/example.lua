@@ -416,7 +416,7 @@ local function App()
 	local compact = ui.below("md")
 	local medium = ui.below("lg")
 	local padding = compact and 12 or 18
-	local contentWidth = math.max(320, viewport.width - padding * 2)
+	local contentWidth = math.max(320, viewport.width - padding * 2 - 48)
 	local commandWidth = compact and contentWidth or 190
 	local mainWidth = compact and contentWidth or math.max(360, contentWidth - commandWidth - 16)
 
@@ -461,11 +461,11 @@ local function App()
 		mainPanels,
 	})
 
-	return ui.scrollView({ width = "100%", height = "100%" }, {
-		ui.column({
-			width = viewport.width,
-			minHeight = viewport.height,
-			padding = padding,
+		return ui.scrollView({ width = "100%", height = "100%" }, {
+			ui.column({
+				width = contentWidth,
+				minHeight = viewport.height,
+				padding = padding,
 			gap = 12,
 			style = { background = ui.theme.backgroundColor },
 		}, {
@@ -479,6 +479,7 @@ end
 return {
 	id = "i18n",
 	label = "I18n",
+	description = "Switch command-console locales, translate keyed labels, and inspect cached translation behavior.",
 	setup = setup,
 	teardown = teardown,
 	window = {

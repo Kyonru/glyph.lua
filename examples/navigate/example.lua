@@ -239,8 +239,8 @@ local function App()
 		local node
 		node = ui.button({
 			label = label,
-			width = 118,
-			height = 32,
+			width = 108,
+			height = 28,
 			navGroup = "battle-commands",
 			style = activeCommand == label and classicSelectedButtonStyle or classicButtonStyle,
 			onClick = function()
@@ -367,11 +367,11 @@ local function App()
 			})
 		end
 
-		battleSubmenu = ui.column({
-			position = "absolute",
-			left = 344,
-			bottom = 106,
-			width = 180,
+			battleSubmenu = ui.column({
+				position = "absolute",
+				left = 332,
+				bottom = 118,
+				width = 180,
 			gap = 6,
 			padding = 8,
 			zIndex = 8,
@@ -435,17 +435,17 @@ local function App()
 						item("Field Kit", 100),
 						item("Old Key", 88),
 					}),
-					ui.row({ gap = 10, navGroup = "battle-commands" }, {
-						ui.column({ width = 148, gap = 6, padding = 8, style = classicPanelStyle, draw = drawBorderPulsePanel }, {
-							ui.text("Command", { style = { color = { 0.94, 0.96, 1, 1 } } }),
-							attackCommand,
-							magicCommand,
+						ui.row({ gap = 8, navGroup = "battle-commands" }, {
+							ui.column({ width = 136, gap = 4, padding = 6, style = classicPanelStyle, draw = drawBorderPulsePanel }, {
+								ui.text("Command", { style = { color = { 0.94, 0.96, 1, 1 } } }),
+								attackCommand,
+								magicCommand,
 							itemCommand,
 							guardCommand,
 							runCommand,
 						}),
-						ui.panel({ grow = 1, gap = 6, padding = 8, style = ui.composeStyles(classicPanelStyle, { shader = backgroundShaderStyle }) }, {
-							ui.text("Party", { style = { color = { 0.94, 0.96, 1, 1 } } }),
+							ui.panel({ grow = 1, gap = 6, padding = 8, style = ui.composeStyles(classicPanelStyle, { shader = backgroundShaderStyle }) }, {
+								ui.text("Party", { style = { color = { 0.94, 0.96, 1, 1 } } }),
 							ui.row({ gap = 8 }, {
 								ui.text("Ari", { style = { color = { 0.94, 0.96, 1, 1 } } }),
 								ui.text("HP  482/520", { style = { color = { 0.72, 0.9, 1, 1 } } }),
@@ -459,8 +459,7 @@ local function App()
 							ui.text("Queued: " .. queuedBattle, { style = { color = { 1, 0.94, 0.68, 1 } } }),
 						}),
 					}),
-					ui.text("Selected: " .. selected, { style = { color = ui.theme.accentColor } }),
-				}),
+					}),
 
 				ui.panel({ width = 210, height = "100%", gap = 10, navGroup = "inspector", style = panelStyle }, {
 					ui.text("Inspector", { style = { color = ui.theme.mutedTextColor } }),
@@ -490,6 +489,7 @@ end
 return {
 	id = "navigate",
 	label = "Navigation",
+	description = "A JRPG command layout exercising beam navigation, nav scopes, focus rings, and gamepad activation.",
 	setup = setup,
 	window = { width = 860, height = 560, title = "Navigation - glyph.lua", resizable = true },
 	install = {

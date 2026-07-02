@@ -326,6 +326,7 @@ end
 return {
   id = "accessibility",
   label = "Accessibility",
+  description = "Drive a ship-console UI with keyboard or gamepad while Glyph emits fake screen-reader events, focus changes, and live-region updates.",
   setup = setup,
   teardown = teardown,
   window = {

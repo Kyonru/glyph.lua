@@ -973,12 +973,12 @@ local function hudOverlay()
 			radius = 8,
 		},
 	}, {
-		ui.text("event stream", { textStyle = "caption", style = { color = colors.muted } }),
-		ui.text(logs[#logs - 3] or "", { textStyle = "caption", style = { color = colors.muted } }),
-		ui.text(logs[#logs - 2] or "", { textStyle = "caption", style = { color = colors.muted } }),
-		ui.text(logs[#logs - 1] or "", { textStyle = "caption", style = { color = colors.muted } }),
-		ui.text(logs[#logs] or "", { textStyle = "caption", style = { color = colors.text } }),
-	})
+			ui.text("event stream", { textStyle = "caption", width = 308, style = { color = colors.muted } }),
+			ui.text(logs[#logs - 3] or "", { textStyle = "caption", wrap = true, width = 308, style = { color = colors.muted } }),
+			ui.text(logs[#logs - 2] or "", { textStyle = "caption", wrap = true, width = 308, style = { color = colors.muted } }),
+			ui.text(logs[#logs - 1] or "", { textStyle = "caption", wrap = true, width = 308, style = { color = colors.muted } }),
+			ui.text(logs[#logs] or "", { textStyle = "caption", wrap = true, width = 308, style = { color = colors.text } }),
+		})
 
 	return ui.stack({ width = "100%", height = "100%" }, {
 		topPanel,
@@ -1165,6 +1165,7 @@ end
 return {
 	id = "menori",
 	label = "Menori",
+	description = "Menori scenes with Glyph HUD panels, a loading overlay, transitions, and clickable world-space billboards.",
 	setup = setup,
 	teardown = teardown,
 	update = update,

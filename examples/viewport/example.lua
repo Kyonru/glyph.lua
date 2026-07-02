@@ -352,10 +352,6 @@ local function App()
   return ui.stack({ width = view.width, height = view.height }, {
     gridBackground(),
     ui.column({ padding = 12, gap = 10, width = "100%", height = "100%" }, {
-      ui.row({ gap = 8, align = "center", width = contentWidth }, {
-        ui.text("Viewport Backend"),
-        ui.text("Push / Shove adapter", { style = { color = ui.theme.mutedTextColor } }),
-      }),
       ui.row({ gap = 6, width = contentWidth }, {
         backendButton("native", "Native"),
         backendButton("push", "Push"),
@@ -375,6 +371,7 @@ end
 return {
   id = "viewport",
   label = "Viewport",
+  description = "Compare native, Push, and Shove virtual viewports with pointer conversion, scroll rows, and modal hit tests.",
   setup = setup,
   teardown = teardown,
   update = update,

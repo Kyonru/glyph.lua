@@ -126,10 +126,10 @@ local function withAlpha(color, alpha)
   return { color[1], color[2], color[3], alpha }
 end
 
-local function metricCard(label, value, accent)
+local function metricCard(label, value, accent, width)
   accent = accent or ui.theme.accentColor
   return ui.column({
-    width = 124,
+    width = width or 124,
     padding = { x = 10, y = 8 },
     gap = 2,
     style = {
@@ -144,8 +144,7 @@ local function metricCard(label, value, accent)
       style = { color = ui.theme.mutedTextColor },
     }),
     ui.text(value, {
-      textStyle = "h3",
-      style = { color = accent },
+      style = { fontSize = 18, color = accent },
     }),
   })
 end
@@ -200,17 +199,7 @@ local function App()
     width = 820,
     backgroundColor = ui.theme.backgroundColor,
   }, {
-    ui.row({ width = "100%", gap = 12, align = "center" }, {
-      ui.column({ flex = 1, gap = 2 }, {
-        ui.text("Performance", { textStyle = "h2" }),
-        ui.text("10k event log with a mounted window, static row cache, and live frame metrics.", {
-          style = { color = ui.theme.mutedTextColor },
-        }),
-      }),
-      metricCard("fps", tostring(metrics.fps), ui.theme.accentColor),
-    }),
-
-    ui.row({ gap = 8, align = "center" }, {
+    ui.row({ gap = 8, align = "center", width = "100%" }, {
       ui.button({ label = "-1000", onClick = function() moveWindow(-1000) end }),
       ui.button({ label = "-100", onClick = function() moveWindow(-100) end }),
       ui.button({ label = "-10", onClick = function() moveWindow(-10) end }),
@@ -218,6 +207,8 @@ local function App()
       ui.button({ label = "+10", onClick = function() moveWindow(10) end }),
       ui.button({ label = "+100", onClick = function() moveWindow(100) end }),
       ui.button({ label = "+1000", onClick = function() moveWindow(1000) end }),
+      ui.box({ flex = 1, height = 1, interactive = false }),
+      metricCard("fps", tostring(metrics.fps), ui.theme.accentColor, 110),
     }),
 
     ui.row({ gap = 8, align = "center" }, {
@@ -241,7 +232,7 @@ local function App()
       metricCard("row builds", tostring(metrics.rowBuilds), { 0.34, 0.58, 0.92, 1 }),
       metricCard("cache hits", tostring(metrics.cachedRows), { 0.95, 0.68, 0.22, 1 }),
       metricCard("layouts", tostring(metrics.layoutCount), { 0.76, 0.48, 0.95, 1 }),
-      metricCard("render", string.format("%.2fms", metrics.renderMs), { 0.92, 0.36, 0.4, 1 }),
+      metricCard("render", string.format("%.2fms", metrics.renderMs), { 0.92, 0.36, 0.4, 1 }, 142),
       metricCard("frame", tostring(metrics.frame), { 0.52, 0.62, 0.7, 1 }),
     }),
 
@@ -292,6 +283,7 @@ end
 return {
   id = "performance",
   label = "Performance",
+  description = "A windowed 10k event log with static row cache, live metrics, and large-step scrolling controls.",
   setup = setup,
   update = update,
   wheelmoved = wheelmoved,

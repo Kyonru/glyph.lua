@@ -29,6 +29,20 @@ love examples/viewport
 love examples/performance
 ```
 
+Run every example as a manual tour:
+
+```sh
+make examples-tour
+# or
+make tour
+```
+
+Press **Enter** in the Love2D window to close the current example and launch the
+next one.
+
+The Makefile uses `LOVE_BIN` when set, otherwise it tries `love` from `PATH` and
+then `/Applications/love.app/Contents/MacOS/love` on macOS.
+
 Generate documentation GIFs from the dedicated capture scenes:
 
 ```sh
@@ -40,9 +54,9 @@ The command requires Love2D and FFmpeg. Set `LOVE_BIN` or `FFMPEG_BIN` when the
 executables are not on `PATH`; on macOS the script also checks
 `/Applications/love.app/Contents/MacOS/love`.
 
-Standalone examples share a runner shell that renders the example title,
-description, and then the runnable demo surface. Set `chrome = false` on an
-example return table when an example needs to own the entire viewport.
+Standalone examples share a runner shell that renders the example `label`,
+example `description`, and then the runnable demo surface. Set `chrome = false`
+on an example return table when an example needs to own the entire viewport.
 
 For shop/combat/debug UI patterns that combine these examples, see
 [Game UI Patterns](game-ui-patterns.md).

@@ -396,12 +396,6 @@ local function App()
 			align = "center",
 			gap = 10,
 		}, {
-			ui.text("Scene-backed Modals", { style = { color = TEXT } }),
-			ui.text(
-				"Particles and the moving probe keep running behind every transition.",
-				{ style = { color = MUTED } }
-			),
-			ui.box({ height = 18 }),
 			ui.row({ gap = 10 }, {
 				launchBtn("Fade", ACCENT, function()
 					ui.modal.open("fade", FadeModal, {
@@ -493,6 +487,7 @@ end
 return {
 	id = "modal",
 	label = "Modal",
+	description = "Open modals over a live probe field: fade, slide, scale, shader, confirm, and stateful counter patterns.",
 	window = {
 		width = 960,
 		height = 580,
