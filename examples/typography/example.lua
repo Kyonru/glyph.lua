@@ -15,18 +15,37 @@ local translations = {
 		status = "Idioma: Espanol",
 	},
 	ja = {
-		briefing = "[font=japanese]信号を発見[/font][newline][font=japanese]ベガを中継地点へ誘導し、通信を保ってください。[/font]",
+		briefing = "[font=japanese]信号を発見[/font][newline][font=japanese][color=#7cffae]ベガ[/color]を中継地点へ誘導し、通信を保ってください。[/font]",
 		status = "言語: 日本語",
 	},
 }
 
-local function setup()
+local function scaledSizes(nextScale)
+	nextScale = nextScale or scale
+	return {
+		body = math.floor(14 * nextScale + 0.5),
+		title = math.floor(31 * nextScale + 0.5),
+		subheader = math.floor(22 * nextScale + 0.5),
+		description = math.floor(14 * nextScale + 0.5),
+		japanese = math.floor(14 * nextScale + 0.5),
+	}
+end
+
+local function loadFonts(nextScale)
 	local loveModule = _G.love
-	local fonts = ExampleFonts.load(loveModule, { body = 14, title = 22, subheader = 16, japanese = 14 })
-	fonts.heading = fonts.subheader
+	local fonts = ExampleFonts.load(loveModule, scaledSizes(nextScale))
+	local richFonts = ExampleFonts.load(loveModule, {
+		body = math.floor(14 * (nextScale or scale) + 0.5),
+		subheader = math.floor(16 * (nextScale or scale) + 0.5),
+		japanese = math.floor(14 * (nextScale or scale) + 0.5),
+	})
+	fonts.heading = richFonts.subheader
 	fonts.display = fonts.title
 	fonts.mono = fonts.body
+	return fonts
+end
 
+local function configureRichText(fonts)
 	local ok, sysl = pcall(require, "sysl_text")
 	if ok then
 		ui.richTextBackend.configure({
@@ -34,7 +53,7 @@ local function setup()
 			defaults = {
 				font = fonts.body,
 				color = { 0.9, 0.96, 1, 1 },
-				adjust_line_height = 2,
+				adjust_line_height = math.floor(10 * scale + 0.5),
 				print_speed = 0.001,
 			},
 			configure = function(Text)
@@ -44,6 +63,11 @@ local function setup()
 			end,
 		})
 	end
+end
+
+local function setup()
+	local fonts = loadFonts(scale)
+	configureRichText(fonts)
 
 	ui.i18n.configure({
 		locale = locale,
@@ -84,7 +108,7 @@ local function setup()
 		typography = {
 			text = { font = "body", fontSize = 14, lineHeight = 20 },
 			h1 = { font = "display", fontSize = 31, lineHeight = 38, color = { 1, 1, 1, 1 } },
-			h2 = { font = "heading", fontSize = 22, lineHeight = 29, color = { 0.8, 0.9, 1, 1 } },
+			h2 = { font = "subheader", fontSize = 22, lineHeight = 29, color = { 0.8, 0.9, 1, 1 } },
 			description = { font = "description", fontSize = 14, lineHeight = 21, color = { 0.55, 0.66, 0.78, 1 } },
 			paragraph = { font = "body", fontSize = 14, lineHeight = 22 },
 			caption = { font = "body", fontSize = 11, lineHeight = 16, color = { 0.55, 0.66, 0.78, 1 } },
@@ -98,7 +122,12 @@ end
 
 local function applyScale(nextScale)
 	scale = math.max(0.8, math.min(1.4, nextScale))
-	ui.setTheme({ textScale = scale })
+	local fonts = loadFonts(scale)
+	configureRichText(fonts)
+	ui.setTheme({
+		textScale = scale,
+		fonts = fonts,
+	})
 end
 
 local function localeButton(id, label)
@@ -157,7 +186,10 @@ local function styleSamples()
 			wrap = true,
 			width = "100%",
 		}),
-		ui.caption("Caption text uses the same layout path, so it wraps and scales with the theme."),
+		ui.caption("Caption text uses the same layout path, so it wraps and scales with the theme.", {
+			wrap = true,
+			width = "100%",
+		}),
 		ui.text("mono/status/log_0442", { textStyle = "code" }),
 	})
 end
@@ -166,7 +198,7 @@ local function richSamples()
 	return ui.panel({ title = "Rich Tags", titleTextStyle = "h2", gap = 12, padding = 16, flex = 1 }, {
 		ui.richText("[font=heading]ALERT[/font] [color=#ffcf5a]incoming[/color]", {
 			width = "100%",
-			height = 52,
+			height = math.floor(58 * scale + 0.5),
 			wrap = true,
 			textVerticalAlign = "center",
 		}),
