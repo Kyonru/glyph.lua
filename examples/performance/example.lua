@@ -3,10 +3,28 @@ local ui = require("glyph")
 local TOTAL_EVENTS = 10000
 local WINDOW_SIZE = 42
 
+local colors = {
+  chassis = { 0.045, 0.05, 0.052, 1 },
+  rail = { 0.065, 0.072, 0.074, 1 },
+  field = { 0.035, 0.04, 0.042, 1 },
+  surface = { 0.085, 0.095, 0.098, 1 },
+  surfaceQuiet = { 0.062, 0.068, 0.07, 1 },
+  rule = { 0.27, 0.28, 0.28, 1 },
+  ruleSoft = { 0.27, 0.28, 0.28, 0.52 },
+  text = { 0.93, 0.91, 0.86, 1 },
+  muted = { 0.66, 0.64, 0.59, 1 },
+  amber = { 0.74, 0.45, 0.08, 1 },
+  amberWash = { 0.15, 0.105, 0.045, 1 },
+  amberStrong = { 0.2, 0.12, 0.035, 1 },
+}
+
 local events = {}
 local rowCache = {}
 local filter = ""
 local setWindowStart = nil
+local visibleRows = {}
+local visibleWindowStart = nil
+local visibleFilter = nil
 
 local metrics = {
   frame = 0,
@@ -14,14 +32,18 @@ local metrics = {
   renderMs = 0,
   layoutPasses = 0,
   rootBuilds = 0,
-  work = "pending",
+  work = "PENDING",
   visibleRows = 0,
   rowBuilds = 0,
   cachedRows = 0,
+  windowStart = 1,
+  windowEnd = 0,
 }
 
 local renderStartedAt = 0
 local rootBuildsBeforeRender = 0
+local captionText = { textStyle = "caption" }
+local measureText = { textStyle = "code", fontSize = 15 }
 
 local function currentFps()
   if love and love.timer and love.timer.getFPS then
@@ -40,14 +62,19 @@ for index = 1, TOTAL_EVENTS do
 end
 
 local exampleTheme = {
-  backgroundColor = { 0.05, 0.055, 0.065, 1 },
-  surfaceColor = { 0.105, 0.12, 0.14, 1 },
-  surfaceHoverColor = { 0.16, 0.18, 0.21, 1 },
-  borderColor = { 0.22, 0.26, 0.31, 1 },
-  textColor = { 0.88, 0.91, 0.94, 1 },
-  mutedTextColor = { 0.48, 0.54, 0.61, 1 },
-  accentColor = { 0.12, 0.68, 0.55, 1 },
-  lineHeight = 16,
+  backgroundColor = colors.chassis,
+  surfaceColor = colors.surface,
+  surfaceHoverColor = { 0.14, 0.15, 0.15, 1 },
+  surfacePressedColor = colors.field,
+  borderColor = colors.rule,
+  textColor = colors.text,
+  mutedTextColor = colors.muted,
+  accentColor = colors.amber,
+  accentTextColor = colors.field,
+  inputColor = colors.field,
+  radius = 2,
+  borderWidth = 1,
+  lineHeight = 18,
 }
 
 ui.on("beforeRender", function()
@@ -62,20 +89,8 @@ end)
 
 ui.on("afterRender", function()
   metrics.renderMs = (love.timer.getTime() - renderStartedAt) * 1000
-  metrics.work = metrics.rootBuilds > rootBuildsBeforeRender and "dirty / build" or "idle / reuse"
+  metrics.work = metrics.rootBuilds > rootBuildsBeforeRender and "DIRTY / BUILD" or "IDLE / REUSE"
 end)
-
-local header = ui.static(ui.row({
-  width = "100%",
-  gap = 8,
-  padding = { x = 8, y = 4 },
-  backgroundColor = { 0.08, 0.095, 0.11, 1 },
-  borderColor = ui.theme.borderColor,
-}, {
-  ui.text("#", { width = 64, color = ui.theme.mutedTextColor }),
-  ui.text("level", { width = 64, color = ui.theme.mutedTextColor }),
-  ui.text("message", { flex = 1, color = ui.theme.mutedTextColor }),
-}))
 
 local function clamp(value, minValue, maxValue)
   if value < minValue then
@@ -89,17 +104,78 @@ local function clamp(value, minValue, maxValue)
   return value
 end
 
+local function rule()
+  return ui.box({
+    width = "100%",
+    height = 1,
+    interactive = false,
+    accessibilityHidden = true,
+    style = { background = colors.rule },
+  })
+end
+
+local function sectionLabel(label)
+  return ui.text(label:upper(), {
+    textStyle = "caption",
+    style = { color = colors.muted },
+  })
+end
+
+local function railRegister(label, value)
+  return ui.stack({ width = "100%", height = 27 }, {
+    ui.row({
+      width = "100%",
+      height = 26,
+      gap = 8,
+      align = "center",
+    }, {
+      ui.text(label:upper(), {
+        width = 68,
+        textStyle = "caption",
+        style = { color = colors.muted },
+      }),
+      ui.text(value, {
+        flex = 1,
+        textStyle = "code",
+        style = { color = colors.text },
+      }),
+    }),
+    ui.box({
+      position = "absolute",
+      left = 0,
+      right = 0,
+      bottom = 0,
+      height = 1,
+      interactive = false,
+      accessibilityHidden = true,
+      style = { background = colors.ruleSoft },
+    }),
+  })
+end
+
 local function rowColor(event)
   if event.level == "error" then
-    return { 0.18, 0.075, 0.08, 1 }
+    return colors.amberStrong
   end
 
   if event.level == "warn" then
-    return { 0.18, 0.14, 0.07, 1 }
+    return colors.amberWash
   end
 
-  return nil
+  return event.index % 2 == 0 and colors.surfaceQuiet or colors.field
 end
+
+local ledgerHeader = ui.static(ui.row({
+  width = "100%",
+  height = 25,
+  align = "center",
+  padding = { x = 7 },
+  style = { background = colors.surface },
+}, {
+  ui.text("SEQ", { width = 70, textStyle = "caption", style = { color = colors.muted } }),
+  ui.text("LEVEL", { width = 70, textStyle = "caption", style = { color = colors.muted } }),
+  ui.text("EVENT", { flex = 1, textStyle = "caption", style = { color = colors.muted } }),
+}))
 
 local function getRow(event)
   local cached = rowCache[event.index]
@@ -109,16 +185,38 @@ local function getRow(event)
   end
 
   metrics.rowBuilds = metrics.rowBuilds + 1
+  local levelColor = event.level == "info" and colors.muted or colors.amber
 
-  cached = ui.static(ui.row({
-    width = "100%",
-    gap = 8,
-    padding = { x = 8, y = 3 },
-    backgroundColor = rowColor(event),
-  }, {
-    ui.text(string.format("%05d", event.index), { width = 64, color = ui.theme.mutedTextColor }),
-    ui.text(event.level, { width = 64 }),
-    ui.text(event.message, { flex = 1 }),
+  cached = ui.static(ui.stack({ width = "100%", height = 25 }, {
+    ui.row({
+      width = "100%",
+      height = 24,
+      align = "center",
+      padding = { x = 7 },
+      style = { background = rowColor(event) },
+    }, {
+      ui.text(string.format("%05d", event.index), {
+        width = 70,
+        textStyle = "code",
+        style = { color = colors.text },
+      }),
+      ui.text(event.level:upper(), {
+        width = 70,
+        textStyle = "code",
+        style = { color = levelColor },
+      }),
+      ui.text(event.message, { flex = 1, style = { color = colors.text } }),
+    }),
+    ui.box({
+      position = "absolute",
+      left = 0,
+      right = 0,
+      bottom = 0,
+      height = 1,
+      interactive = false,
+      accessibilityHidden = true,
+      style = { background = colors.ruleSoft },
+    }),
   }))
 
   rowCache[event.index] = cached
@@ -126,74 +224,10 @@ local function getRow(event)
 end
 
 local function matches(event)
-  return filter == "" or event.message:find(filter, 1, true) ~= nil or event.level:find(filter, 1, true) ~= nil
+  return filter == ""
+    or event.message:find(filter, 1, true) ~= nil
+    or event.level:find(filter, 1, true) ~= nil
 end
-
-local function withAlpha(color, alpha)
-  return { color[1], color[2], color[3], alpha }
-end
-
-local function metricCard(label, value, accent, width)
-  accent = accent or ui.theme.accentColor
-  local valueNode
-  if type(value) == "function" then
-    valueNode = ui.box({
-      width = "100%",
-      height = 22,
-      interactive = false,
-      draw = function(_, x, y, _, _, _, _, ctx)
-        ctx:color(accent)
-        ctx:text(value(), x, y, { fontSize = 18 })
-      end,
-    })
-  else
-    valueNode = ui.text(value, {
-      style = { fontSize = 18, color = accent },
-    })
-  end
-
-  return ui.column({
-    width = width or 124,
-    padding = { x = 10, y = 8 },
-    gap = 2,
-    style = {
-      background = { 0.085, 0.1, 0.12, 1 },
-      borderColor = withAlpha(accent, 0.52),
-      borderWidth = 1,
-      radius = 6,
-    },
-  }, {
-    ui.text(label, {
-      textStyle = "caption",
-      style = { color = ui.theme.mutedTextColor },
-    }),
-    valueNode,
-  })
-end
-
-local function liveSummary()
-  return ui.box({
-    width = "100%",
-    height = 18,
-    interactive = false,
-    draw = function(_, x, y, _, _, _, _, ctx)
-      ctx:color(ui.theme.mutedTextColor)
-      ctx:text(string.format(
-        "work=%s rootBuilds=%d layoutPasses=%d lastTotal=%.2fms frame=%d fps=%d",
-        metrics.work,
-        metrics.rootBuilds,
-        metrics.layoutPasses,
-        metrics.renderMs,
-        metrics.frame,
-        metrics.fps
-      ), x, y, { textStyle = "caption" })
-    end,
-  })
-end
-
-local visibleRows = {}
-local visibleWindowStart = nil
-local visibleFilter = nil
 
 local function rebuildVisibleRows(startIndex)
   if visibleWindowStart == startIndex and visibleFilter == filter then
@@ -204,12 +238,15 @@ local function rebuildVisibleRows(startIndex)
   visibleFilter = filter
   visibleRows = {}
   metrics.cachedRows = 0
+  metrics.windowStart = startIndex
+  metrics.windowEnd = startIndex - 1
 
   local index = startIndex
   while index <= TOTAL_EVENTS and #visibleRows < WINDOW_SIZE do
     local event = events[index]
     if matches(event) then
       visibleRows[#visibleRows + 1] = getRow(event)
+      metrics.windowEnd = event.index
     end
     index = index + 1
   end
@@ -218,7 +255,7 @@ local function rebuildVisibleRows(startIndex)
 end
 
 local function VisibleRows()
-  return ui.column({ gap = 1 }, visibleRows)
+  return ui.column({ width = "100%", gap = 0 }, visibleRows)
 end
 
 local function moveWindow(delta)
@@ -229,6 +266,64 @@ local function moveWindow(delta)
   end
 end
 
+local instruments = {
+  { label = "WORK", value = function() return metrics.work end, color = colors.amber },
+  { label = "FPS", value = function() return metrics.fps end },
+  { label = "LAST TOTAL", value = function() return string.format("%.2f MS", metrics.renderMs) end },
+  { label = "FRAME", value = function() return metrics.frame end },
+  { label = "ROOT BUILDS", value = function() return metrics.rootBuilds end },
+  { label = "LAYOUT PASSES", value = function() return metrics.layoutPasses end },
+  { label = "MOUNTED", value = function() return string.format("%02d / 10K", metrics.visibleRows) end },
+  { label = "CACHE HITS", value = function() return metrics.cachedRows end },
+}
+
+local function drawInstrumentRegister(_, x, y, width, height, _, _, ctx)
+  local columns = 4
+  local cellWidth = width / columns
+  local cellHeight = height / 2
+
+  ctx:color(colors.field)
+  ctx:rect("fill", x, y, width, height)
+  ctx:color(colors.rule)
+  ctx:rect("line", x, y, width, height, 0)
+  ctx:line(x, y + cellHeight, x + width, y + cellHeight)
+
+  for column = 1, columns - 1 do
+    local lineX = x + column * cellWidth
+    ctx:line(lineX, y, lineX, y + height)
+  end
+
+  for index, instrument in ipairs(instruments) do
+    local column = (index - 1) % columns
+    local row = math.floor((index - 1) / columns)
+    local cellX = x + column * cellWidth + 9
+    local cellY = y + row * cellHeight
+    ctx:color(colors.muted)
+    ctx:text(instrument.label, cellX, cellY + 6, captionText)
+    ctx:color(instrument.color or colors.text)
+    ctx:text(instrument.value(), cellX, cellY + 22, measureText)
+  end
+end
+
+local function stepButton(label, delta)
+  return ui.button({
+    label = label,
+    height = 30,
+    flex = 1,
+    style = {
+      radius = 0,
+      background = colors.surface,
+      borderColor = colors.rule,
+      hover = { background = { 0.14, 0.15, 0.15, 1 } },
+      pressed = { background = colors.field },
+      focused = { borderColor = colors.text, borderWidth = 2 },
+    },
+    onClick = function()
+      moveWindow(delta)
+    end,
+  })
+end
+
 local function App()
   metrics.rootBuilds = metrics.rootBuilds + 1
   local windowStart, nextWindowStart = ui.useState(1)
@@ -236,73 +331,147 @@ local function App()
 
   rebuildVisibleRows(windowStart)
 
-  return ui.column({
-    gap = 10,
-    padding = 12,
-    width = "100%",
+  local rail = ui.stack({
+    width = "23%",
+    minWidth = 208,
+    maxWidth = 252,
     height = "100%",
-    backgroundColor = ui.theme.backgroundColor,
+    style = { background = colors.rail },
   }, {
-    ui.row({ gap = 8, align = "center", width = "100%" }, {
-      ui.button({ label = "-1000", onClick = function() moveWindow(-1000) end }),
-      ui.button({ label = "-100", onClick = function() moveWindow(-100) end }),
-      ui.button({ label = "-10", onClick = function() moveWindow(-10) end }),
-      ui.text(string.format("window %05d / %05d", windowStart, TOTAL_EVENTS), { width = 190 }),
-      ui.button({ label = "+10", onClick = function() moveWindow(10) end }),
-      ui.button({ label = "+100", onClick = function() moveWindow(100) end }),
-      ui.button({ label = "+1000", onClick = function() moveWindow(1000) end }),
-      ui.box({ flex = 1, height = 1, interactive = false }),
-      metricCard("fps", function() return tostring(metrics.fps) end, ui.theme.accentColor, 110),
-    }),
-
-    ui.row({ gap = 8, align = "center" }, {
+    ui.column({
+      width = "100%",
+      height = "100%",
+      padding = { left = 16, right = 16, top = 15, bottom = 13 },
+      gap = 9,
+      style = { background = colors.rail },
+    }, {
+      sectionLabel("Window control"),
+      ui.text(string.format("%05d—%05d", metrics.windowStart, metrics.windowEnd), {
+        font = "mono",
+        fontSize = 20,
+        lineHeight = 26,
+        style = { color = colors.text },
+      }),
+      ui.text("42-row mounted window", {
+        textStyle = "caption",
+        style = { color = colors.muted },
+      }),
+      ui.row({ width = "100%", gap = 5 }, {
+        stepButton("-1000", -1000),
+        stepButton("-100", -100),
+        stepButton("-10", -10),
+      }),
+      ui.row({ width = "100%", gap = 5 }, {
+        stepButton("+10", 10),
+        stepButton("+100", 100),
+        stepButton("+1000", 1000),
+      }),
+      rule(),
+      sectionLabel("Exact filter"),
       ui.input({
-        width = 260,
+        width = "100%",
+        height = 32,
         value = filter,
-        placeholder = "Exact filter: info, warn, error...",
+        placeholder = "info, warn, error",
+        style = { radius = 0 },
         onChange = function(nextFilter)
           filter = nextFilter
           moveWindow(0)
         end,
       }),
-      ui.text("filter keeps data outside the UI tree; counters below show mounted work only", {
-        flex = 1,
-        color = ui.theme.mutedTextColor,
+      rule(),
+      sectionLabel("Synthetic dataset"),
+      ui.column({ width = "100%", gap = 0 }, {
+        railRegister("Source", "10,000"),
+        railRegister("Window", "42 max"),
+        railRegister("Storage", "app-owned"),
+      }),
+      ui.box({ width = "100%", grow = 1, interactive = false }),
+      ui.text("WHEEL / HOME / END", {
+        width = "100%",
+        wrap = true,
+        textStyle = "caption",
+        style = { color = colors.muted },
       }),
     }),
-
-    ui.row({ gap = 8, width = "100%", align = "stretch", wrap = true }, {
-      metricCard("visible", function() return string.format("%02d", metrics.visibleRows) end, { 0.12, 0.68, 0.55, 1 }),
-      metricCard("row builds", function() return tostring(metrics.rowBuilds) end, { 0.34, 0.58, 0.92, 1 }),
-      metricCard("cache hits", function() return tostring(metrics.cachedRows) end, { 0.95, 0.68, 0.22, 1 }),
-      metricCard("layout passes", function() return tostring(metrics.layoutPasses) end, { 0.76, 0.48, 0.95, 1 }),
-      metricCard("last total", function() return string.format("%.2fms", metrics.renderMs) end, { 0.92, 0.36, 0.4, 1 }, 142),
-      metricCard("root builds", function() return tostring(metrics.rootBuilds) end, { 0.52, 0.62, 0.7, 1 }),
-      metricCard("work", function() return metrics.work end, ui.theme.accentColor, 146),
+    ui.box({
+      position = "absolute",
+      top = 0,
+      right = 0,
+      bottom = 0,
+      width = 1,
+      interactive = false,
+      accessibilityHidden = true,
+      style = { background = colors.rule },
     }),
+  })
 
-    liveSummary(),
-
-    header,
+  local workfield = ui.column({
+    flex = 1,
+    height = "100%",
+    padding = { left = 20, right = 18, top = 13, bottom = 12 },
+    gap = 7,
+    style = { background = colors.chassis },
+  }, {
+    ui.row({ width = "100%", height = 30, align = "center", gap = 10 }, {
+      ui.text("Runtime ledger", {
+        textStyle = "h1",
+        style = { color = colors.text },
+      }),
+      ui.box({ flex = 1, height = 1, interactive = false }),
+      ui.box({
+        width = 7,
+        height = 7,
+        interactive = false,
+        accessibilityHidden = true,
+        style = { background = colors.amber, radius = 0 },
+      }),
+      ui.text("BOUNDED WINDOW", {
+        textStyle = "caption",
+        style = { color = colors.muted },
+      }),
+    }),
+    sectionLabel("Runtime instruments"),
+    ui.box({
+      width = "100%",
+      height = 88,
+      interactive = false,
+      draw = drawInstrumentRegister,
+    }),
+    ui.row({ width = "100%", height = 18, align = "center", gap = 10 }, {
+      sectionLabel("Event register"),
+      ui.box({ flex = 1, height = 1, interactive = false }),
+      ui.text(string.format("%05d—%05d", metrics.windowStart, metrics.windowEnd), {
+        textStyle = "code",
+        style = { color = colors.amber },
+      }),
+    }),
+    ledgerHeader,
     ui.scrollView({
       width = "100%",
       flex = 1,
-      gap = 1,
-      padding = 0,
+      gap = 0,
+      padding = { right = 4 },
       style = {
-        background = { 0.045, 0.052, 0.064, 1 },
-        borderColor = ui.theme.borderColor,
+        background = colors.field,
+        borderColor = colors.rule,
         borderWidth = 1,
-        radius = 4,
+        radius = 0,
       },
     }, {
       ui.memo(VisibleRows, { windowStart, filter }),
     }),
-
-    ui.text("Mouse wheel dirties and rebuilds the root. Otherwise the stable runner reuses it; every frame still lays out and draws the mounted window.", {
+    ui.text("Idle frames reuse the root; interaction rebuilds it. Layout, callback publication, and draw still run every frame.", {
       width = "100%",
       wrap = true,
+      textStyle = "caption",
+      style = { color = colors.muted },
     }),
+  })
+
+  return ui.row({ width = "100%", height = "100%" }, {
+    rail,
+    workfield,
   })
 end
 
@@ -314,7 +483,7 @@ local function update(dt)
   end
 end
 
-local function wheelmoved(dx, dy)
+local function wheelmoved(_, dy)
   moveWindow(-dy * 6)
 end
 
@@ -333,7 +502,15 @@ end
 return {
   id = "performance",
   label = "Performance",
-  description = "A windowed 10k event log that separates clean-root reuse from interaction-driven rebuilds.",
+  description = "A 10k-event service workbench that separates clean-root reuse from interaction-driven rebuilds.",
+  window = {
+    width = 960,
+    height = 640,
+    minWidth = 820,
+    minHeight = 560,
+    resizable = true,
+    title = "glyph - performance",
+  },
   setup = setup,
   update = update,
   wheelmoved = wheelmoved,

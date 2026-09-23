@@ -169,7 +169,10 @@ This demo uses development copies of Push and Shove from `dev/vendor`; Glyph app
 
 ## Performance
 
-Large dataset workflow with a visible window of mounted rows, static row reuse, and live FPS/timing display. The docs preview is fixed at 18 FPS for deterministic GIF capture; the runnable example reports real Love2D FPS.
+Large dataset service workbench with a 42-row mounted window, static row reuse,
+a flat runtime instrument register, and live FPS/timing display. The docs preview
+is fixed at 18 FPS for deterministic GIF capture; the runnable example reports
+real Love2D FPS.
 
 <!-- glyph:feature-gif-gallery -->
 ## Feature GIF Gallery

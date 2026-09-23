@@ -136,11 +136,12 @@ For large log/table views:
 
 See `examples/performance`.
 
-The performance example reports the previous completed frame as `idle / reuse`
-or `dirty / build`. `root builds` counts component executions, `layout passes`
-counts root layout events rather than visited nodes, and `last total` measures
-the whole Glyph render call, including build work when the frame is dirty plus
-layout, callback publication, and drawing.
+The performance example presents these readings in one flat instrument register
+beside its 10,000-event ledger. It reports the previous completed frame as
+`IDLE / REUSE` or `DIRTY / BUILD`. `ROOT BUILDS` counts component executions,
+`LAYOUT PASSES` counts root layout events rather than visited nodes, and
+`LAST TOTAL` measures the whole Glyph render call, including build work when the
+frame is dirty plus layout, callback publication, and drawing.
 
 ## Scenes And Layers
 
