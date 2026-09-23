@@ -6,12 +6,15 @@ local colors = {
   rail = { 0.065, 0.072, 0.074, 1 },
   field = { 0.035, 0.04, 0.042, 1 },
   surface = { 0.085, 0.095, 0.098, 1 },
+  surfaceRaised = { 0.115, 0.125, 0.128, 1 },
+  progressTrack = { 0.14, 0.155, 0.165, 1 },
   rule = { 0.27, 0.28, 0.28, 1 },
   ruleSoft = { 0.27, 0.28, 0.28, 0.52 },
   text = { 0.93, 0.91, 0.86, 1 },
   muted = { 0.66, 0.64, 0.59, 1 },
   amber = { 0.74, 0.45, 0.08, 1 },
-  amberWash = { 0.16, 0.105, 0.035, 1 },
+  amberBright = { 0.98, 0.70, 0.22, 1 },
+  amberWash = { 0.23, 0.165, 0.045, 1 },
 }
 
 local seedLogs = {
@@ -63,38 +66,87 @@ local function sectionLabel(label)
 end
 
 local function commandButton(label, shortcut, compact, primary, onClick)
-  return ui.row({
+  local children = {
+    ui.row({
+      width = "100%",
+      height = "100%",
+      align = "center",
+      padding = { x = 10, y = 5 },
+      interactive = false,
+      accessibilityHidden = true,
+    }, {
+      ui.text(label, {
+        font = "mono",
+        fontSize = compact and 14 or 16,
+        lineHeight = compact and 18 or 20,
+        style = { color = primary and colors.amberBright or colors.text },
+      }),
+      ui.box({ flex = 1, height = 1, interactive = false }),
+      ui.text("[" .. shortcut .. "]", {
+        textStyle = "code",
+        style = { color = colors.muted },
+      }),
+    }),
+  }
+
+  if primary then
+    local markLength = compact and 8 or 10
+    local markWidth = 2
+    local function mark(props)
+      props.interactive = false
+      props.accessibilityHidden = true
+      props.style = { background = colors.amberBright, radius = 0 }
+      return ui.box(props)
+    end
+
+    children[#children + 1] = mark({ position = "absolute", left = 0, top = 0, bottom = 0, width = markWidth })
+    children[#children + 1] = mark({ position = "absolute", right = 0, top = 0, bottom = 0, width = markWidth })
+    children[#children + 1] = mark({ position = "absolute", left = 0, top = 0, width = markLength, height = markWidth })
+    children[#children + 1] = mark({ position = "absolute", left = 0, bottom = 0, width = markLength, height = markWidth })
+    children[#children + 1] = mark({ position = "absolute", right = 0, top = 0, width = markLength, height = markWidth })
+    children[#children + 1] = mark({ position = "absolute", right = 0, bottom = 0, width = markLength, height = markWidth })
+  end
+
+  return ui.stack({
     key = "command-" .. label:lower(),
     role = "button",
     focusable = true,
     accessibilityLabel = label,
     width = "100%",
     height = compact and 36 or 38,
-    align = "center",
-    padding = { x = 10, y = 5 },
     style = {
-      background = primary and colors.field or colors.surface,
-      borderColor = primary and colors.amber or colors.rule,
-      borderWidth = 1,
+      background = colors.surfaceRaised,
+      borderColor = colors.rule,
+      borderWidth = primary and 0 or 1,
       radius = 0,
       hover = { background = primary and colors.amberWash or colors.field },
       pressed = { background = colors.surface },
       focused = { borderColor = colors.text, borderWidth = 2 },
     },
     onClick = onClick,
-  }, {
-    ui.text(label, {
-      font = "mono",
-      fontSize = compact and 14 or 16,
-      lineHeight = compact and 18 or 20,
-      style = { color = primary and colors.amber or colors.text },
-    }),
-    ui.box({ flex = 1, height = 1, interactive = false }),
-    ui.text("[" .. shortcut .. "]", {
-      textStyle = "code",
-      style = { color = colors.muted },
-    }),
-  })
+  }, children)
+end
+
+local function instrumentMeter(progress)
+  return function(_, x, y, width, height, _, _, ctx)
+    local fillWidth = math.floor(width * progress + 0.5)
+
+    ctx:color(colors.progressTrack)
+    ctx:rect("fill", x, y, width, height)
+    ctx:color({ 0.2, 0.215, 0.225, 0.8 })
+    ctx:rect("fill", x, y, width, 1)
+
+    if fillWidth > 0 then
+      ctx:color(colors.amber)
+      ctx:rect("fill", x, y, fillWidth, height)
+      ctx:color(colors.amberBright)
+      ctx:rect("fill", x, y + 1, fillWidth, math.max(1, height - 3))
+      ctx:color({ 1, 0.79, 0.34, 0.9 })
+      ctx:rect("fill", x, y, fillWidth, 1)
+      ctx:color({ 0.58, 0.3, 0.035, 0.9 })
+      ctx:rect("fill", x, y + height - 1, fillWidth, 1)
+    end
+  end
 end
 
 local function metricRow(label, value, compact)
@@ -355,30 +407,71 @@ local function App()
 
   local function modeButton(index)
     local name = modeNames[index]
-    return ui.button({
+    local selected = activeTab == index
+    local children = {
+      ui.row({
+        width = "100%",
+        height = "100%",
+        align = "center",
+        gap = compact and 5 or 8,
+        padding = { left = compact and 12 or 28, right = 8, y = 5 },
+        interactive = false,
+        accessibilityHidden = true,
+      }, {
+        ui.text(selected and ">" or "", {
+          width = compact and 12 or 20,
+          font = "mono",
+          fontSize = compact and 15 or 18,
+          lineHeight = 20,
+          style = { color = colors.amberBright },
+        }),
+        ui.text(name:upper(), {
+          flex = 1,
+          font = "mono",
+          fontSize = compact and 15 or 18,
+          lineHeight = 20,
+          style = { color = selected and colors.amberBright or colors.muted },
+        }),
+      }),
+    }
+    if selected then
+      children[#children + 1] = ui.box({
+        position = "absolute",
+        left = 0,
+        top = 0,
+        bottom = 0,
+        width = 2,
+        interactive = false,
+        accessibilityHidden = true,
+        style = { background = colors.amberBright, radius = 0 },
+      })
+    end
+
+    return ui.stack({
       key = "mode-" .. name:lower(),
-      label = (activeTab == index and ">       " or "   ") .. name:upper(),
       role = "tab",
-      active = activeTab == index,
+      styleType = "tab",
+      accessibilityLabel = name,
+      focusable = true,
+      active = selected,
       navGroup = "workbench-modes",
       width = "100%",
       height = 34,
-      padding = { left = compact and 12 or 29, right = 8, y = 5 },
       style = {
-        background = colors.field,
+        background = selected and colors.amberWash or colors.surfaceRaised,
         color = colors.muted,
         borderColor = colors.rule,
         borderWidth = 1,
         radius = 0,
-        hover = { background = colors.surface, color = colors.text },
-        pressed = { background = colors.amberWash },
+        hover = { background = selected and colors.amberWash or colors.surface, color = colors.text },
+        pressed = { background = colors.field },
         focused = { borderColor = colors.text, borderWidth = 2 },
-        active = { background = colors.amberWash, color = colors.amber },
+        active = { background = colors.amberWash, color = colors.amberBright },
       },
       onClick = function()
         switchMode(index)
       end,
-    })
+    }, children)
   end
 
   local topBarHeight = compact and 34 or 35
@@ -505,15 +598,14 @@ local function App()
         max = 1,
         flex = 1,
         height = compact and 8 or 21,
-        trackStyle = { background = colors.surface, radius = 0 },
-        fillStyle = { background = colors.amber, radius = 0 },
+        draw = instrumentMeter(progress),
       }),
       ui.text(string.format("%02d%%", math.floor(progress * 100 + 0.5)), {
         width = compact and 60 or 68,
         font = "mono",
         fontSize = compact and 18 or 23,
         lineHeight = compact and 20 or 25,
-        style = { color = colors.amber },
+        style = { color = colors.amberBright },
       }),
     }),
     ui.box({ width = "100%", height = compact and 12 or 9, shrink = 0, interactive = false }),

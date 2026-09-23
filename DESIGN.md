@@ -181,8 +181,9 @@ Borders are structural and normally one pixel. Focus may strengthen the existing
 
 - **Shape:** Compact rectangles; general defaults use the small radius while diagnostic examples may use square corners.
 - **Primary:** Service Amber with Accent Ink, reserved for the main available action.
-- **Command rails:** An amber outline may mark an available command while
-  reserving solid amber for selection and live instrumentation.
+- **Command rails:** Amber corner rails may mark the available command while
+  reserving solid amber for selection and live instrumentation. They stay
+  inside the control footprint; keyboard focus remains a separate full border.
 - **Secondary:** Surface Graphite with Warm Paper and a Rule Graphite boundary.
 - **Hover / Focus:** Hover changes the fill within the same footprint. Focus uses a precise two-pixel border in Warm Paper or Accent Ink; no glow.
 - **Disabled:** Lower-contrast graphite with Muted Stone, while preserving the control's size.
@@ -205,9 +206,9 @@ Borders are structural and normally one pixel. Focus may strengthen the existing
 
 Tabs are attached to their content region rather than floating above it.
 Operator shells may instead use a vertical semantic mode rail beside one fixed
-workfield. Inactive modes use neutral surfaces; the active mode uses Service
-Amber. Keyboard and gamepad focus must remain distinguishable from selection,
-including when both states are present.
+workfield. Inactive modes use neutral surfaces; the active mode uses an amber
+field and a precise leading marker. Keyboard and gamepad focus must remain
+distinguishable from selection, including when both states are present.
 
 ### Registers and Ledgers
 
@@ -215,7 +216,11 @@ Registers are the signature pattern. A shallow neutral header establishes column
 
 ### Meters and Instrument Cells
 
-Meters are thin, square-ended tracks with one amber fill. Instrument cells form a shared matrix with rules between cells; they are not individual metric cards. Labels stay quiet and values carry the visual weight.
+Meters are square-ended tracks with one amber fill. Inline meters stay thin;
+the primary instrument meter may expand to a 20–22 pixel band with a hotter
+inner fill and one-pixel highlight/shadow edges. Instrument cells form a shared
+matrix with rules between cells; they are not individual metric cards. Labels
+stay quiet and values carry the visual weight.
 
 ## Do's and Don'ts
 
