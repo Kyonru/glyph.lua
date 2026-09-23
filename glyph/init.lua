@@ -1060,7 +1060,10 @@ function ui.load(opts)
     ui.setLove(loveModule)
   end
 
-  local installOptions = opts.install or {}
+  local installOptions = {}
+  for key, value in pairs(opts.install or {}) do
+    installOptions[key] = value
+  end
   for key, value in pairs(opts) do
     if key ~= "window" and key ~= "theme" and key ~= "love" and key ~= "install" then
       installOptions[key] = value

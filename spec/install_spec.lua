@@ -302,4 +302,56 @@ describe("install", function()
     ui.render = previousRender
     _G.love = previousGlobalLove
   end)
+
+  it("does not mutate caller-owned install options while merging load options", function()
+    local fakeLove = {}
+    local install = {
+      gamepad = false,
+      order = "before",
+    }
+    local app = function()
+      return ui.text("ok")
+    end
+
+    local unregister = ui.load({
+      love = fakeLove,
+      install = install,
+      app = app,
+    })
+
+    assert.are.same({
+      gamepad = false,
+      order = "before",
+    }, install)
+    assert.is_nil(install.app)
+    assert.is_function(fakeLove.update)
+    assert.is_function(fakeLove.draw)
+
+    unregister()
+    ui.runtime:setLove(nil)
+  end)
+
+  it("keeps top-level load options ahead of nested install options", function()
+    local fakeLove = {}
+    local install = {
+      gamepad = false,
+      keypressed = true,
+    }
+
+    local unregister = ui.load({
+      love = fakeLove,
+      install = install,
+      gamepad = true,
+      keypressed = false,
+    })
+
+    assert.is_function(fakeLove.gamepadpressed)
+    assert.is_function(fakeLove.gamepadreleased)
+    assert.is_nil(fakeLove.keypressed)
+    assert.is_false(install.gamepad)
+    assert.is_true(install.keypressed)
+
+    unregister()
+    ui.runtime:setLove(nil)
+  end)
 end)
