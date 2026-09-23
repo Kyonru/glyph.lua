@@ -102,10 +102,19 @@ ui.modal.isOpen("settings")
 - Non-blocking overlays can pass input through.
 - Backdrop clicks close a layer only when `dismissOnBackdrop = true`.
 - Escape closes the top eligible layer unless `escapeToClose = false`.
+- A pushed blocking layer suspends keyboard, gamepad, and text input focus below it.
+- Closing a layer clears its input targets. When a pushed layer suspended focus,
+  Glyph restores the previously focused control after removal if it is still
+  reachable.
+- Suspension emits a focus-loss event without a focus cue. Successful restoration
+  emits the same focus event and cue metadata as an explicit `ui.setFocus` call.
 
 ## Hook Isolation
 
 Each scene layer has its own hook scope. `useState` inside a modal does not mutate state in the main scene or another modal.
+
+The layer root is available when its effects run, so an initial `useEffect` may
+call `ui.setFocus` for a node captured from that layer's first build.
 
 ## Menori Scenes
 

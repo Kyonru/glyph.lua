@@ -53,6 +53,63 @@ local function sortLayers(layers)
   end)
 end
 
+local function layerRootPath(layer)
+  return "layer:" .. tostring(layer.id)
+end
+
+local function nodeRootPath(node)
+  local root = node
+  while root and root.parent do
+    root = root.parent
+  end
+  return root and root.path or nil
+end
+
+local function transferRestoreFocus(layers, removedLayer)
+  local removedRootPath = layerRootPath(removedLayer)
+  for _, layer in ipairs(layers) do
+    if layer ~= removedLayer and layer._restoreFocusRootPath == removedRootPath then
+      layer._restoreFocusPath = removedLayer._restoreFocusPath
+      layer._restoreFocusRootPath = removedLayer._restoreFocusRootPath
+    end
+  end
+end
+
+local function inheritUnderlyingRestoreFocus(layers, targetLayer)
+  local targetIndex = nil
+  for index, layer in ipairs(layers) do
+    if layer == targetLayer then
+      targetIndex = index
+      break
+    end
+  end
+
+  if not targetIndex then
+    return
+  end
+
+  for index = targetIndex - 1, 1, -1 do
+    local layer = layers[index]
+    if layer._restoreFocusPath then
+      targetLayer._restoreFocusPath = layer._restoreFocusPath
+      targetLayer._restoreFocusRootPath = layer._restoreFocusRootPath
+      return
+    end
+  end
+end
+
+local function clearLayerReferences(scene, layer)
+  if scene.runtime and scene.runtime.clearTreeReferences then
+    scene.runtime:clearTreeReferences(layerRootPath(layer))
+  end
+end
+
+local function reconcileInputReferences(scene)
+  if scene.runtime and scene.runtime.reconcileInputReferences then
+    scene.runtime:reconcileInputReferences()
+  end
+end
+
 function Scene.new(runtime)
   return setmetatable({
     runtime = runtime,
@@ -145,6 +202,7 @@ function Scene:set(id, component, opts)
   opts.kind = opts.kind or "scene"
   opts.blocking = opts.blocking ~= false
   for _, layer in ipairs(self.layers) do
+    clearLayerReferences(self, layer)
     if self.runtime and self.runtime.clearAnimationRoot then
       self.runtime:clearAnimationRoot("layer:" .. tostring(layer.id))
     end
@@ -152,6 +210,7 @@ function Scene:set(id, component, opts)
   self.layers = {}
   local layer = self:createLayer(id, component, opts)
   self.layers[1] = layer
+  reconcileInputReferences(self)
   self.runtime:markDirty()
   return layer
 end
@@ -161,14 +220,39 @@ end
 ---@param opts? GlyphLayerOpts
 ---@return GlyphLayer
 function Scene:push(id, component, opts)
-  local existingIndex = self:findIndex(id)
+  local focusNode = self.runtime and self.runtime.focusNode or nil
+  local focusPath = self.runtime and self.runtime.focusPath or nil
+  local focusRootPath = nodeRootPath(focusNode)
+  local existingIndex, existingLayer = self:findIndex(id)
+  local restoreFocusPath = existingLayer and existingLayer._restoreFocusPath or nil
+  local restoreFocusRootPath = existingLayer and existingLayer._restoreFocusRootPath or nil
   if existingIndex then
+    clearLayerReferences(self, existingLayer)
     table.remove(self.layers, existingIndex)
   end
 
   local layer = self:createLayer(id, component, opts)
+  layer._restoreFocusPath = restoreFocusPath
+  layer._restoreFocusRootPath = restoreFocusRootPath
   self.layers[#self.layers + 1] = layer
   sortLayers(self.layers)
+
+  if not existingLayer and focusPath then
+    layer._restoreFocusPath = focusPath
+    layer._restoreFocusRootPath = focusRootPath
+  elseif existingLayer and focusPath and focusRootPath ~= layerRootPath(existingLayer)
+      and self.runtime and self.runtime.findReachableNode then
+    if not self.runtime:findReachableNode(focusPath, focusNode) then
+      layer._restoreFocusPath = focusPath
+      layer._restoreFocusRootPath = focusRootPath
+    end
+  end
+
+  if layer.blocking and not layer._restoreFocusPath then
+    inheritUnderlyingRestoreFocus(self.layers, layer)
+  end
+
+  reconcileInputReferences(self)
   self.runtime:markDirty()
   return layer
 end
@@ -183,6 +267,7 @@ function Scene:close(id)
     if type(layer.onExit) == "function" then
       layer.onExit(layer)
     end
+    reconcileInputReferences(self)
     self.runtime:markDirty()
   end
   return layer
@@ -215,6 +300,7 @@ function Scene:clear(predicate)
       end
     end
   end
+  reconcileInputReferences(self)
   self.runtime:markDirty()
 end
 
@@ -266,12 +352,27 @@ function Scene:update(dt)
     end
   end
 
+  local restoreFocusPath = nil
   for index = #remove, 1, -1 do
     local layer = self.layers[remove[index]]
+    if layer and layer._restoreFocusPath then
+      restoreFocusPath = layer._restoreFocusPath
+    end
+    if layer then
+      transferRestoreFocus(self.layers, layer)
+      clearLayerReferences(self, layer)
+    end
     if layer and self.runtime and self.runtime.clearAnimationRoot then
       self.runtime:clearAnimationRoot("layer:" .. tostring(layer.id))
     end
     table.remove(self.layers, remove[index])
+  end
+
+  if #remove > 0 then
+    reconcileInputReferences(self)
+    if self.runtime and self.runtime.restoreFocusPath then
+      self.runtime:restoreFocusPath(restoreFocusPath)
+    end
   end
 end
 

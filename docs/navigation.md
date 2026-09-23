@@ -270,6 +270,14 @@ considered as candidates:
   modal prevents focus from reaching nodes in layers below it.
 - Non-blocking overlays (`blocking = false`) are included alongside lower layers.
 
+Pushing a blocking layer suspends focus from the UI below it. Pointer input or the
+next navigation move can focus a control in the new layer. When the layer finishes
+closing, Glyph restores the previously focused control if that control still exists
+and is reachable. Rebuilt layer trees also preserve focus by node path, so activation
+always uses the current node and callbacks rather than a stale pre-render node.
+Nested blocking layers inherit that restoration target even when an intermediate
+layer never takes focus or closes out of order.
+
 ## `ui.Navigate`
 
 The underlying module is also exposed as `ui.Navigate` for advanced use:

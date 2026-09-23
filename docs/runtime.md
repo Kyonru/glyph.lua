@@ -144,6 +144,15 @@ focus is still on the same node. This keeps pressed styles, feedback, audio
 cues, and accessibility activation events consistent across mouse, keyboard,
 and gamepad mappings that forward to `ui.keypressed` / `ui.keyreleased`.
 
+Before keyboard, mapped gamepad, or text input is delivered, Glyph validates
+the focused node against the active scene stack. Controls below a blocking layer
+and nodes removed from a rebuilt or closed layer cannot receive input.
+
+Focus suspension dispatches `focusChanged(nil, previousNode)` without a focus
+audio cue. Restoring a still-reachable control is a normal focus acquisition: it
+dispatches `focusChanged(restoredNode, nil)` and emits the control's resolved
+focus audio, feedback, and accessibility events.
+
 Touch callbacks are wired automatically by `ui.install` / `ui.load`. Gamepad
 mapping is opt-in:
 

@@ -219,6 +219,265 @@ describe("Scene runtime integration", function()
     assert.are.equal(1, clicks)
   end)
 
+  it("suspends root keyboard and text input beneath a blocking modal", function()
+    local runtime = Runtime.new()
+    local clicks = 0
+    local value = ""
+
+    runtime:setLove(makeLove())
+
+    local function Main()
+      return Components.column({}, {
+        Components.button({
+          label = "main",
+          onClick = function()
+            clicks = clicks + 1
+          end,
+        }),
+        Components.input({
+          value = value,
+          onChange = function(nextValue)
+            value = nextValue
+          end,
+        }),
+      })
+    end
+
+    runtime:render(Main)
+    local mainButton = runtime.root.children[1]
+    local mainInput = runtime.root.children[2]
+    runtime:setFocus(mainButton)
+
+    Modal.open(runtime.scene, "dialog", textComponent("dialog"), {
+      transition = "none",
+    })
+    runtime:render(Main)
+
+    assert.is_nil(runtime.focusNode)
+    runtime:keypressed("return")
+    runtime:keyreleased("return")
+    assert.are.equal(0, clicks)
+
+    runtime:setFocus(mainInput)
+    assert.is_nil(runtime.focusNode)
+    runtime:textinput("x")
+    assert.are.equal("", value)
+  end)
+
+  it("restores reachable focus after a modal is removed", function()
+    local runtime = Runtime.new()
+    local mainClicks = 0
+    local modalClicks = 0
+
+    runtime:setLove(makeLove())
+
+    local function Main()
+      return Components.button({
+        label = "main",
+        onClick = function()
+          mainClicks = mainClicks + 1
+        end,
+      })
+    end
+
+    local function Dialog()
+      return Components.button({
+        label = "modal",
+        onClick = function()
+          modalClicks = modalClicks + 1
+        end,
+      })
+    end
+
+    runtime:render(Main)
+    runtime:setFocus(runtime.root)
+    Modal.open(runtime.scene, "dialog", Dialog, { transition = "none" })
+    runtime:render(Main)
+    runtime:setFocus(runtime.scene.layers[1].root)
+
+    Modal.close(runtime.scene, "dialog")
+    assert.is_nil(runtime.focusNode)
+    runtime:update(0)
+
+    assert.are.equal(runtime.root, runtime.focusNode)
+    runtime:keypressed("return")
+    runtime:keyreleased("return")
+    assert.are.equal(1, mainClicks)
+    assert.are.equal(0, modalClicks)
+  end)
+
+  it("preserves root restoration through unfocused nested modals removed out of order", function()
+    local runtime = Runtime.new()
+
+    runtime:setLove(makeLove())
+
+    local function button(label)
+      return function()
+        return Components.button({ label = label, onClick = function() end })
+      end
+    end
+
+    runtime:render(button("root"))
+    runtime:setFocus(runtime.root)
+
+    Modal.open(runtime.scene, "lower", button("lower"), { transition = "none" })
+    runtime:render(button("root"))
+    assert.is_nil(runtime.focusNode)
+
+    Modal.open(runtime.scene, "upper", button("upper"), { transition = "none" })
+    runtime:render(button("root"))
+    assert.is_nil(runtime.focusNode)
+
+    Modal.close(runtime.scene, "lower")
+    runtime:update(0)
+    assert.is_nil(runtime.focusNode)
+
+    Modal.close(runtime.scene, "upper")
+    runtime:update(0)
+    assert.are.equal("root", runtime.focusNode.props.label)
+  end)
+
+  it("preserves root restoration when an overlay is replaced by a blocking layer with the same id", function()
+    local runtime = Runtime.new()
+
+    runtime:setLove(makeLove())
+
+    local function Main()
+      return Components.button({ label = "root", onClick = function() end })
+    end
+
+    runtime:render(Main)
+    runtime:setFocus(runtime.root)
+    runtime.scene:push("shared", textComponent("overlay"), {
+      kind = "overlay",
+      blocking = false,
+      transition = "none",
+    })
+    runtime:render(Main)
+    assert.are.equal("root", runtime.focusNode.props.label)
+
+    Modal.open(runtime.scene, "shared", textComponent("modal"), {
+      transition = "none",
+    })
+    assert.is_nil(runtime.focusNode)
+    runtime:render(Main)
+
+    Modal.close(runtime.scene, "shared")
+    runtime:update(0)
+    assert.are.equal("root", runtime.focusNode.props.label)
+  end)
+
+  it("allows a layer effect to autofocus during its initial build", function()
+    local runtime = Runtime.new()
+    local clicks = 0
+
+    runtime:setLove(makeLove())
+
+    local function Dialog()
+      local button = Components.button({
+        label = "autofocus",
+        onClick = function()
+          clicks = clicks + 1
+        end,
+      })
+      runtime:useEffect(function()
+        runtime:setFocus(button)
+      end, {})
+      return button
+    end
+
+    Modal.open(runtime.scene, "dialog", Dialog, { transition = "none" })
+    runtime:render()
+
+    assert.are.equal(runtime.scene.layers[1].root, runtime.focusNode)
+    runtime:keypressed("return")
+    runtime:keyreleased("return")
+    assert.are.equal(1, clicks)
+  end)
+
+  it("emits focus loss without a cue and normal focus acquisition on restoration", function()
+    local runtime = Runtime.new()
+    local changes = {}
+    local cues = {}
+
+    runtime:setLove(makeLove())
+    runtime.theme = {
+      version = 1,
+      base = {},
+      components = {
+        button = {
+          audio = { focus = "ui-focus" },
+        },
+      },
+    }
+    runtime:register("focusChanged", function(node, previous)
+      local nextLabel = node and node.props.label or "nil"
+      local previousLabel = previous and previous.props.label or "nil"
+      changes[#changes + 1] = nextLabel .. "<-" .. previousLabel
+    end)
+    runtime:register("audio", function(event)
+      if event.kind == "focus" then
+        cues[#cues + 1] = event.cue
+      end
+    end)
+
+    local function Main()
+      return Components.button({ label = "root", onClick = function() end })
+    end
+
+    runtime:render(Main)
+    runtime:setFocus(runtime.root)
+    changes = {}
+    cues = {}
+
+    Modal.open(runtime.scene, "dialog", textComponent("dialog"), { transition = "none" })
+    assert.are.same({ "nil<-root" }, changes)
+    assert.are.same({}, cues)
+
+    runtime:render(Main)
+    Modal.close(runtime.scene, "dialog")
+    runtime:update(0)
+
+    assert.are.same({ "nil<-root", "root<-nil" }, changes)
+    assert.are.same({ "ui-focus" }, cues)
+  end)
+
+  it("rebinds focused press state to rebuilt layer nodes with the same path", function()
+    local runtime = Runtime.new()
+    local setGeneration
+    local clickedGeneration
+
+    runtime:setLove(makeLove())
+
+    local function Dialog()
+      local generation, setValue = runtime:useState(1)
+      setGeneration = setValue
+      return Components.button({
+        label = "generation:" .. generation,
+        onClick = function()
+          clickedGeneration = generation
+        end,
+      })
+    end
+
+    Modal.open(runtime.scene, "dialog", Dialog, { transition = "none" })
+    runtime:render()
+    local firstNode = runtime.scene.layers[1].root
+    runtime:setFocus(firstNode)
+    runtime:keypressed("return")
+
+    setGeneration(2)
+    runtime:render()
+    local currentNode = runtime.scene.layers[1].root
+
+    assert.are_not.equal(firstNode, currentNode)
+    assert.are.equal(currentNode, runtime.focusNode)
+    assert.are.equal(currentNode, runtime.keyDownNode)
+
+    runtime:keyreleased("return")
+    assert.are.equal(2, clickedGeneration)
+  end)
+
   it("dismisses a modal when clicking its backdrop", function()
     local runtime = Runtime.new()
 

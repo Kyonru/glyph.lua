@@ -288,6 +288,47 @@ local function findByPath(node, path)
   return nil
 end
 
+local function findNode(node, path, target)
+  if not node then
+    return nil
+  end
+
+  if path then
+    return findByPath(node, path)
+  end
+
+  if node == target then
+    return node
+  end
+
+  for _, child in ipairs(node.children or {}) do
+    local found = findNode(child, nil, target)
+    if found then
+      return found
+    end
+  end
+
+  return nil
+end
+
+local function pathBelongsToRoot(path, rootPath)
+  if not path or not rootPath then
+    return false
+  end
+  return path == rootPath or path:sub(1, #rootPath + 1) == rootPath .. "."
+end
+
+local function referenceBelongsToRoot(node, path, rootPath)
+  if node then
+    local root = node
+    while root.parent do
+      root = root.parent
+    end
+    return root.path == rootPath
+  end
+  return pathBelongsToRoot(path, rootPath)
+end
+
 local function animationId(node)
   local props = node and node.props or {}
   local key = props.key
@@ -921,10 +962,8 @@ function Runtime:build(component)
   assignPaths(root, "0", nil)
   self:prepareAnimations(root, "root")
   self.root = root
-  self.focusNode = findByPath(root, self.focusPath)
-  self.hoverNode = findByPath(root, self.hoverPath)
-  self.mouseDownNode = findByPath(root, self.mouseDownPath)
-  self.keyDownNode = findByPath(root, self.keyDownPath)
+  self:reconcileTreeReferences(root, "0")
+  self:reconcileInputReferences()
   Accessibility.scanLive(self, root)
   Feedback.prepare(self, root)
   self.needsRender = false
@@ -937,14 +976,16 @@ function Runtime:buildLayer(layer)
     local nextRoot = layer.component(layer.props)
     assignPaths(nextRoot, "layer:" .. tostring(layer.id), nil)
     self:prepareAnimations(nextRoot, "layer:" .. tostring(layer.id))
+    layer.root = nextRoot
+    self:reconcileTreeReferences(nextRoot, "layer:" .. tostring(layer.id))
+    self:reconcileInputReferences()
+    Accessibility.scanLive(self, nextRoot)
+    Feedback.prepare(self, nextRoot)
+    layer.needsRender = false
     self:runEffects()
     return nextRoot
   end)
 
-  layer.root = root
-  Accessibility.scanLive(self, root)
-  Feedback.prepare(self, root)
-  layer.needsRender = false
   return root
 end
 
@@ -1319,10 +1360,11 @@ function Runtime:hitTest(x, y)
 end
 
 function Runtime:setHover(node)
-  if self.hoverNode ~= node then
+  local path = node and node.path or nil
+  if self.hoverNode ~= node or self.hoverPath ~= path then
     local previous = self.hoverNode
     self.hoverNode = node
-    self.hoverPath = node and node.path or nil
+    self.hoverPath = path
     self.bus:dispatch("hoverChanged", node, previous)
     if node then
       self:emitAudio("hover", node)
@@ -1332,10 +1374,14 @@ function Runtime:setHover(node)
 end
 
 function Runtime:setFocus(node)
-  if self.focusNode ~= node then
+  if node and node.path and not self:findReachableNode(node.path, node) then
+    node = nil
+  end
+  local path = node and node.path or nil
+  if self.focusNode ~= node or self.focusPath ~= path then
     local previous = self.focusNode
     self.focusNode = node
-    self.focusPath = node and node.path or nil
+    self.focusPath = path
     if self.keyDownPath and (not node or self.keyDownPath ~= node.path) then
       self.keyDownNode = nil
       self.keyDownPath = nil
@@ -1349,6 +1395,133 @@ function Runtime:setFocus(node)
     end
     self:markDirty()
   end
+end
+
+---@param path? string
+---@param target? GlyphNode
+---@return GlyphNode|nil
+function Runtime:findReachableNode(path, target)
+  if self.scene then
+    for index = #self.scene.layers, 1, -1 do
+      local layer = self.scene.layers[index]
+      if layer.state ~= "exiting" then
+        if layer.input ~= false then
+          local found = findNode(layer.root, path, target)
+          if found then
+            return found
+          end
+        end
+        if layer.blocking then
+          return nil
+        end
+      elseif layer.blocking then
+        return nil
+      end
+    end
+  end
+
+  return findNode(self.root, path, target)
+end
+
+---@param root? GlyphNode
+---@param rootPath string
+---@return nil
+function Runtime:reconcileTreeReferences(root, rootPath)
+  if referenceBelongsToRoot(self.focusNode, self.focusPath, rootPath) then
+    local node = findByPath(root, self.focusPath)
+    if node then
+      self.focusNode = node
+    else
+      self:setFocus(nil)
+    end
+  end
+
+  if referenceBelongsToRoot(self.hoverNode, self.hoverPath, rootPath) then
+    local node = findByPath(root, self.hoverPath)
+    if node then
+      self.hoverNode = node
+    else
+      self:setHover(nil)
+    end
+  end
+
+  if referenceBelongsToRoot(self.mouseDownNode, self.mouseDownPath, rootPath) then
+    self.mouseDownNode = findByPath(root, self.mouseDownPath)
+    if not self.mouseDownNode then
+      self.mouseDownPath = nil
+    end
+  end
+
+  if referenceBelongsToRoot(self.keyDownNode, self.keyDownPath, rootPath) then
+    self.keyDownNode = findByPath(root, self.keyDownPath)
+    if not self.keyDownNode then
+      self.keyDownPath = nil
+      self.keyDownKey = nil
+    end
+  end
+end
+
+---@param rootPath string
+---@return nil
+function Runtime:clearTreeReferences(rootPath)
+  self:reconcileTreeReferences(nil, rootPath)
+end
+
+---@return nil
+function Runtime:reconcileInputReferences()
+  if self.focusNode or self.focusPath then
+    local node = self:findReachableNode(self.focusPath, self.focusNode)
+    if node then
+      self.focusNode = node
+    else
+      self:setFocus(nil)
+    end
+  end
+
+  if self.hoverNode or self.hoverPath then
+    local node = self:findReachableNode(self.hoverPath, self.hoverNode)
+    if node then
+      self.hoverNode = node
+    else
+      self:setHover(nil)
+    end
+  end
+
+  if self.mouseDownNode or self.mouseDownPath then
+    self.mouseDownNode = self:findReachableNode(self.mouseDownPath, self.mouseDownNode)
+    if not self.mouseDownNode then
+      self.mouseDownPath = nil
+    end
+  end
+
+  if self.keyDownNode or self.keyDownPath then
+    self.keyDownNode = self:findReachableNode(self.keyDownPath, self.keyDownNode)
+    if not self.keyDownNode then
+      self.keyDownPath = nil
+      self.keyDownKey = nil
+    end
+  end
+end
+
+---@param path? string
+---@return GlyphNode|nil
+function Runtime:restoreFocusPath(path)
+  self:reconcileInputReferences()
+  if self.focusNode or not path then
+    return self.focusNode
+  end
+
+  local node = self:findReachableNode(path)
+  if node then
+    self:setFocus(node)
+  end
+  return node
+end
+
+---@return GlyphNode|nil
+function Runtime:activeFocusNode()
+  self:reconcileInputReferences()
+  return self.focusNode
 end
 
 function Runtime:cursorKey(node)
@@ -1674,7 +1847,7 @@ function Runtime:wheelmoved(dx, dy)
 end
 
 function Runtime:textinput(text)
-  local node = self.focusNode
+  local node = self:activeFocusNode()
   if node and node.type == "input" and node.props and type(node.props.onChange) == "function" then
     local value = tostring(node.props.value or "")
     local key = self:cursorKey(node)
@@ -1689,7 +1862,7 @@ function Runtime:textinput(text)
 end
 
 function Runtime:keypressed(key)
-  local node = self.focusNode
+  local node = self:activeFocusNode()
 
   if key == "escape" and self:cancelDrag("escape") then
     self.bus:dispatch("event", "keypressed", key, node)
@@ -1740,7 +1913,7 @@ function Runtime:keypressed(key)
 end
 
 function Runtime:keyreleased(key)
-  local node = self.focusNode
+  local node = self:activeFocusNode()
   local down = self.keyDownNode
   local downPath = self.keyDownPath
   local downKey = self.keyDownKey
