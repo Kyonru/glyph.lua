@@ -263,6 +263,23 @@ If a change introduces a new subsystem, public workflow, reusable example patter
 or recurring implementation rule, update `AGENTS.md` and the relevant local skill
 in `skills/` so future agents inherit the guidance.
 
+## Multi-Agent Improvement Team
+
+Project-scoped Codex specialists live in `.codex/agents/`:
+
+- `visual_designer`: game UI/UX, interaction states, responsiveness, and motion.
+- `game_developer`: API ergonomics, Love2D integration, controller flows, and DevEx.
+- `novice_reviewer`: onboarding, documentation, examples, and learnability.
+- `performance_engineer`: frame cost, allocation, caching, scaling, and benchmarks.
+- `software_architect`: public API shape, ownership, compatibility, and reusable patterns.
+
+For library-wide audits or explicit team-review requests, delegate independent,
+read-heavy lenses to the relevant specialists and have the primary agent synthesize
+their evidence into one prioritized plan. Do not spawn all five for routine focused
+changes. Specialists are review-first unless assigned a bounded implementation;
+parallel writers must own disjoint files. The primary agent owns final scope,
+cross-role tradeoffs, edit allocation, and verification.
+
 When writing docs:
 
 - Use `> [!NOTE]` / `> [!TIP]` / `> [!WARNING]` callout syntax. Never use `!!! note` admonition
