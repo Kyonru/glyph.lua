@@ -67,6 +67,11 @@ draws. On an idle frame the existing tree is reused; layout short-circuits
 unchanged/static subtrees, so idle cost is low. (See
 [Architecture](architecture.md).)
 
+The example runner keeps the root component function stable between draws, so
+an idle example exercises this clean-root path. Clean-root reuse skips the
+component build; it does not skip the mounted tree's layout, callback
+publication, or draw work.
+
 Glyph does not yet do fine-grained diffing or automatic memoization: a dirty
 render rebuilds and re-allocates the affected tree. For large or rapidly-changing
 UIs the tools above — `ui.memo`, `ui.static`, stable `key`s, and a mounted
@@ -130,6 +135,12 @@ For large log/table views:
   row counts so performance examples explain their budget at a glance.
 
 See `examples/performance`.
+
+The performance example reports the previous completed frame as `idle / reuse`
+or `dirty / build`. `root builds` counts component executions, `layout passes`
+counts root layout events rather than visited nodes, and `last total` measures
+the whole Glyph render call, including build work when the frame is dirty plus
+layout, callback publication, and drawing.
 
 ## Scenes And Layers
 

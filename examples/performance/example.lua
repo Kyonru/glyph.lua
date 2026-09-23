@@ -12,13 +12,16 @@ local metrics = {
   frame = 0,
   fps = 0,
   renderMs = 0,
-  layoutCount = 0,
+  layoutPasses = 0,
+  rootBuilds = 0,
+  work = "pending",
   visibleRows = 0,
   rowBuilds = 0,
   cachedRows = 0,
 }
 
 local renderStartedAt = 0
+local rootBuildsBeforeRender = 0
 
 local function currentFps()
   if love and love.timer and love.timer.getFPS then
@@ -49,15 +52,17 @@ local exampleTheme = {
 
 ui.on("beforeRender", function()
   renderStartedAt = love.timer.getTime()
-  metrics.layoutCount = 0
+  rootBuildsBeforeRender = metrics.rootBuilds
+  metrics.layoutPasses = 0
 end)
 
 ui.on("layout", function()
-  metrics.layoutCount = metrics.layoutCount + 1
+  metrics.layoutPasses = metrics.layoutPasses + 1
 end)
 
 ui.on("afterRender", function()
   metrics.renderMs = (love.timer.getTime() - renderStartedAt) * 1000
+  metrics.work = metrics.rootBuilds > rootBuildsBeforeRender and "dirty / build" or "idle / reuse"
 end)
 
 local header = ui.static(ui.row({
@@ -130,6 +135,23 @@ end
 
 local function metricCard(label, value, accent, width)
   accent = accent or ui.theme.accentColor
+  local valueNode
+  if type(value) == "function" then
+    valueNode = ui.box({
+      width = "100%",
+      height = 22,
+      interactive = false,
+      draw = function(_, x, y, _, _, _, _, ctx)
+        ctx:color(accent)
+        ctx:text(value(), x, y, { fontSize = 18 })
+      end,
+    })
+  else
+    valueNode = ui.text(value, {
+      style = { fontSize = 18, color = accent },
+    })
+  end
+
   return ui.column({
     width = width or 124,
     padding = { x = 10, y = 8 },
@@ -145,9 +167,27 @@ local function metricCard(label, value, accent, width)
       textStyle = "caption",
       style = { color = ui.theme.mutedTextColor },
     }),
-    ui.text(value, {
-      style = { fontSize = 18, color = accent },
-    }),
+    valueNode,
+  })
+end
+
+local function liveSummary()
+  return ui.box({
+    width = "100%",
+    height = 18,
+    interactive = false,
+    draw = function(_, x, y, _, _, _, _, ctx)
+      ctx:color(ui.theme.mutedTextColor)
+      ctx:text(string.format(
+        "work=%s rootBuilds=%d layoutPasses=%d lastTotal=%.2fms frame=%d fps=%d",
+        metrics.work,
+        metrics.rootBuilds,
+        metrics.layoutPasses,
+        metrics.renderMs,
+        metrics.frame,
+        metrics.fps
+      ), x, y, { textStyle = "caption" })
+    end,
   })
 end
 
@@ -190,6 +230,7 @@ local function moveWindow(delta)
 end
 
 local function App()
+  metrics.rootBuilds = metrics.rootBuilds + 1
   local windowStart, nextWindowStart = ui.useState(1)
   setWindowStart = nextWindowStart
 
@@ -211,7 +252,7 @@ local function App()
       ui.button({ label = "+100", onClick = function() moveWindow(100) end }),
       ui.button({ label = "+1000", onClick = function() moveWindow(1000) end }),
       ui.box({ flex = 1, height = 1, interactive = false }),
-      metricCard("fps", tostring(metrics.fps), ui.theme.accentColor, 110),
+      metricCard("fps", function() return tostring(metrics.fps) end, ui.theme.accentColor, 110),
     }),
 
     ui.row({ gap = 8, align = "center" }, {
@@ -231,26 +272,16 @@ local function App()
     }),
 
     ui.row({ gap = 8, width = "100%", align = "stretch", wrap = true }, {
-      metricCard("visible", string.format("%02d", metrics.visibleRows), { 0.12, 0.68, 0.55, 1 }),
-      metricCard("row builds", tostring(metrics.rowBuilds), { 0.34, 0.58, 0.92, 1 }),
-      metricCard("cache hits", tostring(metrics.cachedRows), { 0.95, 0.68, 0.22, 1 }),
-      metricCard("layouts", tostring(metrics.layoutCount), { 0.76, 0.48, 0.95, 1 }),
-      metricCard("render", string.format("%.2fms", metrics.renderMs), { 0.92, 0.36, 0.4, 1 }, 142),
-      metricCard("frame", tostring(metrics.frame), { 0.52, 0.62, 0.7, 1 }),
+      metricCard("visible", function() return string.format("%02d", metrics.visibleRows) end, { 0.12, 0.68, 0.55, 1 }),
+      metricCard("row builds", function() return tostring(metrics.rowBuilds) end, { 0.34, 0.58, 0.92, 1 }),
+      metricCard("cache hits", function() return tostring(metrics.cachedRows) end, { 0.95, 0.68, 0.22, 1 }),
+      metricCard("layout passes", function() return tostring(metrics.layoutPasses) end, { 0.76, 0.48, 0.95, 1 }),
+      metricCard("last total", function() return string.format("%.2fms", metrics.renderMs) end, { 0.92, 0.36, 0.4, 1 }, 142),
+      metricCard("root builds", function() return tostring(metrics.rootBuilds) end, { 0.52, 0.62, 0.7, 1 }),
+      metricCard("work", function() return metrics.work end, ui.theme.accentColor, 146),
     }),
 
-    ui.text(string.format(
-      "visible=%02d rowBuilds=%d cachedHits=%d layouts=%d render=%.2fms fps=%d",
-      metrics.visibleRows,
-      metrics.rowBuilds,
-      metrics.cachedRows,
-      metrics.layoutCount,
-      metrics.renderMs,
-      metrics.fps
-    ), {
-      textStyle = "caption",
-      color = ui.theme.mutedTextColor,
-    }),
+    liveSummary(),
 
     header,
     ui.scrollView({
@@ -268,7 +299,7 @@ local function App()
       ui.memo(VisibleRows, { windowStart, filter }),
     }),
 
-    ui.text("Mouse wheel moves the virtual window. Only visible rows are mounted; rows are reused from a static cache.", {
+    ui.text("Mouse wheel dirties and rebuilds the root. Otherwise the stable runner reuses it; every frame still lays out and draws the mounted window.", {
       width = "100%",
       wrap = true,
     }),
@@ -302,7 +333,7 @@ end
 return {
   id = "performance",
   label = "Performance",
-  description = "A windowed 10k event log with static row cache, live metrics, and large-step scrolling controls.",
+  description = "A windowed 10k event log that separates clean-root reuse from interaction-driven rebuilds.",
   setup = setup,
   update = update,
   wheelmoved = wheelmoved,

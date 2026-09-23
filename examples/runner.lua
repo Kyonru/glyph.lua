@@ -117,6 +117,12 @@ end
 function Runner.run(example)
 	local capture = nil
 	local nextOnEscape = wantsNextOnEscape()
+	local rootComponent = nil
+	if not example.usesScene then
+		rootComponent = function()
+			return wrapComponent(example, "standalone")
+		end
+	end
 
 	local function updateExample(dt)
 		call(example, "update", dt, "standalone")
@@ -128,9 +134,7 @@ function Runner.run(example)
 		if example.usesScene then
 			ui.render()
 		else
-			ui.render(function()
-				return wrapComponent(example, "standalone")
-			end)
+			ui.render(rootComponent)
 		end
 	end
 
