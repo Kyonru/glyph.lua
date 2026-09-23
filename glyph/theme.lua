@@ -1,26 +1,26 @@
 local theme = {
   version = 0,
   font = nil,
-  textColor = { 0.9, 0.92, 0.95, 1 },
-  mutedTextColor = { 0.58, 0.62, 0.68, 1 },
-  backgroundColor = { 0.08, 0.09, 0.11, 1 },
-  surfaceColor = { 0.13, 0.15, 0.18, 1 },
-  surfaceHoverColor = { 0.18, 0.21, 0.25, 1 },
-  surfacePressedColor = { 0.1, 0.12, 0.15, 1 },
-  borderColor = { 0.28, 0.32, 0.38, 1 },
-  accentColor = { 0.14, 0.4, 0.78, 1 },
-  accentTextColor = { 1, 1, 1, 1 },
-  disabledColor = { 0.18, 0.19, 0.21, 1 },
-  inputColor = { 0.08, 0.09, 0.11, 1 },
-  scrollbarColor = { 0.34, 0.38, 0.45, 0.85 },
+  textColor = { 0.93, 0.91, 0.86, 1 },
+  mutedTextColor = { 0.66, 0.64, 0.59, 1 },
+  backgroundColor = { 0.045, 0.05, 0.052, 1 },
+  surfaceColor = { 0.085, 0.095, 0.098, 1 },
+  surfaceHoverColor = { 0.14, 0.15, 0.15, 1 },
+  surfacePressedColor = { 0.06, 0.065, 0.067, 1 },
+  borderColor = { 0.27, 0.28, 0.28, 1 },
+  accentColor = { 0.74, 0.45, 0.08, 1 },
+  accentTextColor = { 0.07, 0.06, 0.045, 1 },
+  disabledColor = { 0.14, 0.145, 0.145, 1 },
+  inputColor = { 0.035, 0.04, 0.042, 1 },
+  scrollbarColor = { 0.45, 0.44, 0.4, 0.9 },
   fontSize = 13,
   lineHeight = 18,
   textScale = 1,
   fontFilter = "nearest",
-  radius = 4,
+  radius = 2,
   borderWidth = 1,
   inputCursorWidth = 1,
-  tabHeight = 28,
+  tabHeight = 30,
   scrollbarWidth = 6,
 }
 
@@ -39,13 +39,13 @@ theme.typography = {
   },
   h1 = {
     font = "heading",
-    fontSize = 30,
-    lineHeight = 36,
+    fontSize = 24,
+    lineHeight = 30,
   },
   h2 = {
     font = "heading",
-    fontSize = 22,
-    lineHeight = 28,
+    fontSize = 18,
+    lineHeight = 24,
   },
   paragraph = {
     font = "body",
@@ -96,7 +96,7 @@ theme.components = {
     width = theme.scrollbarWidth,
     padding = 3,
     minThumbSize = 24,
-    radius = 3,
+    radius = 1,
     trackColor = { 0, 0, 0, 0 },
     thumbColor = theme.scrollbarColor,
   },
@@ -131,10 +131,14 @@ theme.components = {
         background = theme.accentColor,
         color = theme.accentTextColor,
         hover = {
-          background = { 0.18, 0.44, 0.82, 1 },
+          background = { 0.95, 0.68, 0.24, 1 },
         },
         pressed = {
-          background = { 0.1, 0.32, 0.64, 1 },
+          background = { 0.7, 0.42, 0.07, 1 },
+        },
+        focused = {
+          borderColor = theme.accentTextColor,
+          borderWidth = 2,
         },
       },
     },
@@ -240,6 +244,8 @@ local function syncDerivedDefaults(nextTheme)
   theme.components.button.disabled.color = theme.mutedTextColor
   theme.components.button.variants.primary.background = theme.accentColor
   theme.components.button.variants.primary.color = theme.accentTextColor
+  theme.components.button.variants.primary.focused.borderColor = theme.accentTextColor
+  theme.components.button.variants.primary.focused.borderWidth = 2
 
   theme.components.input.background = theme.inputColor
   theme.components.input.color = theme.textColor

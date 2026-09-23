@@ -335,9 +335,10 @@ ui.button({
 Buttons are focusable by default.
 
 > [!NOTE]
-> The default theme gives focused buttons a two-pixel light border, including
-> primary buttons. The primary palette keeps normal-size text at or above a
-> 4.5:1 contrast ratio in its idle, hover, pressed, and focused states.
+> The default theme gives focused buttons a two-pixel contrasting border.
+> Primary buttons use a dark focus border against the amber surface. The
+> primary palette keeps normal-size text at or above a 4.5:1 contrast ratio in
+> its idle, hover, pressed, and focused states.
 
 Buttons can resolve labels from i18n keys:
 

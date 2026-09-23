@@ -128,6 +128,12 @@ Tabs should use `active` state styling rather than ad hoc active colors.
 
 ## Themes
 
+Glyph's built-in theme is intentionally utilitarian: blackened neutral
+surfaces, warm text, graphite rules, a single amber action color, and corners
+that are square or only slightly eased. This keeps tool screens and HUDs from
+turning every group into a rounded card. Applications can replace every token;
+the defaults are a legible starting point, not a required house style.
+
 Set a theme globally:
 
 ```lua

@@ -201,7 +201,7 @@ describe("style", function()
     end
 
     local focusedPrimary = Style.resolve(button, runtime, { focused = true })
-    assert.are.same(theme.textColor, focusedPrimary.borderColor)
+    assert.are.same(theme.accentTextColor, focusedPrimary.borderColor)
     assert.are.equal(2, focusedPrimary.borderWidth)
     assert.is_true(contrastRatio(focusedPrimary.borderColor, focusedPrimary.background) >= 3)
 
