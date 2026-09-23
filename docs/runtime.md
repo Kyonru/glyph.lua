@@ -41,7 +41,8 @@ ui.load({
 
 ## Hooks
 
-`ui.useState(initial)` stores state by component tree position:
+`ui.useState(initial)` stores a hook slot by call order in the current render
+scope (the root app, a scene layer, or an offscreen surface):
 
 ```lua
 local count, setCount = ui.useState(0)
@@ -58,7 +59,33 @@ ui.useEffect(function()
 end, { id })
 ```
 
-Hook identity is tree-position based. Keyed reconciliation is not part of v0.1.
+Call hooks unconditionally and in the same order on every render. A node's
+`key` does not create a hook scope or make a `useState` / `useEffect` slot follow
+that node; keyed hook-state reconciliation is not part of v0.1.
+
+### Stable Node Keys
+
+Node identity is path-based. Unkeyed siblings use their position in the parent;
+a stable `key` replaces that positional path segment. Use keys for dynamic
+siblings so path-based runtime state such as focus, an input's cursor, style
+transitions, and enter/exit animation stays attached when siblings reorder:
+
+```lua
+local children = {}
+
+for _, row in ipairs(rows) do
+  children[#children + 1] = ui.input({
+    key = row.id,
+    value = row.name,
+    onChange = row.rename,
+  })
+end
+
+return ui.column({}, children)
+```
+
+The key stabilizes each input node's runtime path. It does not affect the order
+of any hooks called while building the rows.
 
 ## Input Forwarding
 

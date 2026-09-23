@@ -39,20 +39,22 @@ the next render reflects it.
 
 ## State and identity
 
-Hooks (`useState`, `useEffect`, `memo`) are stored per render scope **by call
-order**, and a node's identity is its **position in the tree** (its path). Two
+Hooks such as `useState` and `useEffect` are stored in the current render scope
+**by call order**. Node runtime identity is separate: it comes from the node's
+tree path, whose sibling segment is an index unless the node has a `key`. Two
 consequences:
 
 - Call hooks unconditionally at the top of a component, in the same order every
-  render — don't put them behind branches.
-- A node keeps its state/focus/animation as long as it stays at the same tree
-  position. If you render a **dynamic list** and reorder or insert items, give
-  each item a stable `key` so its identity (and its in-progress edits, focus, and
-  enter/exit animation) follows it instead of snapping to a sibling.
+  render — don't put them behind branches. A node `key` does not key a hook slot
+  or make hook state follow that node.
+- If you render **dynamic siblings** and reorder or insert them, give each node a
+  stable `key`. Its path-based runtime identity — including focus, input cursor,
+  style-transition state, and enter/exit animation — then follows the key
+  instead of the sibling index.
 
 ```lua
 for _, row in ipairs(rows) do
-  ui.box({ key = row.id }, { ... }) -- identity follows row.id, not the index
+  ui.input({ key = row.id, value = row.name, onChange = row.rename })
 end
 ```
 
