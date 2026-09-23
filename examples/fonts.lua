@@ -40,6 +40,7 @@ local fallbackFontIds = {
 }
 
 local cache = {}
+local sourceCache = {}
 local helperSource = debug and debug.getinfo and debug.getinfo(1, "S").source or nil
 local helperDir = helperSource and helperSource:match("^@(.+)/[^/]+$") or nil
 local repoRoot = helperDir and helperDir:match("^(.*)/examples$") or nil
@@ -125,14 +126,40 @@ local function readFile(path, loveModule)
 	return nil
 end
 
+local function filterFor(id)
+	local smooth = id == "body" or id == "title" or id == "subheader" or id == "description"
+	return smooth and "linear" or "nearest"
+end
+
+local function loadFontSource(loveModule, id)
+	local path = fontFiles[id]
+	if not path then
+		return nil
+	end
+	if sourceCache[path] then
+		return sourceCache[path]
+	end
+
+	local data = readFile(path, loveModule)
+	local filesystem = loveModule and loveModule.filesystem
+	if data and filesystem and type(filesystem.newFileData) == "function" then
+		local ok, source = pcall(filesystem.newFileData, data, path)
+		if ok and source then
+			sourceCache[path] = source
+			return source
+		end
+	end
+
+	return nil
+end
+
 local function loadFont(graphics, loveModule, id, size)
 	if not graphics or type(graphics.newFont) ~= "function" then
 		return nil
 	end
 
 	local path = fontFiles[id]
-	local smooth = id == "body" or id == "title" or id == "subheader" or id == "description"
-	local filter = smooth and "linear" or "nearest"
+	local filter = filterFor(id)
 	local key = tostring(path or id) .. ":" .. tostring(size) .. ":" .. filter
 	if cache[key] ~= nil then
 		return cache[key] or nil
@@ -177,6 +204,35 @@ function ExampleFonts.font(loveModule, id, size)
 	return loadFont(graphics, loveModule, id, size or 14)
 end
 
+function ExampleFonts.specs(loveModule)
+	loveModule = loveModule or _G.love
+	local specs = {}
+	for role, id in pairs({
+		body = "body",
+		title = "title",
+		subheader = "subheader",
+		description = "description",
+		mono = "mono",
+		monoDisplay = "mono",
+		japanese = "japanese",
+		arabic = "arabic",
+		armenian = "armenian",
+		georgian = "georgian",
+		hebrew = "hebrew",
+		mahajani = "mahajani",
+		thai = "thai",
+		korean = "korean",
+		amharic = "amharic",
+	}) do
+		local source = loadFontSource(loveModule, id)
+		specs[role] = {
+			source = source,
+			filter = filterFor(id),
+		}
+	end
+	return specs
+end
+
 function ExampleFonts.load(loveModule, sizes)
 	loveModule = loveModule or _G.love
 	local graphics = loveModule and loveModule.graphics
@@ -203,7 +259,7 @@ function ExampleFonts.theme(base, opts)
 	base = copy(base or {})
 	opts = opts or {}
 	local colors = opts.colors or {}
-	local fonts = ExampleFonts.load(opts.love or _G.love, opts.sizes)
+	local fonts = ExampleFonts.specs(opts.love or _G.love)
 	local typography = base.typography or {}
 	typography.text = mergeInto({ font = "body" }, copy(typography.text or {}))
 	typography.paragraph = mergeInto({ font = "body" }, copy(typography.paragraph or {}))
