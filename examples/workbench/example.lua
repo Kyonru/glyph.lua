@@ -98,6 +98,7 @@ local function logHeader()
   return ui.row({
     width = "100%",
     height = 24,
+    shrink = 0,
     align = "center",
     padding = { x = 4 },
     style = { background = colors.surface },
@@ -217,8 +218,10 @@ local function activityRegister(logs, filter, setFilter, expanded)
   local children = {}
   if expanded then
     children[#children + 1] = ui.input({
+      key = "activity-filter",
       width = "100%",
       height = 32,
+      shrink = 0,
       placeholder = "Filter activity register",
       value = filter,
       onChange = setFilter,
@@ -227,14 +230,14 @@ local function activityRegister(logs, filter, setFilter, expanded)
   children[#children + 1] = logHeader()
   children[#children + 1] = ui.scrollView({
     width = "100%",
-    grow = 1,
-    minHeight = expanded and 126 or 108,
+    flex = 1,
+    minHeight = 60,
     padding = { right = 4 },
     gap = 0,
     style = { background = colors.field },
   }, rows)
 
-  return ui.column({ width = "100%", grow = 1, gap = 6 }, children)
+  return ui.column({ width = "100%", flex = 1, gap = 6 }, children)
 end
 
 local function App()
@@ -269,17 +272,17 @@ local function App()
   local progress = (count % 12) / 12
   local status = count == 0 and "READY" or (count % 3 == 0 and "SYNC" or "LIVE")
 
-  local overview = ui.column({ width = "100%", grow = 1, gap = 7 }, {
+  local overview = ui.column({ width = "100%", flex = 1, gap = 7 }, {
     sectionLabel("Activity register"),
     activityRegister(logs, "", function() end, false),
   })
 
-  local activity = ui.column({ width = "100%", grow = 1, gap = 7 }, {
+  local activity = ui.column({ width = "100%", flex = 1, gap = 7 }, {
     sectionLabel("Activity register / filter"),
     activityRegister(logs, filter, setFilter, true),
   })
 
-  local custom = ui.column({ width = "100%", grow = 1, gap = 8 }, {
+  local custom = ui.column({ width = "100%", flex = 1, gap = 8 }, {
     sectionLabel("Custom draw / signal field"),
     ui.box({
       width = "100%",
@@ -331,6 +334,7 @@ local function App()
       sectionLabel("Count"),
       ui.text(string.format("%02d", count), {
         font = "monoDisplay",
+        fontSize = 36,
         lineHeight = 40,
         style = { color = colors.text },
       }),
@@ -412,7 +416,7 @@ local function App()
     }),
     ui.tabs({
       width = "100%",
-      grow = 1,
+      flex = 1,
       active = activeTab,
       onChange = function(index)
         setActiveTab(index)
@@ -451,6 +455,7 @@ end
 return {
   id = "workbench",
   label = "Workbench",
+  title = "Mission console",
   description = "State, input, tabs, metrics, and custom drawing arranged as a compact service workbench.",
   window = {
     width = 840,
@@ -463,6 +468,17 @@ return {
   install = {
     gamepad = true,
   },
+  setup = function()
+    ui.setTheme({
+      typography = {
+        h1 = {
+          font = "title",
+          fontSize = 30,
+          lineHeight = 38,
+        },
+      },
+    })
+  end,
   component = function()
     return App()
   end,

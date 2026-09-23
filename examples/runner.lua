@@ -25,11 +25,11 @@ local function wrapComponent(example, mode)
 		return content
 	end
 
-	local strip = ui.stack({ width = "100%", height = 52 }, {
+	local strip = ui.stack({ width = "100%", height = 44 }, {
 		ui.row({
 			width = "100%",
-			height = 51,
-			padding = { x = 18, y = 10 },
+			height = 43,
+			padding = { x = 18, y = 6 },
 			gap = 10,
 			align = "center",
 			style = { background = ui.theme.surfaceColor },

@@ -130,6 +130,7 @@ Poor core API examples:
 - Absolute children support `x`, `y`, `top`, `right`, `bottom`, `left`, `inset`, `zIndex`, width/height, percent sizes, and min/max sizes.
 - Absolute children never determine parent size. Parent size must come from explicit dimensions, flex, percent size, or normal flow children.
 - Plain `box` is a visual/container primitive. If children need layout, set `display = "row"`, `display = "column"`, `display = "grid"`, or use `ui.stack`.
+- `ui.tabs` mounts only the active pane. In a constrained shell, use `flex = 1` on the tabs and pane roots, keep oversized pane bodies in `scrollView`, and do not let pane intrinsic height resize the surrounding workflow.
 - Text with wrapping must draw with a numeric resolved width. Do not let percent-size strings leak into Love2D `printf`.
 - Typography measurement and drawing must share the same resolver so `textScale`, `textStyle`, and font refs stay layout-accurate. SYSL-backed rich text should measure from textbox `get.width`, `get.height`, and `get.lines`.
 
@@ -139,6 +140,8 @@ Poor core API examples:
 - Non-interactive decoration must set `interactive = false` so events pass through.
 - Local `zIndex` orders siblings. Floating UI that must escape later sibling branches should prefer `ui.portal`; use raw `position = "absolute", zScope = "root"` only when a lower-level primitive is clearer.
 - Touch is installed automatically by `ui.install` / `ui.load`; gamepad mapping is opt-in with `install.gamepad = true` or manual `ui.gamepadpressed/released`.
+- Give each Love callback one owner. If app code manually forwards `love.keypressed` or `love.keyreleased` to Glyph, disable the corresponding automatic install callback so a physical key is not delivered twice.
+- Controlled inputs must apply queued edits against their pending value, clamp cursors after app-owned value replacement, and keep cursor movement/deletion on UTF-8 codepoint boundaries.
 - Mouse/touch and keyboard/gamepad activation should use the same press/release lifecycle so pressed styles, feedback, audio cues, and accessibility activation events stay consistent. Focusable non-button nodes with `role = "button"` and `onClick` should participate in that lifecycle.
 - Fixed viewport backends convert pointer coordinates before hit testing. Pointer events outside the virtual viewport should not hit UI.
 - Spatial navigation should stay layout-agnostic. Use `navGroup` for soft grouping and `navScope`/`navTrap`/`onNavigateExit` for submenus.

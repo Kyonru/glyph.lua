@@ -98,6 +98,8 @@ in Workbench.
 
 Broad component sampler with state, a command rail, controlled input, tabs, a
 ruled activity register, meters, custom draw, and keyboard/gamepad navigation.
+Its constrained tab shell keeps the tab strip and workfield geometry fixed
+while pane content changes, including at the declared minimum window size.
 
 ## Dashboard
 
