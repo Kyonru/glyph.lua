@@ -529,6 +529,12 @@ ui.tabs({
 Use `tabWidth`, per-tab `width`, or `tabPadding` when tabs should read as a
 segmented control with stable button sizes.
 
+In a height-constrained shell, use `flex = 1` on `ui.tabs` and on each pane root
+to keep the tab strip and content viewport fixed while switching between panes
+with different intrinsic heights. The tab strip itself never shrinks below
+`tabHeight`. Put an oversized pane body in `scrollView` instead of allowing it
+to resize the surrounding shell.
+
 The default theme keeps selection and focus separate: an active tab uses the
 accent fill, while an active-and-focused tab retains that fill and adds the
 two-pixel focus border.

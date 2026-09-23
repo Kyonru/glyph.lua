@@ -34,7 +34,9 @@ Common props:
 
 `flex = 1` means “take remaining space.” It uses a zero basis unless `basis`,
 `flexBasis`, or the main-axis size (`width` in a row, `height` in a column) is
-provided.
+provided. In a constrained parent, Glyph assigns that remaining size even when
+it is exactly zero or the fixed siblings already overflow; the flex child does
+not retain a stale intrinsic size.
 `align` controls the cross axis; `justify` controls the main axis. In a row, `justify = "center"`
 centers children horizontally. In a column, it centers children vertically.
 
@@ -73,7 +75,9 @@ ui.row({ width = 800 }, {
 ```
 
 Constraints are applied per child in a single pass (Glyph does not redistribute
-the space freed by a clamped child to its siblings).
+the space freed by a clamped child to its siblings). Container constraints are
+resolved before descendants, so a `width = "100%"` child measures against the
+parent's clamped width rather than its pre-clamp percentage.
 
 ```lua
 ui.row({ width = 600, gap = 8 }, {

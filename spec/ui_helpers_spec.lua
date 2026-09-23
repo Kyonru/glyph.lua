@@ -73,6 +73,7 @@ describe("ui helpers", function()
     assert.are.equal(26, first.props.height)
     assert.are.same({ x = 8, y = 4 }, first.props.padding)
     assert.are.equal(70, second.props.width)
+    assert.are.equal(0, row.props.shrink)
   end)
 
   it("creates rich text and typography convenience nodes", function()

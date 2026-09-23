@@ -89,6 +89,53 @@ describe("layout", function()
     assert.are.equal(90, tree.children[2].layout.width)
   end)
 
+  it("assigns zero-basis flex children for positive, zero, and negative remaining space", function()
+    local function flexHeight(parentHeight, contentHeight)
+      local tree = ui.column({ width = 100, height = parentHeight }, {
+        ui.box({ width = 100, height = 40, shrink = 0 }),
+        ui.column({ width = 100, flex = 1 }, {
+          ui.box({ width = 100, height = contentHeight }),
+        }),
+      })
+
+      Layout.compute(tree, context)
+      return tree.children[2].layout.height
+    end
+
+    assert.are.equal(60, flexHeight(100, 10))
+    assert.are.equal(60, flexHeight(100, 200))
+    assert.are.equal(0, flexHeight(40, 200))
+    assert.are.equal(0, flexHeight(30, 200))
+  end)
+
+  it("keeps constrained tab chrome and pane geometry stable across active content sizes", function()
+    local function tabsWith(contentHeight)
+      local tree = ui.column({ width = 300, height = 120 }, {
+        ui.tabs({ width = "100%", flex = 1, tabHeight = 30 }, {
+          {
+            label = "Pane",
+            content = ui.column({ width = "100%", flex = 1 }, {
+              ui.box({ width = "100%", height = contentHeight }),
+            }),
+          },
+        }),
+      })
+
+      Layout.compute(tree, context)
+      return tree.children[1]
+    end
+
+    local short = tabsWith(10)
+    local tall = tabsWith(300)
+
+    assert.are.equal(120, short.layout.height)
+    assert.are.equal(short.layout.height, tall.layout.height)
+    assert.are.equal(30, short.children[1].layout.height)
+    assert.are.equal(short.children[1].layout.height, tall.children[1].layout.height)
+    assert.are.equal(90, short.children[2].layout.height)
+    assert.are.equal(short.children[2].layout.height, tall.children[2].layout.height)
+  end)
+
   it("offsets flow children by their margin", function()
     local tree = ui.row({ width = 300, height = 50 }, {
       ui.box({ width = 50, height = 50 }),
@@ -165,6 +212,24 @@ describe("layout", function()
     Layout.compute(tree, context)
 
     assert.are.equal(200, tree.children[1].layout.width)
+  end)
+
+  it("measures descendants against a container's clamped size", function()
+    local tree = ui.stack({ width = "23%", minWidth = 190, height = 80 }, {
+      ui.column({ width = "100%", height = "100%" }, {
+        ui.box({ width = "100%", height = 10 }),
+      }),
+    })
+
+    Layout.compute(tree, {
+      theme = ui.theme,
+      availableWidth = 680,
+      availableHeight = 80,
+    })
+
+    assert.are.equal(190, tree.layout.width)
+    assert.are.equal(190, tree.children[1].layout.width)
+    assert.are.equal(190, tree.children[1].children[1].layout.width)
   end)
 
   it("recomputes static geometry when available width changes", function()

@@ -56,6 +56,13 @@ local function clamp(value, minValue, maxValue)
   return value
 end
 
+local function clampOptional(value, minValue, maxValue)
+  if value == nil then
+    return nil
+  end
+  return clamp(value, minValue, maxValue)
+end
+
 local function percentValue(value, available)
   if type(value) ~= "string" then
     return nil
@@ -549,8 +556,8 @@ function Layout.compute(root, context)
     if node.type == "meter" then
       measuredWidth, measuredHeight = Layout.measureNode(node, context)
     end
-    local width = node.layout.assignedWidth or resolvedWidth or numericSize(props.width) or measuredWidth
-    local height = node.layout.assignedHeight or resolvedHeight or numericSize(props.height) or measuredHeight
+    local width = clampOptional(node.layout.assignedWidth or resolvedWidth or numericSize(props.width) or measuredWidth, props.minWidth, props.maxWidth)
+    local height = clampOptional(node.layout.assignedHeight or resolvedHeight or numericSize(props.height) or measuredHeight, props.minHeight, props.maxHeight)
     local innerWidth = width and math.max(0, width - pad.left - pad.right) or availableWidth
     local innerHeight = height and math.max(0, height - pad.top - pad.bottom) or availableHeight
     local maxWidth = 0
@@ -711,9 +718,13 @@ function Layout.compute(root, context)
     if direction == "row" then
       mainSize = resolvedWidth or node.layout.assignedWidth
       crossSize = resolvedHeight or node.layout.assignedHeight
+      mainSize = clampOptional(mainSize, props.minWidth, props.maxWidth)
+      crossSize = clampOptional(crossSize, props.minHeight, props.maxHeight)
     else
       mainSize = resolvedHeight or node.layout.assignedHeight
       crossSize = resolvedWidth or node.layout.assignedWidth
+      mainSize = clampOptional(mainSize, props.minHeight, props.maxHeight)
+      crossSize = clampOptional(crossSize, props.minWidth, props.maxWidth)
     end
     local innerMainLimit = mainSize and math.max(0, mainSize - (direction == "row" and pad.left + pad.right or pad.top + pad.bottom)) or nil
     local innerCrossLimit = crossSize and math.max(0, crossSize - (direction == "row" and pad.top + pad.bottom or pad.left + pad.right)) or nil
@@ -752,8 +763,9 @@ function Layout.compute(root, context)
     end
 
     local innerMain = innerMainLimit or totalMain
-    local extra = math.max(0, innerMain - totalMain)
-    if extra > 0 and growTotal > 0 then
+    local freeSpace = innerMain - totalMain
+    if innerMainLimit and freeSpace >= 0 and growTotal > 0 then
+      local extra = freeSpace
       for _, child in ipairs(children) do
         if not isAbsolute(child) then
           local grow = flexGrow(child.props)
@@ -769,14 +781,17 @@ function Layout.compute(root, context)
           end
         end
       end
-    elseif node.type ~= "scrollView" and innerMainLimit and totalMain > innerMainLimit and shrinkTotal > 0 then
+    elseif node.type ~= "scrollView" and innerMainLimit and totalMain > innerMainLimit then
       local overflow = totalMain - innerMainLimit
       for _, child in ipairs(children) do
         if not isAbsolute(child) then
           local shrink = flexShrink(child.props)
           local basis = flexBasis(child, direction)
-          if shrink > 0 and basis > 0 then
-            local assigned = math.max(0, basis - overflow * ((shrink * basis) / shrinkTotal))
+          if shrink > 0 then
+            local assigned = basis
+            if basis > 0 and shrinkTotal > 0 then
+              assigned = math.max(0, basis - overflow * ((shrink * basis) / shrinkTotal))
+            end
             setMain(child, direction, assigned)
             assignMainConstraint(child, direction, assigned)
             child.dirty.layout = true

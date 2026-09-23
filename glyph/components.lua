@@ -279,7 +279,7 @@ function Components.tabs(props, tabs)
     })
   end
 
-  local tabRow = Components.row({ gap = props.gap or 4, height = props.tabHeight }, children)
+  local tabRow = Components.row({ gap = props.gap or 4, height = props.tabHeight, shrink = 0 }, children)
   local content = tabs and tabs[active] and tabs[active].content or nil
 
   props.display = "column"
