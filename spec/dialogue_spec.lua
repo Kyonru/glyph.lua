@@ -235,6 +235,28 @@ describe("dialogue adapter", function()
     assert.is_true(adapter.elapsed >= 0.5)
   end)
 
+  it("invalidates its owning runtime after dialogue mutations", function()
+    local dirty = 0
+    local owningUi = {
+      theme = fakeUi.theme,
+      runtime = {
+        markDirty = function()
+          dirty = dirty + 1
+        end,
+      },
+    }
+    local instance = methodStub({ isActive = true, choices = {} })
+    local adapter = Dialogue.new(owningUi, { instance = instance })
+
+    assert.are.equal(1, dirty) -- initial wrap
+    adapter:update(0.016)
+    adapter:keypressed("space")
+    adapter:select(1)
+    adapter:advance()
+
+    assert.are.equal(5, dirty)
+  end)
+
   it("builds the portrait from the active character/expression", function()
     local instance = {
       config = { portraitEnabled = true, portraitSize = 120, portraitFlipH = true },
@@ -495,6 +517,43 @@ describe("dialogue adapter", function()
     portraitBox.props.draw(portraitBox, 0, 0, 120, 200, fakeLove)
     assert.are.equal("nearest", minFilter)
     assert.are.equal("nearest", magFilter)
+  end)
+
+  it("does not draw released portrait resources from a retained node", function()
+    local texture = {
+      isReleased = function()
+        return true
+      end,
+      setFilter = function()
+        error("must not configure a released texture")
+      end,
+    }
+    local instance = {
+      renderModel = function()
+        return {
+          active = true,
+          speaker = { name = "H" },
+          text = { shown = "" },
+          choices = {},
+          portrait = { texture = texture, quad = "Q", width = 100, height = 100, size = 120 },
+        }
+      end,
+    }
+    local node = Dialogue.new(fakeUi, { instance = instance, portraitFilter = "nearest" }):component()
+    local portraitBox = findPortraitBox(node)
+    local draws = 0
+    local fakeLove = {
+      graphics = setmetatable({
+        draw = function()
+          draws = draws + 1
+        end,
+      }, { __index = function()
+        return function() end
+      end }),
+    }
+
+    portraitBox.props.draw(portraitBox, 0, 0, 120, 200, fakeLove)
+    assert.are.equal(0, draws)
   end)
 
   it("grows the box to fit tall wrapped text", function()

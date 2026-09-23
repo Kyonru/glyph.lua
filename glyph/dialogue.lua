@@ -9,6 +9,22 @@ local Dialogue = {}
 local Adapter = {}
 Adapter.__index = Adapter
 
+local function invalidate(adapter)
+  local runtime = adapter and adapter.ui and adapter.ui.runtime
+  if runtime and type(runtime.markDirty) == "function" then
+    runtime:markDirty()
+  end
+end
+
+local function isReleased(resource)
+  local check = resource and resource.isReleased
+  if type(check) ~= "function" then
+    return false
+  end
+  local ok, released = pcall(check, resource)
+  return ok and released == true
+end
+
 -- ---------------------------------------------------------------------------
 -- Inline text effects
 --
@@ -183,6 +199,12 @@ end
 -- texture's scaling filter when provided.
 local function drawPortraitImage(love, portrait, x, y, size, opacity, rotation, flip, filter)
   if not portrait or not portrait.texture then
+    return
+  end
+  -- Love-Dialogue releases instance-owned images and quads from :destroy(). A
+  -- retained node may survive until Glyph rebuilds on the next render, so never
+  -- pass an already released resource back to love.graphics.draw.
+  if isReleased(portrait.texture) or isReleased(portrait.quad) then
     return
   end
   if flip == nil then
@@ -413,6 +435,7 @@ function Adapter:wrap(instance)
   if instance and self.onSignal then
     instance.onSignal = self.onSignal
   end
+  invalidate(self)
   return self
 end
 
@@ -442,6 +465,7 @@ function Adapter:update(dt)
   end
   self:trackPortrait()
   self:updateHeight(dt)
+  invalidate(self)
 end
 
 -- Caches the wrapped pixel height of the current line's text so the box can
@@ -527,6 +551,7 @@ end
 function Adapter:keypressed(key)
   if self.instance then
     self.instance:keypressed(key)
+    invalidate(self)
   end
 end
 
@@ -540,11 +565,13 @@ function Adapter:select(index)
   elseif self.instance.state then
     self.instance.state.selectedChoice = index
   end
+  invalidate(self)
 end
 
 function Adapter:advance()
   if self.instance then
     self.instance:advance()
+    invalidate(self)
   end
 end
 

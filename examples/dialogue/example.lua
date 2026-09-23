@@ -43,6 +43,12 @@ local docGifDwell = 0
 
 local CONTROLS = "Space/Enter (Next)  |  F (Skip)  |  S (Save)  |  L (Load)  |  Esc (Quit)"
 
+local function markDirty()
+	if ui.runtime and ui.runtime.markDirty then
+		ui.runtime:markDirty()
+	end
+end
+
 local function onSignal(name, args)
 	if name == "ChangeBG" then
 		local r, g, b = tostring(args):match("(%S+)%s+(%S+)%s+(%S+)")
@@ -75,10 +81,12 @@ end
 -- shared; only drawing changes (drawDialogue / the adapter component gate on it).
 local function toggleRenderer()
 	renderMode = (renderMode == "library") and "glyph" or "library"
+	markDirty()
 end
 
 local function toggleFancy()
 	fancy = not fancy
+	markDirty()
 end
 
 -- Drive the conversation forward during a docs-GIF capture: once a line finishes
@@ -382,6 +390,7 @@ return {
 			if savedState then
 				print("Loading Save...", savedState.line)
 				myDialogue:loadState(savedState)
+				markDirty()
 			end
 		elseif key == "g" then
 			toggleRenderer()

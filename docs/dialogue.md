@@ -48,6 +48,11 @@ function love.keypressed(key)
 end
 ```
 
+The adapter invalidates its owning Glyph runtime after `update`, `keypressed`,
+`select`, `advance`, `wrap`, and `play`, so a stable root component rebuilds
+before drawing changed dialogue state. If the app mutates the wrapped instance
+directly, call `ui.runtime:markDirty()` after that mutation.
+
 Render the box as part of your Glyph tree. `component` returns a positioned node
 (or `nil` when no line is active):
 
