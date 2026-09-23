@@ -120,7 +120,9 @@ Optional Menori adapter demo with a vendored example-local Menori snapshot, dist
 
 Arrow key and d-pad spatial navigation across a denser game-tool layout. Demonstrates
 `ui.navigate`, beam-aware movement, `navGroup` scoping, trapped `navScope` submenus, focus
-visibility, gamepad d-pad forwarding, and shader-backed JRPG command submenus.
+visibility, gamepad d-pad forwarding, and shader-backed JRPG command submenus. Its
+standalone window enforces an 800x560 minimum so the dense three-column layout and
+scoped overlays remain legible while resizing.
 
 ## Path Feedback
 

@@ -578,7 +578,14 @@ return {
 	label = "Navigation",
 	description = "A JRPG command layout exercising beam navigation, nav scopes, focus rings, and gamepad activation.",
 	setup = setup,
-	window = { width = 860, height = 560, title = "Navigation - glyph.lua", resizable = true },
+	window = {
+		width = 860,
+		height = 560,
+		minWidth = 800,
+		minHeight = 560,
+		title = "Navigation - glyph.lua",
+		resizable = true,
+	},
 	install = {
 		gamepad = true,
 	},
