@@ -118,6 +118,8 @@ Supported states:
 `button`, `input`, and `tab` ship a default `disabled` style (a muted
 background and text), so setting `disabled = true` dims them without any per-app
 styling. Override the theme component's `disabled` table to customize it.
+Their default focus styles strengthen the existing boundary to two pixels so
+keyboard and gamepad focus remains distinct without changing control geometry.
 
 Tabs should use `active` state styling rather than ad hoc active colors.
 

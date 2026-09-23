@@ -154,6 +154,7 @@ theme.components = {
     radius = theme.radius,
     focused = {
       borderColor = theme.accentColor,
+      borderWidth = 2,
     },
     disabled = {
       background = theme.disabledColor,
@@ -271,6 +272,7 @@ local function syncDerivedDefaults(nextTheme)
   theme.components.input.borderWidth = theme.borderWidth
   theme.components.input.radius = theme.radius
   theme.components.input.focused.borderColor = theme.accentColor
+  theme.components.input.focused.borderWidth = 2
   theme.components.input.disabled.background = theme.disabledColor
   theme.components.input.disabled.color = theme.mutedTextColor
   theme.components.input.disabled.placeholderColor = theme.mutedTextColor

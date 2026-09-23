@@ -133,7 +133,7 @@ describe("style", function()
     assert.are.same(theme.disabledColor, theme.components.tab.disabled.background)
   end)
 
-  it("ships visible default focus styles for buttons and tabs", function()
+  it("ships visible default focus styles for buttons, inputs, and tabs", function()
     local theme = dofile("glyph/theme.lua")
     local runtime = Runtime.new()
     runtime.theme = theme
@@ -142,6 +142,11 @@ describe("style", function()
     button.path = "button"
     local buttonResting = Style.resolve(button, runtime, {})
     local buttonFocused = Style.resolve(button, runtime, { focused = true })
+
+    local input = Components.input({ value = "filter" })
+    input.path = "input"
+    local inputResting = Style.resolve(input, runtime, {})
+    local inputFocused = Style.resolve(input, runtime, { focused = true })
 
     local tab = Components.button({ label = "Logs", styleType = "tab" })
     tab.path = "tab"
@@ -152,6 +157,11 @@ describe("style", function()
     assert.are.same(theme.textColor, buttonFocused.borderColor)
     assert.are.equal(2, buttonFocused.borderWidth)
     assert.is_true(contrastRatio(buttonFocused.borderColor, buttonFocused.background) >= 3)
+
+    assert.are.same(theme.borderColor, inputResting.borderColor)
+    assert.are.same(theme.accentColor, inputFocused.borderColor)
+    assert.are.equal(2, inputFocused.borderWidth)
+    assert.is_true(contrastRatio(inputFocused.borderColor, inputFocused.background) >= 3)
 
     assert.are.same(theme.borderColor, tabResting.borderColor)
     assert.are.same(theme.textColor, tabFocused.borderColor)
