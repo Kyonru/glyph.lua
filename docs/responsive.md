@@ -6,8 +6,8 @@ icon: lucide/monitor
 
 > [!TIP]
 > See responsive flow in the [Layout](layout.md) docs, fixed virtual viewport
-> mapping in [`examples/viewport`](examples.md), and responsive grid columns in
-> [`examples/basic`](examples.md).
+> mapping in [`examples/viewport`](examples.md), and a resizable tool shell in
+> [`examples/workbench`](examples.md).
 
 Glyph tracks viewport size and breakpoints for resizable Love2D windows.
 

@@ -1,7 +1,7 @@
-.PHONY: docs docs-gifs docs-tour doc-tour test examples-tour tour accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene styles themes typography viewport
+.PHONY: docs docs-gifs docs-tour doc-tour test examples-tour tour accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene styles themes typography viewport workbench
 
-EXAMPLES := accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene styles themes typography viewport
-TOUR_EXAMPLES := accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene themes typography viewport
+EXAMPLES := accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene styles themes typography viewport workbench
+TOUR_EXAMPLES := accessibility animations audio-cues basic dashboard dialogue hud-menu i18n inventory juice menori modal navigate path-feedback performance scene themes typography viewport workbench
 LOVE_BIN ?= $(shell command -v love 2>/dev/null || if [ -x /Applications/love.app/Contents/MacOS/love ]; then echo /Applications/love.app/Contents/MacOS/love; else echo love; fi)
 
 docs:

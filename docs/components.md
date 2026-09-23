@@ -9,8 +9,9 @@ icon: lucide/boxes
 <!-- /glyph:feature-gif components -->
 
 > [!TIP]
-> See it in action: [`examples/basic`](examples.md) wires up text, buttons,
-> inputs, meters, tabs, and a scroll view end to end.
+> See the minimal text/button loop in [`examples/basic`](examples.md), then the
+> broader input, meter, tabs, and scroll-view composition in
+> [`examples/workbench`](examples.md).
 
 Glyph components return virtual nodes. Components are plain Lua functions; there is no class system.
 

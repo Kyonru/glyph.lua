@@ -26,6 +26,7 @@ love examples/themes
 love examples/typography
 love examples/viewport
 love examples/performance
+love examples/workbench
 ```
 
 Run every example as a manual tour:
@@ -87,9 +88,14 @@ Theme and variant driven interaction cue events with app-owned Love2D tone playb
 
 ## Basic
 
-Starter service workbench with state, a command rail, buttons, controlled input,
-tabs, a ruled activity register, meters, custom draw, and keyboard/gamepad
-navigation.
+Minimal state loop with text, increment/reset buttons, and keyboard/gamepad
+focus. This is the copyable first example; broader component composition lives
+in Workbench.
+
+## Workbench
+
+Broad component sampler with state, a command rail, controlled input, tabs, a
+ruled activity register, meters, custom draw, and keyboard/gamepad navigation.
 
 ## Dashboard
 

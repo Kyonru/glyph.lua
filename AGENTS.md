@@ -204,6 +204,8 @@ Examples should demonstrate real workflows, not marketing pages:
 - `examples/animations`: enter/exit, movement, selection, size, and meter animation.
 - `examples/audio-cues`: cue metadata and app-owned sound playback.
 - `examples/basic`: minimal API usage.
+- `examples/workbench`: broad component sampler arranged as a flat service
+  console with state, inputs, tabs, meters, custom draw, and an event register.
 - `examples/performance`: large data, memo/static, bounded work.
 - `examples/styles`: themes, variants, transitions, shader styling.
 - `examples/dashboard`: dense debugger/admin UI.
