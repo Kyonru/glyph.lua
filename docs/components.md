@@ -328,6 +328,11 @@ ui.button({
 
 Buttons are focusable by default.
 
+> [!NOTE]
+> The default theme gives focused buttons a two-pixel light border, including
+> primary buttons. The primary palette keeps normal-size text at or above a
+> 4.5:1 contrast ratio in its idle, hover, pressed, and focused states.
+
 Buttons can resolve labels from i18n keys:
 
 ```lua
@@ -509,6 +514,10 @@ ui.tabs({
 
 Use `tabWidth`, per-tab `width`, or `tabPadding` when tabs should read as a
 segmented control with stable button sizes.
+
+The default theme keeps selection and focus separate: an active tab uses the
+accent fill, while an active-and-focused tab retains that fill and adds the
+two-pixel focus border.
 
 ## Panel
 

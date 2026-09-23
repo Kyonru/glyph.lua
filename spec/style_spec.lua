@@ -8,6 +8,25 @@ local function color(value)
   return { value, value, value, 1 }
 end
 
+local function relativeLuminance(value)
+  local function linear(channel)
+    if channel <= 0.03928 then
+      return channel / 12.92
+    end
+    return ((channel + 0.055) / 1.055) ^ 2.4
+  end
+
+  return 0.2126 * linear(value[1]) + 0.7152 * linear(value[2]) + 0.0722 * linear(value[3])
+end
+
+local function contrastRatio(foreground, background)
+  local foregroundLuminance = relativeLuminance(foreground)
+  local backgroundLuminance = relativeLuminance(background)
+  local lighter = math.max(foregroundLuminance, backgroundLuminance)
+  local darker = math.min(foregroundLuminance, backgroundLuminance)
+  return (lighter + 0.05) / (darker + 0.05)
+end
+
 describe("style", function()
   it("resolves theme, component, variant, state, and inline precedence", function()
     local runtime = Runtime.new()
@@ -112,6 +131,84 @@ describe("style", function()
     assert.are.same(theme.disabledColor, theme.components.input.disabled.background)
     assert.is_table(theme.components.tab.disabled)
     assert.are.same(theme.disabledColor, theme.components.tab.disabled.background)
+  end)
+
+  it("ships visible default focus styles for buttons and tabs", function()
+    local theme = dofile("glyph/theme.lua")
+    local runtime = Runtime.new()
+    runtime.theme = theme
+
+    local button = Components.button({ label = "Run" })
+    button.path = "button"
+    local buttonResting = Style.resolve(button, runtime, {})
+    local buttonFocused = Style.resolve(button, runtime, { focused = true })
+
+    local tab = Components.button({ label = "Logs", styleType = "tab" })
+    tab.path = "tab"
+    local tabResting = Style.resolve(tab, runtime, {})
+    local tabFocused = Style.resolve(tab, runtime, { focused = true })
+
+    assert.are.same(theme.borderColor, buttonResting.borderColor)
+    assert.are.same(theme.textColor, buttonFocused.borderColor)
+    assert.are.equal(2, buttonFocused.borderWidth)
+    assert.is_true(contrastRatio(buttonFocused.borderColor, buttonFocused.background) >= 3)
+
+    assert.are.same(theme.borderColor, tabResting.borderColor)
+    assert.are.same(theme.textColor, tabFocused.borderColor)
+    assert.are.equal(2, tabFocused.borderWidth)
+    assert.is_true(contrastRatio(tabFocused.borderColor, tabFocused.background) >= 3)
+  end)
+
+  it("keeps active and active-focused tabs visually distinct", function()
+    local theme = dofile("glyph/theme.lua")
+    local runtime = Runtime.new()
+    runtime.theme = theme
+    local tab = Components.button({ label = "Logs", styleType = "tab", active = true })
+    tab.path = "active-tab"
+
+    local active = Style.resolve(tab, runtime, { active = true })
+    local activeFocused = Style.resolve(tab, runtime, { active = true, focused = true })
+
+    assert.are.same(theme.accentColor, active.background)
+    assert.are.same(theme.accentColor, activeFocused.background)
+    assert.are.same(theme.borderColor, active.borderColor)
+    assert.are.same(theme.textColor, activeFocused.borderColor)
+    assert.are.equal(theme.borderWidth, active.borderWidth)
+    assert.are.equal(2, activeFocused.borderWidth)
+    assert.is_true(contrastRatio(activeFocused.borderColor, activeFocused.background) >= 3)
+  end)
+
+  it("keeps default primary button text readable across interactive states", function()
+    local theme = dofile("glyph/theme.lua")
+    local runtime = Runtime.new()
+    runtime.theme = theme
+    local button = Components.button({ label = "Launch", variant = "primary" })
+    button.path = "primary"
+
+    local states = {
+      {},
+      { hover = true },
+      { pressed = true },
+      { focused = true },
+      { hover = true, focused = true },
+      { pressed = true, focused = true },
+      { disabled = true },
+    }
+
+    for _, state in ipairs(states) do
+      local resolved = Style.resolve(button, runtime, state)
+      assert.is_true(contrastRatio(resolved.color, resolved.background) >= 4.5)
+    end
+
+    local focusedPrimary = Style.resolve(button, runtime, { focused = true })
+    assert.are.same(theme.textColor, focusedPrimary.borderColor)
+    assert.are.equal(2, focusedPrimary.borderWidth)
+    assert.is_true(contrastRatio(focusedPrimary.borderColor, focusedPrimary.background) >= 3)
+
+    local activeTab = Components.button({ label = "Logs", styleType = "tab", active = true })
+    activeTab.path = "contrast-tab"
+    local resolvedTab = Style.resolve(activeTab, runtime, { active = true, focused = true })
+    assert.is_true(contrastRatio(resolvedTab.color, resolvedTab.background) >= 4.5)
   end)
 
   it("invalidates static style cache when theme version changes", function()

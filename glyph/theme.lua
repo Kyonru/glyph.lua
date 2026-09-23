@@ -8,7 +8,7 @@ local theme = {
   surfaceHoverColor = { 0.18, 0.21, 0.25, 1 },
   surfacePressedColor = { 0.1, 0.12, 0.15, 1 },
   borderColor = { 0.28, 0.32, 0.38, 1 },
-  accentColor = { 0.24, 0.54, 0.95, 1 },
+  accentColor = { 0.14, 0.4, 0.78, 1 },
   accentTextColor = { 1, 1, 1, 1 },
   disabledColor = { 0.18, 0.19, 0.21, 1 },
   inputColor = { 0.08, 0.09, 0.11, 1 },
@@ -118,6 +118,10 @@ theme.components = {
     pressed = {
       background = theme.surfacePressedColor,
     },
+    focused = {
+      borderColor = theme.textColor,
+      borderWidth = 2,
+    },
     disabled = {
       background = theme.disabledColor,
       color = theme.mutedTextColor,
@@ -127,10 +131,10 @@ theme.components = {
         background = theme.accentColor,
         color = theme.accentTextColor,
         hover = {
-          background = { 0.3, 0.62, 1, 1 },
+          background = { 0.18, 0.44, 0.82, 1 },
         },
         pressed = {
-          background = { 0.16, 0.42, 0.78, 1 },
+          background = { 0.1, 0.32, 0.64, 1 },
         },
       },
     },
@@ -165,6 +169,10 @@ theme.components = {
     },
     pressed = {
       background = theme.surfacePressedColor,
+    },
+    focused = {
+      borderColor = theme.textColor,
+      borderWidth = 2,
     },
     disabled = {
       background = theme.disabledColor,
@@ -226,6 +234,8 @@ local function syncDerivedDefaults(nextTheme)
   theme.components.button.radius = theme.radius
   theme.components.button.hover.background = theme.surfaceHoverColor
   theme.components.button.pressed.background = theme.surfacePressedColor
+  theme.components.button.focused.borderColor = theme.textColor
+  theme.components.button.focused.borderWidth = 2
   theme.components.button.disabled.background = theme.disabledColor
   theme.components.button.disabled.color = theme.mutedTextColor
   theme.components.button.variants.primary.background = theme.accentColor
@@ -249,6 +259,8 @@ local function syncDerivedDefaults(nextTheme)
   theme.components.tab.active.color = theme.accentTextColor
   theme.components.tab.hover.background = theme.surfaceHoverColor
   theme.components.tab.pressed.background = theme.surfacePressedColor
+  theme.components.tab.focused.borderColor = theme.textColor
+  theme.components.tab.focused.borderWidth = 2
   theme.components.tab.disabled.background = theme.disabledColor
   theme.components.tab.disabled.color = theme.mutedTextColor
   theme.components.scrollBar.width = theme.scrollbarWidth
