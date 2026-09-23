@@ -12,6 +12,18 @@ local function textComponent(value)
   end
 end
 
+local function effectComponent(runtime, label, calls)
+  return function()
+    runtime:useEffect(function()
+      calls[#calls + 1] = "effect:" .. label
+      return function()
+        calls[#calls + 1] = "cleanup:" .. label
+      end
+    end, {})
+    return Components.text(label)
+  end
+end
+
 local function makeLove(overrides)
   overrides = overrides or {}
   local calls = overrides.calls or {}
@@ -164,6 +176,101 @@ describe("Scene runtime integration", function()
 
     assert.are.equal("a:2", runtime.scene.layers[1].root.value)
     assert.are.equal("b:11", runtime.scene.layers[2].root.value)
+  end)
+
+  it("disposes a layer scope after its exit transition and onClose callback", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    runtime:setLove(makeLove())
+
+    runtime.scene:push("panel", effectComponent(runtime, "panel", calls), {
+      transition = "fade",
+      duration = 0,
+      exitDuration = 0.25,
+      onClose = function()
+        calls[#calls + 1] = "close:panel"
+      end,
+    })
+    runtime:render()
+    local scope = runtime.scene.layers[1].scope
+
+    runtime.scene:close("panel")
+    runtime:update(0.1)
+    assert.are.same({ "effect:panel" }, calls)
+
+    runtime:update(0.2)
+    runtime:update(1)
+
+    assert.are.same({ "effect:panel", "close:panel", "cleanup:panel" }, calls)
+    assert.is_true(scope.disposed)
+    assert.is_nil(next(scope.hooks))
+    assert.is_nil(next(scope.effects))
+    assert.is_nil(next(scope.pendingEffects))
+  end)
+
+  it("disposes existing layer scopes immediately when scene.set replaces the stack", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    runtime:setLove(makeLove())
+
+    runtime.scene:push("old", effectComponent(runtime, "old", calls), { transition = "none" })
+    runtime:render()
+    local oldScope = runtime.scene.layers[1].scope
+
+    runtime.scene:set("new", textComponent("new"), { transition = "none" })
+
+    assert.are.same({ "effect:old", "cleanup:old" }, calls)
+    assert.is_true(oldScope.disposed)
+    assert.are.equal("new", runtime.scene.layers[1].id)
+  end)
+
+  it("disposes the replaced scope immediately for duplicate layer ids", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    runtime:setLove(makeLove())
+
+    runtime.scene:push("shared", effectComponent(runtime, "old", calls), { transition = "none" })
+    runtime:render()
+    local oldScope = runtime.scene.layers[1].scope
+
+    runtime.scene:push("shared", effectComponent(runtime, "new", calls), { transition = "none" })
+    runtime:render()
+
+    assert.are.same({ "effect:old", "cleanup:old", "effect:new" }, calls)
+    assert.is_true(oldScope.disposed)
+    assert.are.equal(1, #runtime.scene.layers)
+  end)
+
+  it("disposes only cleared layer scopes after their exit completes", function()
+    local runtime = Runtime.new()
+    local calls = {}
+    runtime:setLove(makeLove())
+
+    runtime.scene:push("a", effectComponent(runtime, "a", calls), {
+      kind = "overlay",
+      blocking = false,
+      transition = "none",
+    })
+    runtime.scene:push("b", effectComponent(runtime, "b", calls), {
+      kind = "overlay",
+      blocking = false,
+      transition = "none",
+    })
+    runtime:render()
+
+    runtime.scene:clear(function(layer)
+      return layer.id == "a"
+    end)
+    assert.are.same({ "effect:a", "effect:b" }, calls)
+
+    runtime:update(0)
+    assert.are.same({ "effect:a", "effect:b", "cleanup:a" }, calls)
+    assert.are.equal("b", runtime.scene.layers[1].id)
+
+    runtime.scene:clear()
+    runtime:update(0)
+    runtime:update(1)
+    assert.are.same({ "effect:a", "effect:b", "cleanup:a", "cleanup:b" }, calls)
   end)
 
   it("routes clicks to the topmost blocking layer", function()

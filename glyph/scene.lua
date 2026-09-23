@@ -104,6 +104,12 @@ local function clearLayerReferences(scene, layer)
   end
 end
 
+local function disposeLayerScope(scene, layer)
+  if scene.runtime and scene.runtime.disposeHookScope then
+    scene.runtime:disposeHookScope(layer.scope)
+  end
+end
+
 local function reconcileInputReferences(scene)
   if scene.runtime and scene.runtime.reconcileInputReferences then
     scene.runtime:reconcileInputReferences()
@@ -203,6 +209,7 @@ function Scene:set(id, component, opts)
   opts.blocking = opts.blocking ~= false
   for _, layer in ipairs(self.layers) do
     clearLayerReferences(self, layer)
+    disposeLayerScope(self, layer)
     if self.runtime and self.runtime.clearAnimationRoot then
       self.runtime:clearAnimationRoot("layer:" .. tostring(layer.id))
     end
@@ -228,6 +235,7 @@ function Scene:push(id, component, opts)
   local restoreFocusRootPath = existingLayer and existingLayer._restoreFocusRootPath or nil
   if existingIndex then
     clearLayerReferences(self, existingLayer)
+    disposeLayerScope(self, existingLayer)
     table.remove(self.layers, existingIndex)
   end
 
@@ -361,6 +369,7 @@ function Scene:update(dt)
     if layer then
       transferRestoreFocus(self.layers, layer)
       clearLayerReferences(self, layer)
+      disposeLayerScope(self, layer)
     end
     if layer and self.runtime and self.runtime.clearAnimationRoot then
       self.runtime:clearAnimationRoot("layer:" .. tostring(layer.id))

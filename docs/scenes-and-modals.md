@@ -116,6 +116,13 @@ Each scene layer has its own hook scope. `useState` inside a modal does not muta
 The layer root is available when its effects run, so an initial `useEffect` may
 call `ui.setFocus` for a node captured from that layer's first build.
 
+Closing or clearing a layer retains its hook state and active effects while the
+exit transition draws. After the transition and `onClose`, Glyph runs each effect
+cleanup once and releases the scope. `ui.scene.set` replaces the whole stack
+immediately, and `ui.scene.push` replaces an existing duplicate ID immediately,
+so those operations clean up discarded scopes during the call without waiting for
+an exit transition.
+
 ## Menori Scenes
 
 `ui.menori.new({ menori = menori })` adds optional Menori-aware scene helpers for

@@ -326,6 +326,31 @@ describe("runtime", function()
     assert.are.same({ "effect 1", "cleanup 1", "effect 2" }, calls)
   end)
 
+  it("disposes the root hook scope exactly once and clears retained hook state", function()
+    local runtime = Runtime.new()
+    local calls = {}
+
+    local function App()
+      runtime:useState("retained")
+      runtime:useEffect(function()
+        calls[#calls + 1] = "effect"
+        return function()
+          calls[#calls + 1] = "cleanup"
+        end
+      end, {})
+      return Components.text("ok")
+    end
+
+    runtime:build(App)
+    runtime:disposeHookScope()
+    runtime:disposeHookScope()
+
+    assert.are.same({ "effect", "cleanup" }, calls)
+    assert.is_nil(next(runtime.hooks))
+    assert.is_nil(next(runtime.effects))
+    assert.is_nil(next(runtime.pendingEffects))
+  end)
+
   it("memo returns cached nodes for unchanged deps", function()
     local runtime = Runtime.new()
     local builds = 0

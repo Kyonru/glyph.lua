@@ -458,6 +458,7 @@ function SurfaceInstance:keyreleased(key)
 end
 
 function SurfaceInstance:destroy()
+  self.runtime:disposeHookScope()
   Feedback.clear(self.runtime)
   self.canvas = nil
   self.runtime.root = nil

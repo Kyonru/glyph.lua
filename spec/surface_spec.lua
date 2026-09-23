@@ -129,6 +129,35 @@ describe("surface", function()
     assert.are.equal("B:11", surfaceB.runtime.root.value)
   end)
 
+  it("disposes root effects exactly once when destroyed", function()
+    local calls = {}
+    local surface = Surface.new({
+      width = 120,
+      height = 60,
+      love = fakeLove(),
+      component = function(ui)
+        ui.useState("retained")
+        ui.useEffect(function()
+          calls[#calls + 1] = "effect"
+          return function()
+            calls[#calls + 1] = "cleanup"
+          end
+        end, {})
+        return ui.text("surface")
+      end,
+    })
+
+    surface:render()
+    surface:destroy()
+    surface:destroy()
+
+    assert.are.same({ "effect", "cleanup" }, calls)
+    assert.is_nil(surface.runtime.root)
+    assert.is_nil(surface.runtime.rootComponent)
+    assert.is_nil(next(surface.runtime.hooks))
+    assert.is_nil(next(surface.runtime.effects))
+  end)
+
   it("renders to a fixed-size canvas and resizes it explicitly", function()
     local love = fakeLove()
     local surface = Surface.new({

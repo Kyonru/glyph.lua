@@ -59,6 +59,14 @@ ui.useEffect(function()
 end, { id })
 ```
 
+An effect cleanup runs before that effect is replaced after a dependency change,
+and exactly once when its owning hook scope is discarded. Scene layers keep their
+effects through exit animation; cleanup runs after the transition completes and
+after `onClose`. Immediate stack replacement with `ui.scene.set`, or replacement
+of a duplicate layer ID with `ui.scene.push`, disposes the replaced scopes during
+that call. An offscreen surface disposes its root hook scope during
+`surface:destroy()`.
+
 Call hooks unconditionally and in the same order on every render. A node's
 `key` does not create a hook scope or make a `useState` / `useEffect` slot follow
 that node; keyed hook-state reconciliation is not part of v0.1.

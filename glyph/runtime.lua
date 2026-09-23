@@ -723,6 +723,10 @@ function Runtime:useState(initial)
   end
 
   local function setState(nextValue)
+    if scope and scope.disposed then
+      return
+    end
+
     if type(nextValue) == "function" then
       hooks[index] = nextValue(hooks[index])
     else
@@ -770,6 +774,42 @@ function Runtime:runEffects()
   end
 
   self.pendingEffects = {}
+end
+
+---@param scope? table omit to dispose the root hook scope
+---@return nil
+function Runtime:disposeHookScope(scope)
+  local target = scope or self
+  local effects = target.effects or {}
+  local firstError = nil
+
+  for _, effect in pairs(effects) do
+    local cleanup = effect and effect.cleanup or nil
+    if type(cleanup) == "function" then
+      -- Clear before invoking so re-entrant disposal cannot run it twice.
+      effect.cleanup = nil
+      local ok, err = pcall(cleanup)
+      if not ok and firstError == nil then
+        firstError = err
+      end
+    end
+  end
+
+  target.hooks = {}
+  target.effects = {}
+  target.pendingEffects = {}
+  target.needsRender = false
+
+  if scope then
+    scope.disposed = true
+    scope.layer = nil
+  else
+    self.hookCursor = 0
+  end
+
+  if firstError ~= nil then
+    error(firstError, 0)
+  end
 end
 
 local function copyAnimationSpecWithFrom(spec, from)

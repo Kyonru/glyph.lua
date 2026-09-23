@@ -57,7 +57,8 @@ end
 - `surface:update(dt)` — advance the surface's runtime (hooks, animations, feedback).
 - `surface:resize(width, height)` — change the canvas size (drops the old canvas).
 - `surface:markDirty()` — flag a redraw (for change-driven caching).
-- `surface:destroy()` — release the canvas and clear the runtime.
+- `surface:destroy()` — run root `useEffect` cleanups once, release the canvas,
+  and clear the runtime. Calling it again does not repeat already-run cleanups.
 
 ## Input
 
