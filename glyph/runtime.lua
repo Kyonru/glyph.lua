@@ -469,6 +469,7 @@ function Runtime.new()
     scrollbarFeedback = {},
     layoutCallbackCache = {},
     inputCursors = {},
+    inputEdits = {},
     focusPath = nil,
     memoCache = setmetatable({}, { __mode = "k" }),
     styleCache = {},
@@ -1568,6 +1569,140 @@ function Runtime:cursorKey(node)
   return node and node.path or nil
 end
 
+local function isUtf8Continuation(byte)
+  return byte ~= nil and byte >= 0x80 and byte < 0xC0
+end
+
+local function clampInputCursor(value, cursor)
+  local length = #value
+  cursor = math.max(0, math.min(length, math.floor(tonumber(cursor) or length)))
+  while cursor > 0 and cursor < length and isUtf8Continuation(value:byte(cursor + 1)) do
+    cursor = cursor - 1
+  end
+  return cursor
+end
+
+local function previousInputCursor(value, cursor)
+  cursor = clampInputCursor(value, cursor)
+  if cursor <= 0 then
+    return 0
+  end
+
+  local byteIndex = cursor
+  while byteIndex > 0 and isUtf8Continuation(value:byte(byteIndex)) do
+    byteIndex = byteIndex - 1
+  end
+  return math.max(0, byteIndex - 1)
+end
+
+local function nextInputCursor(value, cursor)
+  local length = #value
+  cursor = clampInputCursor(value, cursor)
+  if cursor >= length then
+    return length
+  end
+
+  local byteIndex = cursor + 2
+  while byteIndex <= length and isUtf8Continuation(value:byte(byteIndex)) do
+    byteIndex = byteIndex + 1
+  end
+  return byteIndex - 1
+end
+
+local function inputPadding(props)
+  local value = props and props.padding
+  if type(value) == "number" then
+    return { top = value, right = value, bottom = value, left = value }
+  end
+
+  value = value or {}
+  return {
+    top = value.top or value.y or 6,
+    right = value.right or value.x or 8,
+    bottom = value.bottom or value.y or 6,
+    left = value.left or value.x or 8,
+  }
+end
+
+function Runtime:inputEditState(node)
+  local key = self:cursorKey(node)
+  local rendered = tostring(node and node.props and node.props.value or "")
+  if not key then
+    return rendered, #rendered, nil, nil
+  end
+
+  local edit = self.inputEdits[key]
+  if not edit then
+    edit = { rendered = rendered, value = rendered }
+    self.inputEdits[key] = edit
+  elseif edit.rendered ~= rendered then
+    if edit.value == rendered then
+      edit.rendered = rendered
+    else
+      edit.rendered = rendered
+      edit.value = rendered
+    end
+  end
+
+  local cursor = clampInputCursor(edit.value, self.inputCursors[key])
+  self.inputCursors[key] = cursor
+  return edit.value, cursor, key, edit
+end
+
+function Runtime:setPendingInputEdit(edit, key, value, cursor)
+  if edit then
+    edit.value = value
+  end
+  if key then
+    self.inputCursors[key] = clampInputCursor(value, cursor)
+  end
+end
+
+function Runtime:inputCursorAtX(node, x)
+  local value, _, key = self:inputEditState(node)
+  if not key then
+    return #value
+  end
+
+  local props = node.props or {}
+  local pad = inputPadding(props)
+  local target = x - ((node.absoluteX or 0) + pad.left)
+  if target <= 0 then
+    return 0
+  end
+
+  local loveModule = self.love or _G.love
+  local style = Style.resolve(node, self, { focused = true })
+  local textStyle = Typography.resolveDrawable(self.theme, props, style, "input", loveModule, value)
+  local graphics = loveModule and loveModule.graphics
+  local font = textStyle.font or (graphics and graphics.getFont and graphics.getFont())
+  local glyphCount = 0
+
+  local function prefixWidth(cursor)
+    if font and type(font.getWidth) == "function" then
+      local ok, width = pcall(font.getWidth, font, value:sub(1, cursor))
+      if ok and type(width) == "number" then
+        return width
+      end
+    end
+    return glyphCount * 7
+  end
+
+  local cursor = 0
+  local previousWidth = 0
+  while cursor < #value do
+    local nextCursor = nextInputCursor(value, cursor)
+    glyphCount = glyphCount + 1
+    local width = prefixWidth(nextCursor)
+    if target < (previousWidth + width) / 2 then
+      return cursor
+    end
+    cursor = nextCursor
+    previousWidth = width
+  end
+  return #value
+end
+
 local function dragDistance(state, x, y)
   local dx = x - (state.startX or x)
   local dy = y - (state.startY or y)
@@ -1819,7 +1954,9 @@ function Runtime:mousepressed(x, y, button)
   if node and (node.type == "input" or node.type == "button" or node.props.focusable) then
     self:setFocus(node)
     if node.type == "input" then
-      self.inputCursors[self:cursorKey(node)] = #tostring(node.props.value or "")
+      local key = self:cursorKey(node)
+      self:inputEditState(node)
+      self.inputCursors[key] = self:inputCursorAtX(node, x)
     end
   else
     self:setFocus(nil)
@@ -1889,11 +2026,9 @@ end
 function Runtime:textinput(text)
   local node = self:activeFocusNode()
   if node and node.type == "input" and node.props and type(node.props.onChange) == "function" then
-    local value = tostring(node.props.value or "")
-    local key = self:cursorKey(node)
-    local cursor = self.inputCursors[key] or #value
+    local value, cursor, key, edit = self:inputEditState(node)
     local nextValue = value:sub(1, cursor) .. text .. value:sub(cursor + 1)
-    self.inputCursors[key] = cursor + #text
+    self:setPendingInputEdit(edit, key, nextValue, cursor + #text)
     node.props.onChange(nextValue)
     self:markDirty()
   end
@@ -1917,25 +2052,28 @@ function Runtime:keypressed(key)
   end
 
   if node and node.type == "input" and node.props and type(node.props.onChange) == "function" then
-    local value = tostring(node.props.value or "")
-    local cursorKey = self:cursorKey(node)
-    local cursor = self.inputCursors[cursorKey] or #value
+    local value, cursor, cursorKey, edit = self:inputEditState(node)
     if key == "backspace" then
       if cursor > 0 then
-        node.props.onChange(value:sub(1, cursor - 1) .. value:sub(cursor + 1))
-        self.inputCursors[cursorKey] = cursor - 1
+        local previousCursor = previousInputCursor(value, cursor)
+        local nextValue = value:sub(1, previousCursor) .. value:sub(cursor + 1)
+        self:setPendingInputEdit(edit, cursorKey, nextValue, previousCursor)
+        node.props.onChange(nextValue)
         self:markDirty()
       end
     elseif key == "delete" then
       if cursor < #value then
-        node.props.onChange(value:sub(1, cursor) .. value:sub(cursor + 2))
+        local nextCursor = nextInputCursor(value, cursor)
+        local nextValue = value:sub(1, cursor) .. value:sub(nextCursor + 1)
+        self:setPendingInputEdit(edit, cursorKey, nextValue, cursor)
+        node.props.onChange(nextValue)
         self:markDirty()
       end
     elseif key == "left" then
-      self.inputCursors[cursorKey] = math.max(0, cursor - 1)
+      self.inputCursors[cursorKey] = previousInputCursor(value, cursor)
       self:markDirty()
     elseif key == "right" then
-      self.inputCursors[cursorKey] = math.min(#value, cursor + 1)
+      self.inputCursors[cursorKey] = nextInputCursor(value, cursor)
       self:markDirty()
     end
   elseif node and isActivationKey(key) and isActivatable(node) then
@@ -3924,6 +4062,11 @@ function Runtime:drawNode(node, x, y, stackContext)
       drawRect(love, "line", absX, absY, width, height, radius)
     end
     local value = tostring(props.value or "")
+    local cursor = nil
+    if self.focusNode == node then
+      value, cursor = self:inputEditState(node)
+    end
+    local pad = inputPadding(props)
     local inputStyle = style
     if value == "" and style.placeholderColor then
       inputStyle = Style.copyValue(style)
@@ -3932,15 +4075,14 @@ function Runtime:drawNode(node, x, y, stackContext)
       inputStyle = Style.copyValue(style)
       inputStyle.color = self.theme.mutedTextColor
     end
-    drawPlainText(self, node, value ~= "" and value or tostring(props.placeholder or ""), absX + 8, absY + 6, width - 16, love, inputStyle, opacity, "input")
+    drawPlainText(self, node, value ~= "" and value or tostring(props.placeholder or ""), absX + pad.left, absY + pad.top, math.max(0, width - pad.left - pad.right), love, inputStyle, opacity, "input")
     if self.focusNode == node then
-      local cursor = self.inputCursors[self:cursorKey(node)] or #value
       local prefix = value:sub(1, cursor)
       local inputTextStyle = Typography.resolveDrawable(self.theme, props, style, "input", love)
       local font = inputTextStyle.font or (love.graphics.getFont and love.graphics.getFont())
-      local cursorX = absX + 8 + (font and font:getWidth(prefix) or #prefix * 7)
+      local cursorX = absX + pad.left + (font and font:getWidth(prefix) or #prefix * 7)
       color(love, withOpacity(style.cursorColor or self.theme.accentColor, opacity))
-      love.graphics.rectangle("fill", cursorX, absY + 6, self.theme.inputCursorWidth, math.max(12, height - 12))
+      love.graphics.rectangle("fill", cursorX, absY + pad.top, self.theme.inputCursorWidth, math.max(12, height - pad.top - pad.bottom))
     end
   elseif node.type == "meter" then
     ctx = createDrawContext(self, node, absX, absY, width, height, love, style)

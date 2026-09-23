@@ -1105,6 +1105,103 @@ describe("runtime", function()
     assert.are.equal("", value)
   end)
 
+  it("applies batched controlled input edits before the next rebuild", function()
+    local runtime = Runtime.new()
+    local value = ""
+
+    local function App()
+      return Components.input({
+        value = value,
+        onChange = function(nextValue)
+          value = nextValue
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(1, 1, 1)
+    runtime:textinput("a")
+    runtime:textinput("b")
+    runtime:textinput("c")
+    runtime:keypressed("backspace")
+    runtime:keypressed("backspace")
+
+    assert.are.equal("a", value)
+    assert.are.equal(1, runtime.inputCursors["0"])
+  end)
+
+  it("clamps the cursor when a controlled value is shortened externally", function()
+    local runtime = Runtime.new()
+    local value = "filter"
+
+    local function App()
+      return Components.input({
+        value = value,
+        onChange = function(nextValue)
+          value = nextValue
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(150, 1, 1)
+    value = "ok"
+    runtime:build(App)
+    runtime:keypressed("backspace")
+
+    assert.are.equal("o", value)
+    assert.are.equal(1, runtime.inputCursors["0"])
+  end)
+
+  it("edits UTF-8 input only at codepoint boundaries", function()
+    local runtime = Runtime.new()
+    local value = "aéz"
+
+    local function App()
+      return Components.input({
+        value = value,
+        onChange = function(nextValue)
+          value = nextValue
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(150, 1, 1)
+    runtime:keypressed("left")
+    runtime:keypressed("backspace")
+    runtime:textinput("ø")
+
+    assert.are.equal("aøz", value)
+    assert.are.equal(3, runtime.inputCursors["0"])
+  end)
+
+  it("places the input cursor nearest the clicked glyph boundary", function()
+    local runtime = Runtime.new()
+    local value = "abc"
+
+    local function App()
+      return Components.input({
+        width = 100,
+        value = value,
+        onChange = function(nextValue)
+          value = nextValue
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(9, 1, 1)
+    runtime:textinput("x")
+
+    assert.are.equal("xabc", value)
+    assert.are.equal(1, runtime.inputCursors["0"])
+  end)
+
   it("clamps scroll views to their content bounds", function()
     local runtime = Runtime.new()
 

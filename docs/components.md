@@ -376,6 +376,12 @@ ui.input({
 Inputs are controlled: keep the value in state and update it through `onChange`.
 Use `placeholderKey` for localized placeholder text.
 
+Pointer presses place the cursor at the nearest glyph boundary. Left, Right,
+Backspace, and Delete preserve UTF-8 codepoint boundaries, and consecutive
+events are applied to the pending controlled value even when they arrive before
+the next render. If an app replaces the value with shorter text, Glyph clamps
+the cursor to the new value. Set `padding` to adjust both text and cursor insets.
+
 ## Meter
 
 `ui.meter(props)` draws generic value displays such as health, mana, cooldown,
