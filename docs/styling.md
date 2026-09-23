@@ -59,9 +59,9 @@ Themes can define a font registry, typography presets, and a global text scale:
 ui.setTheme({
   textScale = 1.15,
   fonts = {
-    body = love.graphics.newFont(14),
-    heading = love.graphics.newFont(24),
-    japanese = love.graphics.newFont("assets/DotGothic16-Regular.ttf", 14),
+    body = { path = "assets/ui.ttf", filter = "linear" },
+    heading = { path = "assets/ui-heading.ttf", filter = "linear" },
+    japanese = { path = "assets/DotGothic16-Regular.ttf" },
   },
   fontFallbacks = { "japanese" },
   typography = {
@@ -74,8 +74,11 @@ ui.setTheme({
 ```
 
 `font` may be a Love2D font object, a registered font name, or a font spec table
-such as `{ path = "assets/ui.ttf", size = 14 }`. Font specs are loaded lazily and
-cached when Love2D font creation is available. Text defaults to
+such as `{ path = "assets/ui.ttf" }`. A spec may also use `source` for a
+Love-supported in-memory source such as `FileData`. Specs are instantiated at
+the resolved `fontSize` after `textScale`, then cached by source, size, hinting,
+and filter. Prebuilt Love Font objects remain fixed at the size at which the app
+created them; use a spec when one family must serve several presets. Text defaults to
 `fontFilter = "nearest"` for crisp pixel scaling; set `fontFilter = "linear"` or
 use a font spec with `filter = { min = "nearest", mag = "linear" }` when a
 specific text style needs different Love2D filtering.

@@ -137,8 +137,9 @@ local function loadSpecFont(spec, size, graphics, cacheKey, filterSpec)
   end
 
   local ok, font
-  if spec.path then
-    ok, font = pcall(graphics.newFont, spec.path, size, spec.hinting)
+  local source = spec.source or spec.path
+  if source then
+    ok, font = pcall(graphics.newFont, source, size, spec.hinting)
   else
     ok, font = pcall(graphics.newFont, size)
   end
@@ -163,7 +164,7 @@ local function loadResolvedFont(fontRef, resolved, theme, graphics, fontFilter, 
     local specFilter = Filter.fromFields(fontRef, fontFilter)
     local key = table.concat({
       "spec",
-      tostring(fontRef.path or ""),
+      tostring(fontRef.source or fontRef.path or ""),
       tostring(size),
       tostring(fontRef.hinting or ""),
       Filter.key(specFilter),

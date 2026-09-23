@@ -26,6 +26,7 @@ local GlyphFilterSpec = {}
 
 ---@class GlyphFontSpec
 ---@field path? string
+---@field source? any Love2D font source such as FileData; instantiated at the resolved font size
 ---@field size? number
 ---@field hinting? string
 ---@field filter? GlyphFilter

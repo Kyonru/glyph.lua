@@ -74,6 +74,10 @@ describe("typography measurement cache", function()
 end)
 
 describe("typography font resolution", function()
+  before_each(function()
+    Typography.clearCache()
+  end)
+
   it("resolves caption typography through the named theme font", function()
     local latinFont = {
       getWidth = function(_, text)
@@ -151,5 +155,129 @@ describe("typography font resolution", function()
 
     assert.are.equal(japaneseFont, resolved.font)
     assert.are.equal(#("言語: 日本語") * 2, width)
+  end)
+
+  it("instantiates source descriptors at resolved sizes and reuses cached fonts", function()
+    local source = {}
+    local calls = {}
+    local fakeLove = {
+      graphics = {
+        newFont = function(received, size)
+          calls[#calls + 1] = { source = received, size = size }
+          return {
+            source = received,
+            size = size,
+            getWidth = function(_, text)
+              return #text * size
+            end,
+            getHeight = function()
+              return size
+            end,
+            hasGlyphs = function()
+              return true
+            end,
+            setFilter = function() end,
+          }
+        end,
+      },
+    }
+    local theme = {
+      fontSize = 12,
+      textScale = 1,
+      typography = { text = { font = "body", fontSize = 12 } },
+      fonts = { body = { source = source, filter = "linear" } },
+    }
+
+    local first = Typography.resolveDrawable(theme, {}, nil, nil, fakeLove, "alpha")
+    local repeated = Typography.resolveDrawable(theme, {}, nil, nil, fakeLove, "beta")
+    local large = Typography.resolveDrawable(theme, { fontSize = 24 }, nil, nil, fakeLove, "large")
+    theme.textScale = 2
+    local scaled = Typography.resolveDrawable(theme, {}, nil, nil, fakeLove, "scaled")
+
+    assert.are.equal(2, #calls)
+    assert.are.equal(source, calls[1].source)
+    assert.are.equal(12, calls[1].size)
+    assert.are.equal(24, calls[2].size)
+    assert.are.equal(first.font, repeated.font)
+    assert.are.equal(large.font, scaled.font)
+  end)
+
+  it("keeps prebuilt font objects fixed when fontSize changes", function()
+    local fixed = {
+      getWidth = function(_, text)
+        return #text * 8
+      end,
+      getHeight = function()
+        return 16
+      end,
+    }
+    local created = 0
+    local fakeLove = {
+      graphics = {
+        newFont = function()
+          created = created + 1
+        end,
+      },
+    }
+    local theme = {
+      fontSize = 13,
+      typography = { text = { font = "body" } },
+      fonts = { body = fixed },
+    }
+
+    local resolved = Typography.resolveDrawable(theme, { fontSize = 40 }, nil, nil, fakeLove, "fixed")
+
+    assert.are.equal(fixed, resolved.font)
+    assert.are.equal(0, created)
+  end)
+
+  it("loads source-descriptor fallbacks at the selected effective size", function()
+    local fallbackSource = {}
+    local createdSize = nil
+    local latinFont = {
+      getWidth = function(_, text)
+        return #text
+      end,
+      getHeight = function()
+        return 12
+      end,
+      hasGlyphs = function(_, text)
+        return not tostring(text):find("言", 1, true)
+      end,
+    }
+    local fakeLove = {
+      graphics = {
+        newFont = function(source, size)
+          createdSize = size
+          return {
+            source = source,
+            getWidth = function(_, text)
+              return #text * 2
+            end,
+            getHeight = function()
+              return size
+            end,
+            hasGlyphs = function()
+              return true
+            end,
+            setFilter = function() end,
+          }
+        end,
+      },
+    }
+    local theme = {
+      fontSize = 13,
+      typography = { text = { font = "body" } },
+      fonts = {
+        body = latinFont,
+        japanese = { source = fallbackSource },
+      },
+      fontFallbacks = { "japanese" },
+    }
+
+    local resolved = Typography.resolveDrawable(theme, { fontSize = 19 }, nil, nil, fakeLove, "言語")
+
+    assert.are.equal(fallbackSource, resolved.font.source)
+    assert.are.equal(19, createdSize)
   end)
 end)

@@ -24,10 +24,12 @@ Glyph is intended for debugger panels and game UI, so performance matters.
 
 ## Typography
 
-Theme font specs are loaded lazily and cached by resolved size, and wrapped-text
-measurement (`font:getWidth`) is cached per `(font, text)` so re-laying out the
-same labels each frame does not re-measure them. Prefer named fonts and
-`textStyle` presets over creating Love2D fonts inside component functions.
+Theme font specs are loaded lazily and cached by source, rounded resolved size,
+hinting, and filter. Wrapped-text measurement (`font:getWidth`) is cached per
+`(font, text)` so re-laying out the same labels each frame does not re-measure
+them. Prefer named fonts and `textStyle` presets over creating Love2D fonts
+inside component functions. Avoid continuously animating `fontSize`: every
+distinct rounded size intentionally retains a separate Love Font.
 
 SYSL-backed rich text is opt-in. Use plain `ui.text` for hot-path labels, and
 reserve `ui.richText` for copy that actually needs rich formatting, images,
