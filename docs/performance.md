@@ -51,6 +51,10 @@ Use `ui.static(node)` for stable labels, icons, or repeated rows that do not nee
 local label = ui.static(ui.text("Ready"))
 ```
 
+Static and memoized nodes reuse cached geometry while their incoming layout
+constraints are unchanged. A window resize or parent-size change automatically
+recomputes their geometry, so responsive percent sizes remain accurate.
+
 ## Reactivity model
 
 A render rebuilds the tree only when it is **dirty** — a `useState` setter ran,

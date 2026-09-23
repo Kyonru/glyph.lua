@@ -167,6 +167,71 @@ describe("layout", function()
     assert.are.equal(200, tree.children[1].layout.width)
   end)
 
+  it("recomputes static geometry when available width changes", function()
+    local tree = ui.static(ui.box({ width = "50%", height = "50%" }))
+
+    Layout.compute(tree, {
+      theme = ui.theme,
+      availableWidth = 200,
+      availableHeight = 100,
+    })
+
+    assert.are.equal(100, tree.layout.width)
+    assert.are.equal(50, tree.layout.height)
+
+    Layout.compute(tree, {
+      theme = ui.theme,
+      availableWidth = 320,
+      availableHeight = 100,
+    })
+
+    assert.are.equal(160, tree.layout.width)
+    assert.are.equal(50, tree.layout.height)
+  end)
+
+  it("recomputes memoized geometry when available height changes", function()
+    local tree = ui.box({ width = "75%", height = "25%" })
+    tree.memoized = true
+
+    Layout.compute(tree, {
+      theme = ui.theme,
+      availableWidth = 200,
+      availableHeight = 120,
+    })
+
+    assert.are.equal(150, tree.layout.width)
+    assert.are.equal(30, tree.layout.height)
+
+    Layout.compute(tree, {
+      theme = ui.theme,
+      availableWidth = 200,
+      availableHeight = 240,
+    })
+
+    assert.are.equal(150, tree.layout.width)
+    assert.are.equal(60, tree.layout.height)
+  end)
+
+  it("reuses static geometry when available constraints are unchanged", function()
+    local measureCalls = 0
+    local tree = ui.static(ui.box({
+      measure = function()
+        measureCalls = measureCalls + 1
+        return 40, 20
+      end,
+    }))
+    local staticContext = {
+      theme = ui.theme,
+      availableWidth = 200,
+      availableHeight = 100,
+    }
+
+    Layout.compute(tree, staticContext)
+    Layout.compute(tree, staticContext)
+
+    assert.are.equal(1, measureCalls)
+  end)
+
   it("does not leak unresolved percent widths into arithmetic", function()
     local tree = ui.row({ width = 240 }, {
       ui.box({ width = "100%", height = 10 }),

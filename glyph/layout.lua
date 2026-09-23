@@ -655,10 +655,19 @@ function Layout.compute(root, context)
   visit = function(node, availableWidth, availableHeight)
     node.layout = node.layout or {}
     node.dirty = node.dirty or {}
+    local previousAvailableWidth = node.layout.availableWidth
+    local previousAvailableHeight = node.layout.availableHeight
     node.layout.availableWidth = availableWidth
     node.layout.availableHeight = availableHeight
 
-    if (node.static or node.memoized) and node.dirty.layout == false and (node.layout.width or 0) > 0 and (node.layout.height or 0) > 0 then
+    local constraintsUnchanged = previousAvailableWidth == availableWidth
+      and previousAvailableHeight == availableHeight
+    if (node.static or node.memoized)
+      and constraintsUnchanged
+      and node.dirty.layout == false
+      and (node.layout.width or 0) > 0
+      and (node.layout.height or 0) > 0
+    then
       return node.layout.width, node.layout.height
     end
 
