@@ -140,6 +140,13 @@ end
 `ui.install` and `ui.load` can install common callbacks automatically.
 Gamepad callbacks are installed only when `install.gamepad` is enabled.
 
+> [!WARNING]
+> Give each Love callback one owner. If an existing `love.keypressed` or
+> `love.keyreleased` callback already calls the matching `ui.*` forwarder,
+> disable Glyph's automatic copy with
+> `install = { keypressed = false, keyreleased = false }`. Otherwise one
+> physical key is delivered twice; this is especially visible in text inputs.
+
 > [!NOTE]
 > If a fixed viewport backend is active, Glyph converts mouse and touch screen
 > coordinates into virtual viewport coordinates before hover, focus, click, and

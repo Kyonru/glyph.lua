@@ -591,14 +591,18 @@ return {
 	},
 	keypressed = function(key)
 		if key == "up" then
-			ui.navigate("up")
+			return ui.navigate("up")
 		elseif key == "down" then
-			ui.navigate("down")
+			return ui.navigate("down")
 		elseif key == "left" then
-			ui.navigate("left")
+			return ui.navigate("left")
 		elseif key == "right" then
-			ui.navigate("right")
+			return ui.navigate("right")
 		end
+		return ui.keypressed(key)
+	end,
+	keyreleased = function(key)
+		return ui.keyreleased(key)
 	end,
 	component = function()
 		return App()

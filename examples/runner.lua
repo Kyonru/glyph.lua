@@ -113,6 +113,25 @@ local function captureWindow(window, capture)
 	return opts
 end
 
+local function installOptions(example)
+	local opts = {}
+	for key, value in pairs((example and example.install) or {}) do
+		opts[key] = value
+	end
+
+	-- A custom example callback owns that event. Several examples deliberately
+	-- translate navigation or keypad keys and then forward once to Glyph; leaving
+	-- automatic installation enabled would deliver the same physical key twice.
+	if example and type(example.keypressed) == "function" and opts.keypressed == nil then
+		opts.keypressed = false
+	end
+	if example and type(example.keyreleased) == "function" and opts.keyreleased == nil then
+		opts.keyreleased = false
+	end
+
+	return opts
+end
+
 local function captureFramePath(capture, index)
 	return string.format("%s/%04d.png", capture.frameDir, index)
 end
@@ -190,7 +209,7 @@ function Runner.run(example)
 		capture = captureOptions(example)
 		ui.load({
 			window = captureWindow(example.window, capture),
-			install = example.install,
+			install = installOptions(example),
 		})
 		ExampleFonts.install(ui)
 		if capture then

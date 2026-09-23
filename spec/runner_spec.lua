@@ -6,15 +6,21 @@ local ui = require("glyph")
 describe("example runner", function()
   local previousLove
   local previousRender
+  local previousLoad
+  local previousFontsInstalled
 
   before_each(function()
     previousLove = _G.love
     previousRender = ui.render
+    previousLoad = ui.load
+    previousFontsInstalled = ui._glyphExampleFontsInstalled
     _G.love = {}
   end)
 
   after_each(function()
     ui.render = previousRender
+    ui.load = previousLoad
+    ui._glyphExampleFontsInstalled = previousFontsInstalled
     _G.love = previousLove
   end)
 
@@ -56,5 +62,24 @@ describe("example runner", function()
     love.draw()
 
     assert.is_nil(renderedRoot)
+  end)
+
+  it("disables automatic key callbacks when an example owns them", function()
+    local install
+    ui.load = function(opts)
+      install = opts.install
+    end
+    ui._glyphExampleFontsInstalled = true
+
+    Runner.run({
+      install = { gamepad = true },
+      keypressed = function() end,
+      keyreleased = function() end,
+    })
+    love.load()
+
+    assert.is_true(install.gamepad)
+    assert.is_false(install.keypressed)
+    assert.is_false(install.keyreleased)
   end)
 end)

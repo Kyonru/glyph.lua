@@ -2518,6 +2518,11 @@ local function keypressed(key)
 		turnPage(1)
 		return true
 	end
+	return ui.keypressed(key)
+end
+
+local function keyreleased(key)
+	return ui.keyreleased(key)
 end
 
 local function gamepadpressed(_, button)
@@ -2569,6 +2574,7 @@ return {
 	update = update,
 	teardown = teardown,
 	keypressed = keypressed,
+	keyreleased = keyreleased,
 	gamepadpressed = gamepadpressed,
 	gamepadreleased = gamepadreleased,
 	window = {

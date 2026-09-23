@@ -490,9 +490,16 @@ end
 local function keypressed(key)
   if key == "home" then
     moveWindow(-TOTAL_EVENTS)
+    return true
   elseif key == "end" then
     moveWindow(TOTAL_EVENTS)
+    return true
   end
+  return ui.keypressed(key)
+end
+
+local function keyreleased(key)
+  return ui.keyreleased(key)
 end
 
 local function setup()
@@ -515,6 +522,7 @@ return {
   update = update,
   wheelmoved = wheelmoved,
   keypressed = keypressed,
+  keyreleased = keyreleased,
   component = function()
     return App()
   end,
