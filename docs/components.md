@@ -14,6 +14,12 @@ icon: lucide/boxes
 
 Glyph components return virtual nodes. Components are plain Lua functions; there is no class system.
 
+Component constructors shallow-copy the props table before applying defaults.
+Reusing or later changing a caller-owned props table therefore does not change
+an existing node's top-level props. Nested values such as `style` tables are
+shared rather than deep-copied; replace or copy those explicitly when they need
+independent mutation.
+
 ## Text
 
 ```lua

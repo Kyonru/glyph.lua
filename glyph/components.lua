@@ -5,19 +5,11 @@ local I18n = require(prefix .. ".i18n")
 local Components = {}
 
 local function normalizeProps(props)
-  if props == nil then
-    return {}
-  end
-
-  return props
-end
-
-local function copyProps(props)
-  local copy = {}
+  local normalized = {}
   for key, value in pairs(props or {}) do
-    copy[key] = value
+    normalized[key] = value
   end
-  return copy
+  return normalized
 end
 
 local function normalizeChildren(children)
@@ -35,7 +27,7 @@ end
 local function createNode(kind, props, children)
   local node = {
     type = kind,
-    props = normalizeProps(props),
+    props = props or {},
     children = normalizeChildren(children),
     layout = { x = 0, y = 0, width = 0, height = 0 },
     dirty = {
@@ -58,11 +50,7 @@ local function createNode(kind, props, children)
   return node
 end
 
----@param value string
----@param props? GlyphTextProps
----@return GlyphNode
-function Components.text(value, props)
-  props = normalizeProps(props)
+local function createTextNode(value, props)
   -- `rich = true` is shorthand for `format = "sysl"`; an explicit format wins.
   if props.rich == true and props.format == nil then
     props.format = "sysl"
@@ -72,13 +60,21 @@ function Components.text(value, props)
   return node
 end
 
+---@param value string
+---@param props? GlyphTextProps
+---@return GlyphNode
+function Components.text(value, props)
+  props = normalizeProps(props)
+  return createTextNode(value, props)
+end
+
 ---@param key string
 ---@param props? GlyphTextProps
 ---@return GlyphNode
 function Components.textKey(key, props)
   props = normalizeProps(props)
   props.textKey = key
-  return Components.text(key, props)
+  return createTextNode(key, props)
 end
 
 ---@param value string
@@ -87,7 +83,7 @@ end
 function Components.richText(value, props)
   props = normalizeProps(props)
   props.format = props.format or "sysl"
-  return Components.text(value, props)
+  return createTextNode(value, props)
 end
 
 ---@param key string
@@ -97,7 +93,7 @@ function Components.richTextKey(key, props)
   props = normalizeProps(props)
   props.textKey = key
   props.format = props.format or "sysl"
-  return Components.text(key, props)
+  return createTextNode(key, props)
 end
 
 ---@param value string
@@ -106,7 +102,7 @@ end
 function Components.h1(value, props)
   props = normalizeProps(props)
   props.textStyle = props.textStyle or "h1"
-  return Components.text(value, props)
+  return createTextNode(value, props)
 end
 
 ---@param value string
@@ -115,7 +111,7 @@ end
 function Components.h2(value, props)
   props = normalizeProps(props)
   props.textStyle = props.textStyle or "h2"
-  return Components.text(value, props)
+  return createTextNode(value, props)
 end
 
 ---@param value string
@@ -124,7 +120,7 @@ end
 function Components.p(value, props)
   props = normalizeProps(props)
   props.textStyle = props.textStyle or "paragraph"
-  return Components.text(value, props)
+  return createTextNode(value, props)
 end
 
 ---@param value string
@@ -133,26 +129,26 @@ end
 function Components.caption(value, props)
   props = normalizeProps(props)
   props.textStyle = props.textStyle or "caption"
-  return Components.text(value, props)
+  return createTextNode(value, props)
 end
 
 ---@param props? GlyphImageProps
 ---@return GlyphNode
 function Components.image(props)
-  return createNode("image", props, nil)
+  return createNode("image", normalizeProps(props), nil)
 end
 
 ---@param props? GlyphPathProps
 ---@return GlyphNode
 function Components.path(props)
-  return createNode("path", props, nil)
+  return createNode("path", normalizeProps(props), nil)
 end
 
 ---@param props? GlyphProps
 ---@param children? GlyphNode[]|GlyphNode
 ---@return GlyphNode
 function Components.box(props, children)
-  return createNode("box", props, children)
+  return createNode("box", normalizeProps(props), children)
 end
 
 ---@param props? GlyphProps
@@ -286,7 +282,8 @@ function Components.tabs(props, tabs)
   local tabRow = Components.row({ gap = props.gap or 4, height = props.tabHeight }, children)
   local content = tabs and tabs[active] and tabs[active].content or nil
 
-  return Components.column(props, {
+  props.display = "column"
+  return createNode("column", props, {
     tabRow,
     content or Components.box({ height = 0, width = 0 }),
   })
@@ -297,7 +294,6 @@ end
 ---@return GlyphNode
 function Components.panel(props, children)
   props = normalizeProps(props)
-  local panelProps = copyProps(props)
   local panelChildren = {}
   local title = props.title or props.titleKey
   local resolvedTitle = title and I18n.resolveTitle(props) or nil
@@ -313,16 +309,16 @@ function Components.panel(props, children)
     panelChildren[#panelChildren + 1] = child
   end
 
-  panelProps.display = "column"
-  if panelProps.gap == nil then
-    panelProps.gap = 8
+  props.display = "column"
+  if props.gap == nil then
+    props.gap = 8
   end
-  if panelProps.padding == nil then
-    panelProps.padding = 10
+  if props.padding == nil then
+    props.padding = 10
   end
-  panelProps.title = resolvedTitle
+  props.title = resolvedTitle
 
-  return createNode("panel", panelProps, panelChildren)
+  return createNode("panel", props, panelChildren)
 end
 
 ---@param node GlyphNode
