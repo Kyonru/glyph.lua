@@ -41,11 +41,15 @@ Supported visual fields include:
 - `fontSize`
 - `lineHeight`
 - `opacity`
-- `padding`
 - `shader`
 - `blendMode`
 
 Existing compatibility props such as `backgroundColor`, `borderColor`, `color`, and `radius` still work, but `style` is preferred.
+
+> [!NOTE]
+> Layout fields such as `width`, `height`, `padding`, `margin`, `gap`, `align`,
+> and `justify` belong on the component props table, outside `style`. Keep
+> `style` for visual fields and interaction-state styles.
 
 ## Typography
 

@@ -32,25 +32,27 @@ function love.load()
     app    = App,
   })
 end
-
-function love.update(dt) ui.update(dt) end
-function love.draw()     ui.render(App) end
 ```
 
-`ui.load` automatically installs `mousemoved`, `mousepressed`, `mousereleased`,
-`keypressed`, `keyreleased`, `textinput`, `wheelmoved`, and `resize` callbacks
-so you don't have to wire each one manually.
+With `app = App`, `ui.load` installs update, draw, `mousemoved`, `mousepressed`,
+`mousereleased`, `keypressed`, `keyreleased`, `textinput`, `wheelmoved`, touch,
+and resize callbacks. Do not also call `ui.update` or `ui.render` from your
+Love2D callbacks when using this automatic setup.
 
 Touch input is mapped through the same pointer path automatically. Gamepad
-navigation is opt-in:
+navigation is opt-in. To enable it, add the `install` option to that same
+`ui.load` call; do not add a second call:
 
 ```lua
-ui.load({
-  app = App,
-  install = {
-    gamepad = true,
-  },
-})
+function love.load()
+  ui.load({
+    window = { width = 960, height = 600, title = "My Game" },
+    app = App,
+    install = {
+      gamepad = true,
+    },
+  })
+end
 ```
 
 ---
@@ -70,9 +72,10 @@ local TEXT    = { 0.92, 0.92, 0.96, 1 }
 local MUTED   = { 0.52, 0.52, 0.62, 1 }
 
 local function field(label, value, onChange, placeholder)
-  return ui.column({ style = { gap = 6 } }, {
+  return ui.column({ width = "100%", gap = 6 }, {
     ui.text(label, { style = { fontSize = 11, color = MUTED } }),
     ui.input({
+      width       = "100%",
       value       = value,
       onChange    = onChange,
       placeholder = placeholder,
@@ -83,7 +86,7 @@ local function field(label, value, onChange, placeholder)
         radius      = 8,
         color       = TEXT,
         fontSize    = 13,
-        focus = {
+        focused = {
           borderColor = { ACCENT[1], ACCENT[2], ACCENT[3], 0.6 },
         },
       },
@@ -98,26 +101,26 @@ local function SignIn()
   return ui.column({
     width  = "100%",
     height = "100%",
+    align  = "center",
+    justify = "center",
     style  = {
-      alignItems     = "center",
-      justifyContent = "center",
-      background     = BG,
+      background = BG,
     },
   }, {
     ui.column({
+      width   = 360,
+      padding = 36,
+      gap     = 20,
       style = {
-        width       = 360,
         background  = SURFACE,
         borderColor = BORDER,
         borderWidth = 1,
         radius      = 14,
-        padding     = 36,
-        gap         = 20,
       },
     }, {
 
       -- Header
-      ui.column({ style = { gap = 4, marginBottom = 4 } }, {
+      ui.column({ gap = 4, margin = { bottom = 4 } }, {
         ui.text("Welcome back", { style = { fontSize = 22, color = TEXT } }),
         ui.text("Sign in to continue.", { style = { fontSize = 13, color = MUTED } }),
       }),
@@ -159,12 +162,6 @@ end
 
 function love.load()
   ui.load({ window = { width = 800, height = 600, title = "Sign in" }, app = SignIn })
-end
-
-function love.update(dt) ui.update(dt) end
-function love.draw()
-  love.graphics.clear(BG[1], BG[2], BG[3])
-  ui.render(SignIn)
 end
 ```
 

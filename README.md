@@ -21,6 +21,9 @@ The same documentation lives locally in [docs/](docs/README.md).
 
 ## Quick Start
 
+Copy `glyph.lua` and the `glyph/` directory into a Love2D project, then create
+this `main.lua`:
+
 ```lua
 local ui = require("glyph")
 
@@ -40,20 +43,28 @@ local function App()
   })
 end
 
-function love.update(dt)
-  ui.update(dt)
-end
-
-function love.draw()
-  ui.render(App)
+function love.load()
+  ui.load({
+    window = {
+      width = 640,
+      height = 360,
+      resizable = true,
+      title = "Glyph App",
+    },
+    app = App,
+  })
 end
 ```
 
-Copy `glyph.lua` and the `glyph/` directory into a Love2D project, then:
+Run it from the project directory:
 
-```lua
-local ui = require("glyph")
+```sh
+love .
 ```
+
+Passing `app = App` to `ui.load` installs Glyph's update, draw, pointer,
+keyboard, touch, wheel, and resize callbacks. Do not also call `ui.update` or
+`ui.render` from your Love2D callbacks when using this automatic setup.
 
 Glyph has no required runtime dependency beyond Love2D 11.x. Optional adapters
 such as Push/Shove viewport backends, SYSL rich text, and anim8 sprite

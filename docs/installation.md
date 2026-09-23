@@ -95,21 +95,27 @@ Install the rock directly from the terminal:
 luarocks install glyph
 ```
 
-LuaRocks places glyph on the global Lua path, so no `package.path` adjustment is needed.
-Just require it:
+LuaRocks installs Glyph into the selected Lua tree. A system Lua configured for
+that tree can require it directly:
 
 ```lua
 local ui = require("glyph")
 ```
 
 > [!NOTE]
-> Love2D uses its own bundled Lua rather than the system one, so the LuaRocks tree
-> is not on `package.path` by default. Add the snippet below to the top of `main.lua`
-> to bridge them.
+> Love2D uses its own bundled Lua rather than the system one, so its
+> `package.path` usually does not include the LuaRocks tree. Add the snippet
+> below to the top of `main.lua` to bridge them.
 
 ```lua
-local rock = io.popen("luarocks path --lr-path 2>/dev/null"):read("*l")
-if rock then package.path = rock .. ";" .. package.path end
+local handle = io.popen("luarocks path --lr-path 2>/dev/null")
+if handle then
+  local rockPath = handle:read("*l")
+  handle:close()
+  if rockPath and rockPath ~= "" then
+    package.path = rockPath .. ";" .. package.path
+  end
+end
 ```
 
 ---
@@ -128,7 +134,8 @@ end
 function love.load()
   ui.load({ app = App })
 end
-
-function love.update(dt) ui.update(dt) end
-function love.draw()     ui.render(App) end
 ```
+
+Passing `app = App` installs Glyph's update, draw, and common input callbacks.
+Do not also call `ui.update` or `ui.render` from your Love2D callbacks when using
+this automatic setup.

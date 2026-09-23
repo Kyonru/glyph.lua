@@ -8,15 +8,11 @@ icon: lucide/map
 ![Animated GIF showing a minimal Glyph counter app rendering and updating.](assets/feature-gifs/getting-started.gif)
 <!-- /glyph:feature-gif getting-started -->
 
-Require Glyph from Love2D:
+Create a `main.lua` in the Love2D project where you installed Glyph:
 
 ```lua
 local ui = require("glyph")
-```
 
-Create components as Lua functions:
-
-```lua
 local function App()
   local count, setCount = ui.useState(0)
 
@@ -28,34 +24,10 @@ local function App()
         setCount(count + 1)
       end,
     }),
-    ui.text("Count: " .. count),
+    ui.text("Count: " .. tostring(count)),
   })
 end
-```
 
-Wire Love2D manually:
-
-```lua
-function love.update(dt)
-  ui.update(dt)
-end
-
-function love.draw()
-  ui.render(App)
-end
-
-function love.mousepressed(x, y, button)
-  ui.mousepressed(x, y, button)
-end
-
-function love.mousereleased(x, y, button)
-  ui.mousereleased(x, y, button)
-end
-```
-
-Or let Glyph install common callbacks:
-
-```lua
 function love.load()
   ui.load({
     window = {
@@ -69,12 +41,48 @@ function love.load()
 end
 ```
 
-`ui.load` uses the global `love` module by default. Use `ui.install(love, opts)` when you only want callback wiring.
+Run the project with `love .`. The button should increment the count.
 
-## Tests
+Passing `app = App` to `ui.load` installs update, draw, pointer, keyboard,
+touch, wheel, and resize callbacks. This is the recommended first-run setup.
 
-Run the pure Lua test suite with:
+## Manual Wiring
 
-```sh
-.luarocks/bin/busted
+If your game owns its Love2D callbacks, do not call `ui.load` or `ui.install`.
+Forward the runtime callbacks your UI uses:
+
+```lua
+function love.update(dt)
+  ui.update(dt)
+end
+
+function love.draw()
+  ui.render(App)
+end
+
+function love.mousemoved(x, y, dx, dy)
+  ui.mousemoved(x, y, dx, dy)
+end
+
+function love.mousepressed(x, y, button)
+  ui.mousepressed(x, y, button)
+end
+
+function love.mousereleased(x, y, button)
+  ui.mousereleased(x, y, button)
+end
 ```
+
+The manual path uses the global `love` module automatically. If you prefer
+Glyph to chain common input callbacks while your game keeps update and draw,
+call `ui.install(love)` and remove the manual input forwarders. Do not combine
+manual `ui.update` / `ui.render` calls with `ui.load({ app = App })`.
+
+## Next Steps
+
+- [Architecture & Mental Model](architecture.md) explains rendering, state, and identity.
+- [Components](components.md) covers buttons, inputs, lists, tabs, and panels.
+- [Layout](layout.md) covers rows, columns, grids, stacks, and positioning.
+- [Styling And Themes](styling.md) covers visual styles and interaction states.
+- [Navigation](navigation.md) adds keyboard and controller focus.
+- [Scenes And Modals](scenes-and-modals.md) adds layered game UI.
