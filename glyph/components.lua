@@ -12,6 +12,14 @@ local function normalizeProps(props)
   return props
 end
 
+local function copyProps(props)
+  local copy = {}
+  for key, value in pairs(props or {}) do
+    copy[key] = value
+  end
+  return copy
+end
+
 local function normalizeChildren(children)
   if children == nil then
     return {}
@@ -289,6 +297,7 @@ end
 ---@return GlyphNode
 function Components.panel(props, children)
   props = normalizeProps(props)
+  local panelProps = copyProps(props)
   local panelChildren = {}
   local title = props.title or props.titleKey
   local resolvedTitle = title and I18n.resolveTitle(props) or nil
@@ -304,66 +313,16 @@ function Components.panel(props, children)
     panelChildren[#panelChildren + 1] = child
   end
 
-  return createNode("panel", {
-    display = "column",
-    gap = props.gap or 8,
-    padding = props.padding or 10,
-    margin = props.margin,
-    width = props.width,
-    height = props.height,
-    grow = props.grow,
-    flex = props.flex,
-    shrink = props.shrink,
-    minWidth = props.minWidth,
-    minHeight = props.minHeight,
-    maxWidth = props.maxWidth,
-    maxHeight = props.maxHeight,
-    position = props.position,
-    x = props.x,
-    y = props.y,
-    top = props.top,
-    right = props.right,
-    bottom = props.bottom,
-    left = props.left,
-    inset = props.inset,
-    zIndex = props.zIndex,
-    align = props.align,
-    justify = props.justify,
-    navGroup = props.navGroup,
-    navScope = props.navScope,
-    navTrap = props.navTrap,
-    onNavigateExit = props.onNavigateExit,
-    role = props.role,
-    accessibilityLabel = props.accessibilityLabel,
-    accessibilityLabelKey = props.accessibilityLabelKey,
-    accessibilityLabelParams = props.accessibilityLabelParams,
-    accessibilityLabelFallback = props.accessibilityLabelFallback,
-    accessibilityLabelCacheKey = props.accessibilityLabelCacheKey,
-    accessibilityDescription = props.accessibilityDescription,
-    accessibilityDescriptionKey = props.accessibilityDescriptionKey,
-    accessibilityDescriptionParams = props.accessibilityDescriptionParams,
-    accessibilityDescriptionFallback = props.accessibilityDescriptionFallback,
-    accessibilityDescriptionCacheKey = props.accessibilityDescriptionCacheKey,
-    accessibilityValue = props.accessibilityValue,
-    accessibilityValueText = props.accessibilityValueText,
-    accessibilityValueTextKey = props.accessibilityValueTextKey,
-    accessibilityValueTextParams = props.accessibilityValueTextParams,
-    accessibilityValueTextFallback = props.accessibilityValueTextFallback,
-    accessibilityValueTextCacheKey = props.accessibilityValueTextCacheKey,
-    accessibilityHidden = props.accessibilityHidden,
-    accessibilityLive = props.accessibilityLive,
-    title = resolvedTitle,
-    clip = props.clip,
-    stencil = props.stencil,
-    shape = props.shape,
-    draw = props.draw,
-    backgroundColor = props.backgroundColor,
-    borderColor = props.borderColor,
-    radius = props.radius,
-    style = props.style,
-    variant = props.variant,
-    styleType = props.styleType,
-  }, panelChildren)
+  panelProps.display = "column"
+  if panelProps.gap == nil then
+    panelProps.gap = 8
+  end
+  if panelProps.padding == nil then
+    panelProps.padding = 10
+  end
+  panelProps.title = resolvedTitle
+
+  return createNode("panel", panelProps, panelChildren)
 end
 
 ---@param node GlyphNode

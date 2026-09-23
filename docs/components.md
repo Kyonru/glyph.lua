@@ -532,6 +532,13 @@ ui.panel({ title = "Logs", width = "100%", flex = 1 }, {
 Panel titles use the `h2` typography preset by default. Use `titleTextStyle` to
 select another preset, and `titleKey` for localized panel titles.
 
+Panels accept the full shared component prop set. Stable `key` values,
+`interactive`, layout callbacks such as `onLayout` and `onBounds`, lifecycle
+animation through `enter` and `exit`, and `feedback` or `audio` metadata are
+forwarded to the panel node. Glyph shallow-copies the supplied props, then adds
+the panel defaults `display = "column"`, `gap = 8`, and `padding = 10` without
+mutating the caller's table; explicit spacing values, including `0`, are kept.
+
 ## Accessibility Props
 
 All nodes accept semantic props such as `role`, `accessibilityLabel`,

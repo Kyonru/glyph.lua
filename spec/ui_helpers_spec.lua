@@ -1521,6 +1521,58 @@ describe("ui helpers", function()
     assert.are.equal("caption", customPanel.children[1].props.textStyle)
   end)
 
+  it("preserves inherited panel props without mutating the caller table", function()
+    local onLayout = function() end
+    local onBounds = function() end
+    local enter = { from = { opacity = 0 }, duration = 0.2 }
+    local exit = { to = { opacity = 0 }, duration = 0.1 }
+    local feedback = { press = "panel.press" }
+    local style = { background = { 0.1, 0.1, 0.1, 1 } }
+    local props = {
+      title = "Inventory",
+      key = "inventory",
+      interactive = false,
+      onLayout = onLayout,
+      onBounds = onBounds,
+      enter = enter,
+      exit = exit,
+      feedback = feedback,
+      audio = false,
+      style = style,
+    }
+
+    local panel = ui.panel(props, { ui.text("Potion") })
+
+    assert.are_not.equal(props, panel.props)
+    assert.are.equal("inventory", panel.props.key)
+    assert.is_false(panel.props.interactive)
+    assert.are.equal(onLayout, panel.props.onLayout)
+    assert.are.equal(onBounds, panel.props.onBounds)
+    assert.are.equal(enter, panel.props.enter)
+    assert.are.equal(exit, panel.props.exit)
+    assert.are.equal(feedback, panel.props.feedback)
+    assert.is_false(panel.props.audio)
+    assert.are.equal(style, panel.props.style)
+    assert.are.equal("column", panel.props.display)
+    assert.are.equal(8, panel.props.gap)
+    assert.are.equal(10, panel.props.padding)
+    assert.are.equal("Inventory", panel.props.title)
+    assert.are.equal("Inventory", panel.children[1].value)
+    assert.is_nil(props.display)
+    assert.is_nil(props.gap)
+    assert.is_nil(props.padding)
+  end)
+
+  it("preserves explicit panel spacing values", function()
+    local props = { gap = 0, padding = 0 }
+    local panel = ui.panel(props, {})
+
+    assert.are.equal(0, panel.props.gap)
+    assert.are.equal(0, panel.props.padding)
+    assert.are.equal(0, props.gap)
+    assert.are.equal(0, props.padding)
+  end)
+
   it("describes default accessibility semantics", function()
     local button = ui.button({ label = "Launch" })
     local input = ui.input({ value = "Nova", placeholder = "Name" })
