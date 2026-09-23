@@ -395,6 +395,7 @@ local GlyphPadding = {}
 ---@field grow? number
 ---@field shrink? number
 ---@field basis? number
+---@field flexBasis? number alias for `basis`; `basis` takes precedence when both are set
 ---@field position? "absolute"|"relative" "absolute" removes the node from flow (use left/right/top/bottom/inset); "relative" (default) keeps it in flow
 ---@field x? number|string
 ---@field y? number|string

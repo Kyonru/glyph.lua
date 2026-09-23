@@ -30,9 +30,11 @@ Common props:
 - `grow`
 - `flex`
 - `shrink`
-- `basis` or `flexBasis`
+- `basis` (`flexBasis` is an alias; `basis` wins when both are set)
 
-`flex = 1` means “take remaining space” using a zero basis unless width or height is provided.
+`flex = 1` means “take remaining space.” It uses a zero basis unless `basis`,
+`flexBasis`, or the main-axis size (`width` in a row, `height` in a column) is
+provided.
 `align` controls the cross axis; `justify` controls the main axis. In a row, `justify = "center"`
 centers children horizontally. In a column, it centers children vertically.
 
