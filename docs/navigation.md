@@ -270,6 +270,12 @@ considered as candidates:
   modal prevents focus from reaching nodes in layers below it.
 - Non-blocking overlays (`blocking = false`) are included alongside lower layers.
 
+Candidates are collected from the top scene layer downward, then from the app's
+root tree when no blocking layer cut off traversal. A HUD or decorative overlay
+with `input = false` and `blocking = false` is skipped without disabling root
+navigation. An input-disabled blocking layer still blocks the root, matching
+pointer routing.
+
 Pushing a blocking layer suspends focus from the UI below it. Pointer input or the
 next navigation move can focus a control in the new layer. When the layer finishes
 closing, Glyph restores the previously focused control if that control still exists

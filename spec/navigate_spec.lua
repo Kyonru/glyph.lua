@@ -122,6 +122,78 @@ describe("spatial navigation", function()
     assert.are.same({ "overlay", "main" }, labels(Navigate.collect(runtime)))
   end)
 
+  it("orders non-blocking layer candidates before runtime root candidates", function()
+    local runtime = Runtime.new()
+    runtime:setLove(fakeLove())
+
+    local function Main()
+      return Components.button({ label = "root", navGroup = "root", width = 100, height = 40 })
+    end
+
+    runtime.scene:push("overlay", function()
+      return Components.button({ label = "overlay", navGroup = "overlay", width = 100, height = 40 })
+    end, {
+      kind = "overlay",
+      blocking = false,
+      transition = "none",
+      width = 100,
+      height = 40,
+      navScope = true,
+    })
+    runtime:render(Main)
+
+    local candidates = Navigate.collect(runtime)
+    assert.are.same({ "overlay", "root" }, labels(candidates))
+    assert.are.equal("overlay", candidates[1].group)
+    assert.are.equal(runtime.scene.layers[1], candidates[1].scope)
+    assert.are.equal("root", candidates[2].group)
+    assert.is_nil(candidates[2].scope)
+  end)
+
+  it("keeps runtime root navigation below input-disabled non-blocking overlays", function()
+    local runtime = Runtime.new()
+    runtime:setLove(fakeLove())
+
+    local function Main()
+      return Components.button({ label = "root", width = 100, height = 40 })
+    end
+
+    runtime.scene:push("decoration", function()
+      return Components.button({ label = "hidden", width = 100, height = 40 })
+    end, {
+      kind = "overlay",
+      input = false,
+      blocking = false,
+      transition = "none",
+    })
+    runtime:render(Main)
+
+    assert.are.same({ "root" }, labels(Navigate.collect(runtime)))
+    assert.are.equal("root", Navigate.move(runtime, "right").props.label)
+  end)
+
+  it("stops before runtime root at input-disabled blocking layers", function()
+    local runtime = Runtime.new()
+    runtime:setLove(fakeLove())
+
+    local function Main()
+      return Components.button({ label = "root", width = 100, height = 40 })
+    end
+
+    runtime.scene:push("curtain", function()
+      return Components.button({ label = "hidden", width = 100, height = 40 })
+    end, {
+      kind = "overlay",
+      input = false,
+      blocking = true,
+      transition = "none",
+    })
+    runtime:render(Main)
+
+    assert.are.same({}, labels(Navigate.collect(runtime)))
+    assert.is_nil(Navigate.move(runtime, "right"))
+  end)
+
   it("allows navigate callbacks to cancel movement", function()
     local runtime = Runtime.new()
     layout(runtime, Components.row({ gap = 8 }, {

@@ -135,6 +135,7 @@ end
 function Navigate.collect(runtime)
   local candidates = {}
   local scene = runtime.scene
+  local reachesRoot = true
 
   if scene and #scene.layers > 0 then
     for index = #scene.layers, 1, -1 do
@@ -146,17 +147,17 @@ function Navigate.collect(runtime)
         end
 
         if layer.blocking then
+          reachesRoot = false
           break
         end
       elseif layer.blocking then
+        reachesRoot = false
         break
       end
     end
-
-    return candidates
   end
 
-  if runtime.root then
+  if reachesRoot and runtime.root then
     collectRoot(runtime.root, 0, 0, candidates)
   end
 
