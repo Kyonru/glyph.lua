@@ -1003,6 +1003,7 @@ function Runtime:build(component)
   assignPaths(root, "0", nil)
   self:prepareAnimations(root, "root")
   self.root = root
+  self:reconcileInputEdits(root)
   self:reconcileTreeReferences(root, "0")
   self:reconcileInputReferences()
   Accessibility.scanLive(self, root)
@@ -1018,6 +1019,7 @@ function Runtime:buildLayer(layer)
     assignPaths(nextRoot, "layer:" .. tostring(layer.id), nil)
     self:prepareAnimations(nextRoot, "layer:" .. tostring(layer.id))
     layer.root = nextRoot
+    self:reconcileInputEdits(nextRoot)
     self:reconcileTreeReferences(nextRoot, "layer:" .. tostring(layer.id))
     self:reconcileInputReferences()
     Accessibility.scanLive(self, nextRoot)
@@ -1638,9 +1640,11 @@ function Runtime:inputEditState(node)
   elseif edit.rendered ~= rendered then
     if edit.value == rendered then
       edit.rendered = rendered
+      edit.pending = false
     else
       edit.rendered = rendered
       edit.value = rendered
+      edit.pending = false
     end
   end
 
@@ -1652,10 +1656,38 @@ end
 function Runtime:setPendingInputEdit(edit, key, value, cursor)
   if edit then
     edit.value = value
+    edit.pending = true
   end
   if key then
     self.inputCursors[key] = clampInputCursor(value, cursor)
   end
+end
+
+function Runtime:reconcileInputEdits(root)
+  local function visit(node)
+    if not node then
+      return
+    end
+
+    if node.type == "input" and node.path then
+      local edit = self.inputEdits[node.path]
+      if edit then
+        local rendered = tostring(node.props and node.props.value or "")
+        if edit.pending or edit.rendered ~= rendered then
+          edit.rendered = rendered
+          edit.value = rendered
+          edit.pending = false
+          self.inputCursors[node.path] = clampInputCursor(rendered, self.inputCursors[node.path])
+        end
+      end
+    end
+
+    for _, child in ipairs(node.children or {}) do
+      visit(child)
+    end
+  end
+
+  visit(root)
 end
 
 function Runtime:inputCursorAtX(node, x)

@@ -1131,6 +1131,32 @@ describe("runtime", function()
     assert.are.equal(1, runtime.inputCursors["0"])
   end)
 
+  it("reconciles a pending edit when a controlled owner rejects it", function()
+    local runtime = Runtime.new()
+    local value = "abc"
+    local proposed
+
+    local function App()
+      return Components.input({
+        value = value,
+        onChange = function(nextValue)
+          proposed = nextValue
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:mousepressed(150, 1, 1)
+    runtime:textinput("d")
+    assert.are.equal("abcd", proposed)
+
+    runtime:build(App)
+    runtime:textinput("x")
+
+    assert.are.equal("abcx", proposed)
+  end)
+
   it("clamps the cursor when a controlled value is shortened externally", function()
     local runtime = Runtime.new()
     local value = "filter"
