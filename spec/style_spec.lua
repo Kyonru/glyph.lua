@@ -136,6 +136,60 @@ describe("style", function()
     assert.are.same(color(2), third.color)
   end)
 
+  it("keeps the warm style cache stable at its capacity boundary", function()
+    local runtime = Runtime.new()
+    runtime.theme = {
+      version = 1,
+      base = {},
+      components = {},
+    }
+    local nodes = {}
+    local initialStyles = {}
+
+    for index = 1, 4097 do
+      local node = Components.box({
+        style = { opacity = index / 4097 },
+      })
+      node.path = tostring(index)
+      nodes[index] = node
+      initialStyles[index] = Style.resolve(node, runtime, {})
+    end
+
+    assert.are.equal(4096, runtime.styleCacheCount)
+    assert.is_not_nil(runtime.styleCache[nodes[1].path])
+    assert.is_not_nil(runtime.styleCache[nodes[4096].path])
+    assert.is_nil(runtime.styleCache[nodes[4097].path])
+
+    for _ = 1, 2 do
+      for index, node in ipairs(nodes) do
+        local resolved = Style.resolve(node, runtime, {})
+        if index <= 4096 then
+          assert.are.equal(initialStyles[index], resolved)
+        else
+          assert.are.same({ opacity = 1 }, resolved)
+        end
+      end
+    end
+
+    assert.are.equal(4096, runtime.styleCacheCount)
+    assert.is_not_nil(runtime.styleCache[nodes[1].path])
+  end)
+
+  it("starts a fresh bounded cache after the runtime replaces it", function()
+    local runtime = Runtime.new()
+    local first = Components.box({ style = { opacity = 0.5 } })
+    first.path = "first"
+    Style.resolve(first, runtime, {})
+
+    runtime.styleCache = {}
+    local second = Components.box({ style = { opacity = 0.75 } })
+    second.path = "second"
+    local resolved = Style.resolve(second, runtime, {})
+
+    assert.are.equal(1, runtime.styleCacheCount)
+    assert.are.equal(resolved, runtime.styleCache.second.style)
+  end)
+
   it("draw context applies styles and restores Love2D state", function()
     local runtime = Runtime.new()
     local calls = {}

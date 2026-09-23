@@ -55,6 +55,10 @@ Static and memoized nodes reuse cached geometry while their incoming layout
 constraints are unchanged. A window resize or parent-size change automatically
 recomputes their geometry, so responsive percent sizes remain accurate.
 
+Resolved styles also use a bounded per-runtime cache. When that cache is full,
+Glyph retains its existing warm entries and resolves additional paths without
+caching them, avoiding both unbounded memory growth and whole-cache rebuilds.
+
 ## Reactivity model
 
 A render rebuilds the tree only when it is **dirty** — a `useState` setter ran,

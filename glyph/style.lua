@@ -1,11 +1,28 @@
 local Style = {}
 
 -- The style cache keys on node.path and persists across rebuilds; in a
--- long-running app with a churning tree that would grow without bound. Cap the
--- distinct-entry count and reset when it is exceeded (entries are re-derivable,
--- so a reset only costs a recompute). The limit is a safety net, far above a
--- normal tree's node count.
+-- long-running app with a churning tree that would grow without bound. Once the
+-- cache reaches this safety limit, existing entries stay warm and new paths are
+-- resolved without being admitted. Retaining the warm set avoids an N+1
+-- workload repeatedly flushing and rebuilding the entire cache.
 local STYLE_CACHE_LIMIT = 4096
+local STYLE_CACHE_COUNTS = setmetatable({}, { __mode = "k" })
+
+---@param cache table
+---@return number
+local function styleCacheCount(cache)
+  local count = STYLE_CACHE_COUNTS[cache]
+  if count ~= nil then
+    return count
+  end
+
+  count = 0
+  for _ in pairs(cache) do
+    count = count + 1
+  end
+  STYLE_CACHE_COUNTS[cache] = count
+  return count
+end
 
 local STATE_KEYS = {
   hover = true,
@@ -208,16 +225,22 @@ function Style.resolve(node, runtime, state)
   applyState(resolved, props.style, "disabled", state.disabled)
 
   node.resolvedStyle = resolved
-  if runtime.styleCache[node.path] == nil then
-    runtime.styleCacheCount = (runtime.styleCacheCount or 0) + 1
-  end
-  runtime.styleCache[node.path] = {
-    key = key,
-    style = resolved,
-  }
-  if runtime.styleCacheCount and runtime.styleCacheCount > STYLE_CACHE_LIMIT then
-    runtime.styleCache = {}
-    runtime.styleCacheCount = 0
+  if cached ~= nil then
+    runtime.styleCache[node.path] = {
+      key = key,
+      style = resolved,
+    }
+  else
+    local count = styleCacheCount(runtime.styleCache)
+    if count < STYLE_CACHE_LIMIT then
+      runtime.styleCache[node.path] = {
+        key = key,
+        style = resolved,
+      }
+      count = count + 1
+      STYLE_CACHE_COUNTS[runtime.styleCache] = count
+    end
+    runtime.styleCacheCount = count
   end
 
   return resolved
