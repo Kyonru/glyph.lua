@@ -11,10 +11,6 @@ local function call(example, name, ...)
 	return nil
 end
 
-local function exampleDescription(example)
-	return example.description
-end
-
 local function exampleTitle(example)
 	return example.title or example.label or example.id or "Example"
 end
@@ -29,23 +25,51 @@ local function wrapComponent(example, mode)
 		return content
 	end
 
-	local headerChildren = {
-		ui.h1(exampleTitle(example), {
-			style = { color = { 0.94, 0.96, 0.99, 1 } },
-		}),
-	}
-	local description = exampleDescription(example)
-	if description and description ~= "" then
-		headerChildren[#headerChildren + 1] = ui.p(description, {
-			textStyle = "description",
+	local strip = ui.stack({ width = "100%", height = 52 }, {
+		ui.row({
 			width = "100%",
-			wrap = true,
-			style = { color = { 0.68, 0.74, 0.82, 1 } },
-		})
-	end
+			height = 51,
+			padding = { x = 18, y = 10 },
+			gap = 10,
+			align = "center",
+			style = { background = ui.theme.surfaceColor },
+		}, {
+			ui.text("Glyph", {
+				textStyle = "h2",
+				style = { color = ui.theme.textColor },
+			}),
+			ui.text("/", { style = { color = ui.theme.accentColor } }),
+			ui.text(exampleTitle(example), {
+				textStyle = "h2",
+				style = { color = ui.theme.mutedTextColor },
+			}),
+			ui.box({ flex = 1, height = 1, interactive = false }),
+			ui.box({
+				width = 7,
+				height = 7,
+				interactive = false,
+				accessibilityHidden = true,
+				style = { background = ui.theme.accentColor, radius = 0 },
+			}),
+			ui.text("Runtime ready", {
+				textStyle = "caption",
+				style = { color = ui.theme.mutedTextColor },
+			}),
+		}),
+		ui.box({
+			position = "absolute",
+			left = 0,
+			right = 0,
+			bottom = 0,
+			height = 1,
+			interactive = false,
+			accessibilityHidden = true,
+			style = { background = ui.theme.borderColor },
+		}),
+	})
 
-	return ui.column({ width = "100%", height = "100%", gap = 16 }, {
-		ui.column({ width = "100%", padding = { x = 24, y = 24 }, gap = 6 }, headerChildren),
+	return ui.column({ width = "100%", height = "100%" }, {
+		strip,
 		ui.stack({ width = "100%", grow = 1 }, {
 			content,
 		}),

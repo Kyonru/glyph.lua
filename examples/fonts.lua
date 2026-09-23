@@ -1,6 +1,5 @@
 local ExampleFonts = {}
 
-local acme = "dev/assets/fonts/Acme/Acme-Regular.ttf"
 local dotGothic16 = "dev/assets/fonts/DotGothic16/DotGothic16-Regular.ttf"
 local googleSans = "dev/assets/fonts/Google_Sans/GoogleSans-Regular.ttf"
 local inconsolata = "dev/assets/fonts/Inconsolata/Inconsolata-Regular.ttf"
@@ -10,13 +9,13 @@ local notoSansGeorgian = "dev/assets/fonts/Noto_Sans_Georgian/NotoSansGeorgian-R
 local notoSansHebrew = "dev/assets/fonts/Noto_Sans_Hebrew/NotoSansHebrew-Regular.ttf"
 local notoSansMahajani = "dev/assets/fonts/Noto_Sans_Mahajani/NotoSansMahajani-Regular.ttf"
 local notoSerifKr = "dev/assets/fonts/Noto_Serif_KR/NotoSerifKR-Regular.ttf"
-local sekuya = "dev/assets/fonts/Sekuya/Sekuya-Regular.ttf"
 
 local fontFiles = {
-	body = inconsolata,
-	title = sekuya,
-	subheader = sekuya,
-	description = acme,
+	body = googleSans,
+	title = googleSans,
+	subheader = googleSans,
+	description = googleSans,
+	mono = inconsolata,
 	japanese = dotGothic16,
 	arabic = notoSansArabic,
 	armenian = notoSansArmenian,
@@ -142,7 +141,9 @@ local function loadFont(graphics, loveModule, id, size)
 	end
 
 	local path = fontFiles[id]
-	local key = tostring(path or id) .. ":" .. tostring(size)
+	local smooth = id == "body" or id == "title" or id == "subheader" or id == "description"
+	local filter = smooth and "linear" or "nearest"
+	local key = tostring(path or id) .. ":" .. tostring(size) .. ":" .. filter
 	if cache[key] ~= nil then
 		return cache[key] or nil
 	end
@@ -167,7 +168,7 @@ local function loadFont(graphics, loveModule, id, size)
 	end
 
 	if font and font.setFilter then
-		font:setFilter("nearest", "nearest")
+		font:setFilter(filter, filter)
 	end
 
 	if not font then
@@ -190,6 +191,8 @@ function ExampleFonts.load(loveModule, sizes)
 		title = loadFont(graphics, loveModule, "title", sizes.title or 22),
 		subheader = loadFont(graphics, loveModule, "subheader", sizes.subheader or 16),
 		description = loadFont(graphics, loveModule, "description", sizes.description or sizes.body or 14),
+		mono = loadFont(graphics, loveModule, "mono", sizes.mono or 13),
+		monoDisplay = loadFont(graphics, loveModule, "mono", sizes.monoDisplay or 32),
 		japanese = loadFont(graphics, loveModule, "japanese", sizes.japanese or sizes.body or 14),
 	}
 	for _, id in ipairs(fallbackFontIds) do
@@ -211,6 +214,7 @@ function ExampleFonts.theme(base, opts)
 	typography.caption = mergeInto(copy(typography.caption or {}), { font = "body" })
 	typography.input = mergeInto(copy(typography.input or {}), { font = "body" })
 	typography.button = mergeInto(copy(typography.button or {}), { font = "body" })
+	typography.code = mergeInto(copy(typography.code or {}), { font = "mono" })
 	typography.h1 = capTypographySize(mergeInto(copy(typography.h1 or {}), { font = "title", color = colors.title }), 22, 34)
 	typography.h2 = capTypographySize(mergeInto(copy(typography.h2 or {}), { font = "subheader", color = colors.subheader }), 18, 24)
 	typography.h3 = capTypographySize(mergeInto(copy(typography.h3 or {}), { font = "subheader", color = colors.subheader }), 16, 22)
@@ -226,6 +230,8 @@ function ExampleFonts.theme(base, opts)
 		title = fonts.title,
 		subheader = fonts.subheader,
 		description = fonts.description,
+		mono = fonts.mono,
+		monoDisplay = fonts.monoDisplay,
 	}
 	for _, id in ipairs(fallbackFontIds) do
 		themeFonts[id] = fonts[id]
