@@ -87,8 +87,9 @@ Theme and variant driven interaction cue events with app-owned Love2D tone playb
 
 ## Basic
 
-Starter app with state, responsive grid layout, buttons, controlled input, tabs,
-scrollable activity, meters, custom draw, and keyboard/gamepad navigation.
+Starter service workbench with state, a command rail, buttons, controlled input,
+tabs, a ruled activity register, meters, custom draw, and keyboard/gamepad
+navigation.
 
 ## Dashboard
 

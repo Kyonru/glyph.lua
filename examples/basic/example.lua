@@ -1,144 +1,158 @@
 local ui = require("glyph")
 
 local colors = {
-  panel = { 0.055, 0.068, 0.092, 0.96 },
-  panelDeep = { 0.028, 0.036, 0.054, 0.98 },
-  border = { 1, 1, 1, 0.14 },
-  text = { 0.92, 0.96, 1, 1 },
-  muted = { 0.58, 0.66, 0.74, 1 },
-  teal = { 0.1, 0.82, 0.72, 1 },
-  blue = { 0.28, 0.52, 1, 1 },
-  gold = { 1, 0.72, 0.22, 1 },
-  coral = { 1, 0.32, 0.38, 1 },
-  violet = { 0.68, 0.42, 1, 1 },
+  chassis = { 0.045, 0.05, 0.052, 1 },
+  rail = { 0.065, 0.072, 0.074, 1 },
+  field = { 0.035, 0.04, 0.042, 1 },
+  surface = { 0.085, 0.095, 0.098, 1 },
+  rule = { 0.27, 0.28, 0.28, 1 },
+  ruleSoft = { 0.27, 0.28, 0.28, 0.52 },
+  text = { 0.93, 0.91, 0.86, 1 },
+  muted = { 0.66, 0.64, 0.59, 1 },
+  amber = { 0.74, 0.45, 0.08, 1 },
+  amberDark = { 0.12, 0.085, 0.035, 1 },
 }
 
 local seedLogs = {
-  { kind = "runtime", message = "Renderer attached", color = colors.teal },
-  { kind = "layout", message = "Responsive grid measured", color = colors.blue },
-  { kind = "input", message = "Inspector focused", color = colors.gold },
-  { kind = "draw", message = "Custom graph redrawn", color = colors.violet },
-  { kind = "state", message = "Counter ready", color = colors.coral },
+  { time = "0008", kind = "runtime", message = "Renderer attached" },
+  { time = "0007", kind = "layout", message = "Responsive flow measured" },
+  { time = "0006", kind = "input", message = "Inspector focused" },
+  { time = "0005", kind = "draw", message = "Signal field redrawn" },
+  { time = "0004", kind = "state", message = "Counter ready" },
+  { time = "0003", kind = "theme", message = "Service palette resolved" },
+  { time = "0002", kind = "focus", message = "Navigation graph built" },
+  { time = "0001", kind = "mount", message = "Workbench mounted" },
 }
-
-local function alpha(color, value)
-  return { color[1], color[2], color[3], value ~= nil and value or color[4] or 1 }
-end
-
-local function clamp(value, minValue, maxValue)
-  value = tonumber(value) or 0
-  if value < minValue then
-    return minValue
-  elseif value > maxValue then
-    return maxValue
-  end
-  return value
-end
 
 local function copyLogs()
   local result = {}
   for index, entry in ipairs(seedLogs) do
     result[index] = {
+      time = entry.time,
       kind = entry.kind,
       message = entry.message,
-      color = entry.color,
     }
   end
   return result
 end
 
 local function pushLog(logs, entry)
-  local nextLogs = {
-    {
-      kind = entry.kind,
-      message = entry.message,
-      color = entry.color,
-    },
-  }
-
+  local nextLogs = { entry }
   for index = 1, math.min(#logs, 11) do
     nextLogs[#nextLogs + 1] = logs[index]
   end
-
   return nextLogs
 end
 
-local function drawSparkline(count)
-  return function(_, x, y, width, height, _, _, ctx)
-    ctx:color(colors.panelDeep)
-    ctx:rect("fill", x, y, width, height, 8)
-
-    ctx:color({ 1, 1, 1, 0.05 })
-    for gx = 24, width - 16, 32 do
-      ctx:line(x + gx, y + 16, x + gx, y + height - 16)
-    end
-
-    local points = {}
-    local samples = 18
-    for index = 0, samples do
-      local ratio = index / samples
-      local value = 0.5 + math.sin(ratio * math.pi * 2.4 + count * 0.28) * 0.26
-      value = value + math.cos(ratio * math.pi * 3.8 + count * 0.12) * 0.12
-      points[#points + 1] = x + 18 + ratio * (width - 36)
-      points[#points + 1] = y + 18 + (1 - clamp(value, 0.08, 0.92)) * (height - 36)
-    end
-
-    ctx:color(alpha(colors.blue, 0.28))
-    ctx:line((table.unpack or unpack)(points))
-    ctx:color(colors.teal)
-    for index = 1, #points, 8 do
-      ctx:shape("fill", { kind = "circle", segments = 12 }, {
-        x = points[index] - 3,
-        y = points[index + 1] - 3,
-        width = 6,
-        height = 6,
-      })
-    end
-  end
+local function rule()
+  return ui.box({
+    width = "100%",
+    height = 1,
+    interactive = false,
+    accessibilityHidden = true,
+    style = { background = colors.rule },
+  })
 end
 
-local function statCard(label, value, color, detail)
-  return ui.box({
-    padding = 10,
-    display = "column",
-    gap = 5,
-    style = {
-      background = alpha(color, 0.14),
-      borderColor = alpha(color, 0.58),
-      borderWidth = 1,
-      radius = 8,
-    },
+local function sectionLabel(label)
+  return ui.text(label:upper(), {
+    textStyle = "caption",
+    style = { color = colors.muted },
+  })
+end
+
+local function metricRow(label, value)
+  return ui.stack({ width = "100%", height = 31 }, {
+    ui.row({
+      width = "100%",
+      height = 30,
+      align = "center",
+      gap = 12,
+      padding = { x = 4 },
+    }, {
+      ui.text(label:upper(), {
+        width = 126,
+        textStyle = "caption",
+        style = { color = colors.muted },
+      }),
+      ui.text(value, {
+        flex = 1,
+        textStyle = "code",
+        style = { color = colors.text },
+      }),
+    }),
+    ui.box({
+      position = "absolute",
+      left = 0,
+      right = 0,
+      bottom = 0,
+      height = 1,
+      interactive = false,
+      accessibilityHidden = true,
+      style = { background = colors.ruleSoft },
+    }),
+  })
+end
+
+local function logHeader()
+  return ui.row({
+    width = "100%",
+    height = 24,
+    align = "center",
+    padding = { x = 4 },
+    style = { background = colors.surface },
   }, {
-    ui.text(label, { textStyle = "caption", style = { color = colors.muted } }),
-    ui.text(value, { textStyle = "h2", style = { color = colors.text } }),
-    ui.text(detail, { textStyle = "caption", style = { color = alpha(color, 0.88) } }),
+    ui.text("SEQ", {
+      width = 78,
+      textStyle = "caption",
+      style = { color = colors.muted },
+    }),
+    ui.text("CHANNEL", {
+      width = 84,
+      textStyle = "caption",
+      style = { color = colors.muted },
+    }),
+    ui.text("EVENT", {
+      flex = 1,
+      textStyle = "caption",
+      style = { color = colors.muted },
+    }),
   })
 end
 
 local function logRow(entry)
-  return ui.row({
-    width = "100%",
-    minHeight = 30,
-    gap = 8,
-    align = "center",
-  }, {
+  return ui.stack({ width = "100%", minHeight = 27 }, {
+    ui.row({
+      width = "100%",
+      minHeight = 26,
+      align = "center",
+      padding = { x = 4 },
+    }, {
+      ui.text(entry.time, {
+        width = 78,
+        textStyle = "code",
+        style = { color = colors.text },
+      }),
+      ui.text(entry.kind:upper(), {
+        width = 84,
+        textStyle = "caption",
+        style = { color = colors.muted },
+      }),
+      ui.text(entry.message, {
+        flex = 1,
+        wrap = true,
+        style = { color = colors.text },
+      }),
+    }),
     ui.box({
-      width = 8,
-      height = 8,
-      style = {
-        background = entry.color or colors.teal,
-        radius = 4,
-      },
-    }),
-    ui.text(entry.kind, {
-      width = 58,
-      textStyle = "caption",
-      style = { color = entry.color or colors.muted },
-    }),
-    ui.text(entry.message, {
-      flex = 1,
-      wrap = true,
-      style = { color = colors.text },
+      position = "absolute",
+      left = 0,
+      right = 0,
+      bottom = 0,
+      height = 1,
+      interactive = false,
+      accessibilityHidden = true,
+      style = { background = colors.ruleSoft },
     }),
   })
 end
@@ -146,211 +160,298 @@ end
 local function emptyState()
   return ui.column({
     width = "100%",
-    height = 110,
+    height = 90,
     align = "center",
     justify = "center",
-    gap = 4,
+    gap = 3,
   }, {
-    ui.text("No events match that filter.", { style = { color = colors.text } }),
-    ui.text("Adjust the filter to widen the feed.", {
+    ui.text("No matching events", { style = { color = colors.text } }),
+    ui.text("Clear the filter to restore the register.", {
       textStyle = "caption",
       style = { color = colors.muted },
     }),
   })
 end
 
-local function App()
-  local count, setCount = ui.useState(0)
-  local activeTab, setActiveTab = ui.useState(1)
-  local filter, setFilter = ui.useState("")
-  local logs, setLogs = ui.useState(copyLogs)
+local function signalField(count)
+  return function(_, x, y, width, height, _, _, ctx)
+    ctx:color(colors.field)
+    ctx:rect("fill", x, y, width, height)
 
-  local function record(kind, message, color)
-    setLogs(function(previous)
-      return pushLog(previous, {
-        kind = kind,
-        message = message,
-        color = color,
-      })
-    end)
+    ctx:color(colors.ruleSoft)
+    for index = 1, 5 do
+      local lineX = x + width * index / 6
+      ctx:line(lineX, y + 14, lineX, y + height - 14)
+    end
+    ctx:line(x + 14, y + height * 0.5, x + width - 14, y + height * 0.5)
+
+    local points = {}
+    local samples = 22
+    for index = 0, samples do
+      local ratio = index / samples
+      local value = 0.5
+        + math.sin(ratio * math.pi * 2.4 + count * 0.28) * 0.26
+        + math.cos(ratio * math.pi * 3.8 + count * 0.12) * 0.1
+      points[#points + 1] = x + 14 + ratio * (width - 28)
+      points[#points + 1] = y + 14 + (1 - value) * (height - 28)
+    end
+
+    ctx:color(colors.amber)
+    ctx:line((table.unpack or unpack)(points))
   end
+end
 
-  local filtered = {}
+local function activityRegister(logs, filter, setFilter, expanded)
+  local rows = {}
   local query = filter:lower()
   for _, entry in ipairs(logs) do
     local haystack = (entry.kind .. " " .. entry.message):lower()
     if query == "" or haystack:find(query, 1, true) then
-      filtered[#filtered + 1] = logRow(entry)
+      rows[#rows + 1] = logRow(entry)
     end
   end
-  if #filtered == 0 then
-    filtered[1] = emptyState()
+  if #rows == 0 then
+    rows[1] = emptyState()
+  end
+
+  local children = {}
+  if expanded then
+    children[#children + 1] = ui.input({
+      width = "100%",
+      height = 32,
+      placeholder = "Filter activity register",
+      value = filter,
+      onChange = setFilter,
+    })
+  end
+  children[#children + 1] = logHeader()
+  children[#children + 1] = ui.scrollView({
+    width = "100%",
+    grow = 1,
+    minHeight = expanded and 126 or 108,
+    padding = { right = 4 },
+    gap = 0,
+    style = { background = colors.field },
+  }, rows)
+
+  return ui.column({ width = "100%", grow = 1, gap = 6 }, children)
+end
+
+local function App()
+  local count, setCount = ui.useState(4)
+  local activeTab, setActiveTab = ui.useState(1)
+  local filter, setFilter = ui.useState("")
+  local logs, setLogs = ui.useState(copyLogs)
+
+  local function record(kind, message)
+    setLogs(function(previous)
+      local sequence = (tonumber(previous[1] and previous[1].time) or 0) + 1
+      return pushLog(previous, {
+        time = string.format("%04d", sequence),
+        kind = kind,
+        message = message,
+      })
+    end)
+  end
+
+  local function increment()
+    local nextCount = count + 1
+    setCount(nextCount)
+    record("state", "Counter changed to " .. tostring(nextCount))
+  end
+
+  local function reset()
+    setCount(0)
+    setFilter("")
+    setLogs(copyLogs())
   end
 
   local progress = (count % 12) / 12
-  local status = count == 0 and "ready" or (count % 3 == 0 and "sync" or "live")
+  local status = count == 0 and "READY" or (count % 3 == 0 and "SYNC" or "LIVE")
 
-  local overview = ui.column({ width = "100%", gap = 12 }, {
-    ui.grid({
-      width = "100%",
-      minCellWidth = 150,
-      maxColumns = 3,
-      cellHeight = 86,
-      gap = 10,
-    }, {
-      statCard("counter", tostring(count), colors.teal, "12-step loop"),
-      statCard("events", tostring(#logs), colors.gold, "live feed"),
-      statCard("status", status, colors.violet, "ready / sync / live"),
-    }),
-    ui.box({
-      width = "100%",
-      height = 118,
-      interactive = false,
-      draw = drawSparkline(count),
-    }),
-    ui.meter({
-      value = progress,
-      max = 1,
-      height = 12,
-      shape = { kind = "skew", skew = 10 },
-      trackStyle = { background = { 1, 1, 1, 0.08 } },
-      fillStyle = { background = colors.teal },
-    }),
+  local overview = ui.column({ width = "100%", grow = 1, gap = 7 }, {
+    sectionLabel("Activity register"),
+    activityRegister(logs, "", function() end, false),
   })
 
-  local activity = ui.column({ width = "100%", gap = 10 }, {
-    ui.input({
+  local activity = ui.column({ width = "100%", grow = 1, gap = 7 }, {
+    sectionLabel("Activity register / filter"),
+    activityRegister(logs, filter, setFilter, true),
+  })
+
+  local custom = ui.column({ width = "100%", grow = 1, gap = 8 }, {
+    sectionLabel("Custom draw / signal field"),
+    ui.box({
       width = "100%",
-      placeholder = "Filter activity...",
-      value = filter,
-      onChange = function(nextValue)
-        setFilter(nextValue)
-      end,
-    }),
-    ui.scrollView({
-      width = "100%",
-      height = 202,
-      gap = 6,
-      padding = 8,
+      height = 132,
+      interactive = false,
+      draw = signalField(count),
       style = {
-        background = colors.panelDeep,
-        borderColor = colors.border,
+        borderColor = colors.rule,
         borderWidth = 1,
-        radius = 8,
+        radius = 0,
       },
-    }, filtered),
-  })
-
-  local custom = ui.column({ width = "100%", gap = 10 }, {
-    ui.box({
-      width = "100%",
-      height = 164,
-      interactive = false,
-      draw = function(_, x, y, width, height, _, _, ctx)
-        ctx:color(colors.panelDeep)
-        ctx:rect("fill", x, y, width, height, 8)
-        ctx:color(alpha(colors.blue, 0.18))
-        ctx:shape("fill", { kind = "blob", points = 12, variance = 0.12, seed = "basic" }, {
-          x = x + width * 0.08,
-          y = y + 24,
-          width = width * 0.46,
-          height = height - 48,
-        })
-        ctx:color(alpha(colors.gold, 0.2))
-        ctx:shape("fill", { kind = "skew", skew = 24 }, {
-          x = x + width * 0.42,
-          y = y + 36,
-          width = width * 0.48,
-          height = height - 72,
-        })
-        ctx:color(colors.text)
-        ctx:printf("signal field", x + 18, y + height - 36, width - 36, "center")
-      end,
     }),
-    ui.text("A compact custom-drawn panel can sit beside normal controls without changing layout rules.", {
-      wrap = true,
+    ui.text("Custom drawing shares the same measured workfield as normal controls.", {
       width = "100%",
+      wrap = true,
+      textStyle = "caption",
       style = { color = colors.muted },
     }),
   })
 
-  return ui.scrollView({
-    width = "100%",
+  local rail = ui.stack({
+    width = "23%",
+    minWidth = 190,
+    maxWidth = 300,
     height = "100%",
-    padding = { left = 28, right = 28, top = 24, bottom = 24 },
-    gap = 14,
-    align = "center",
   }, {
-    ui.panel({
-      title = "Mission Console",
+    ui.column({
       width = "100%",
-      maxWidth = 860,
-      padding = 14,
+      height = "100%",
+      padding = { left = 18, right = 18, top = 20, bottom = 16 },
       gap = 12,
-      style = {
-        background = colors.panel,
-        borderColor = colors.border,
-        borderWidth = 1,
-        radius = 8,
-      },
+      style = { background = colors.rail },
     }, {
-      ui.row({ width = "100%", gap = 10, align = "center" }, {
-        ui.button({
-          label = "Increment",
-          onClick = function()
-            local nextCount = count + 1
-            setCount(nextCount)
-            record("state", "Counter changed to " .. tostring(nextCount), colors.teal)
-          end,
+      sectionLabel("Commands"),
+      ui.button({
+        label = "Increment",
+        width = "100%",
+        height = 36,
+        variant = "primary",
+        onClick = increment,
+      }),
+      ui.button({
+        label = "Reset",
+        width = "100%",
+        height = 36,
+        onClick = reset,
+      }),
+      rule(),
+      sectionLabel("Count"),
+      ui.text(string.format("%02d", count), {
+        font = "monoDisplay",
+        lineHeight = 40,
+        style = { color = colors.text },
+      }),
+      ui.text("12-step loop", {
+        textStyle = "code",
+        style = { color = colors.muted },
+      }),
+      rule(),
+      sectionLabel("Status"),
+      ui.row({ width = "100%", gap = 8, align = "center" }, {
+        ui.box({
+          width = 8,
+          height = 8,
+          interactive = false,
+          style = { background = colors.amber, radius = 0 },
         }),
-        ui.button({
-          label = "Reset",
-          onClick = function()
-            setCount(0)
-            setFilter("")
-            setLogs(copyLogs())
-          end,
-        }),
-        ui.text("Count: " .. tostring(count), {
-          flex = 1,
+        ui.text(status, {
+          textStyle = "code",
           style = { color = colors.text },
         }),
       }),
-      ui.tabs({
+      ui.box({ grow = 1, width = "100%", interactive = false }),
+      ui.text("KEYBOARD + GAMEPAD", {
+        textStyle = "caption",
+        wrap = true,
         width = "100%",
-        active = activeTab,
-        onChange = function(index)
-          setActiveTab(index)
-          record("input", "Switched to tab " .. tostring(index), colors.gold)
-        end,
-        tabWidth = 96,
-        tabHeight = 34,
-        tabStyle = {
-          background = { 1, 1, 1, 0.055 },
-          color = colors.muted,
-          borderColor = colors.border,
-          borderWidth = 1,
-          radius = 8,
-          hover = { background = { 1, 1, 1, 0.09 }, color = colors.text },
-          active = {
-            background = alpha(colors.teal, 0.22),
-            color = colors.text,
-            borderColor = alpha(colors.teal, 0.78),
-          },
-        },
-      }, {
-        { label = "Overview", content = overview },
-        { label = "Activity", content = activity },
-        { label = "Custom", content = custom },
+        style = { color = colors.muted },
       }),
     }),
+    ui.box({
+      position = "absolute",
+      top = 0,
+      right = 0,
+      bottom = 0,
+      width = 1,
+      interactive = false,
+      accessibilityHidden = true,
+      style = { background = colors.rule },
+    }),
+  })
+
+  local workfield = ui.column({
+    flex = 1,
+    height = "100%",
+    padding = { left = 24, right = 20, top = 17, bottom = 14 },
+    gap = 9,
+    style = { background = colors.chassis },
+  }, {
+    ui.row({ width = "100%", align = "center", gap = 12 }, {
+      ui.text("Mission sync", {
+        textStyle = "h1",
+        style = { color = colors.text },
+      }),
+      ui.box({ flex = 1, height = 1, interactive = false }),
+      ui.text(status, {
+        textStyle = "code",
+        style = { color = colors.muted },
+      }),
+    }),
+    ui.row({ width = "100%", height = 18, gap = 12, align = "center" }, {
+      ui.meter({
+        value = progress,
+        max = 1,
+        flex = 1,
+        height = 8,
+        trackStyle = { background = colors.surface, radius = 0 },
+        fillStyle = { background = colors.amber, radius = 0 },
+      }),
+      ui.text(string.format("%02d%%", math.floor(progress * 100 + 0.5)), {
+        width = 46,
+        textStyle = "code",
+        style = { color = colors.amber },
+      }),
+    }),
+    ui.column({ width = "100%", gap = 0 }, {
+      metricRow("Input route", "Keyboard + Gamepad"),
+      metricRow("Event rows", tostring(#logs)),
+      metricRow("Focus path", ({ "Overview", "Activity", "Custom" })[activeTab]),
+    }),
+    ui.tabs({
+      width = "100%",
+      grow = 1,
+      active = activeTab,
+      onChange = function(index)
+        setActiveTab(index)
+        record("input", "Mode changed to " .. ({ "Overview", "Activity", "Custom" })[index])
+      end,
+      tabWidth = 104,
+      tabHeight = 30,
+      gap = 6,
+      tabStyle = {
+        background = colors.surface,
+        color = colors.muted,
+        borderColor = colors.rule,
+        borderWidth = 1,
+        radius = 0,
+        hover = { background = { 0.14, 0.15, 0.15, 1 }, color = colors.text },
+        pressed = { background = colors.field },
+        focused = { borderColor = colors.text, borderWidth = 2 },
+        active = {
+          background = colors.amber,
+          color = colors.amberDark,
+        },
+      },
+    }, {
+      { label = "Overview", content = overview },
+      { label = "Activity", content = activity },
+      { label = "Custom", content = custom },
+    }),
+  })
+
+  return ui.row({ width = "100%", height = "100%" }, {
+    rail,
+    workfield,
   })
 end
 
 return {
   id = "basic",
   label = "Basic",
-  description = "A mission-console starter with state, tabs, a controlled input, a meter, an event log, and a custom sparkline.",
+  description = "State, input, tabs, metrics, and custom drawing arranged as a compact service workbench.",
   window = {
     width = 840,
     height = 560,
