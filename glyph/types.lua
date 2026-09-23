@@ -371,6 +371,8 @@ local GlyphFeedbackApi = {}
 ---@field right? number
 ---@field bottom? number
 ---@field left? number
+---@field x? number horizontal spacing shorthand for left and right
+---@field y? number vertical spacing shorthand for top and bottom
 local GlyphPadding = {}
 
 ---@class GlyphProps
@@ -378,8 +380,8 @@ local GlyphPadding = {}
 ---@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table, style: GlyphStyle, ctx: GlyphDrawContext)
 ---@field onBounds? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
 ---@field onLayout? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
----@field width? number numeric pixels, or a percent string of the parent's content size, e.g. "50%"
----@field height? number numeric pixels, or a percent string of the parent's content size, e.g. "50%"
+---@field width? number|string numeric pixels, or a percent string of the parent's content size, e.g. "50%"
+---@field height? number|string numeric pixels, or a percent string of the parent's content size, e.g. "50%"
 ---@field minWidth? number lower clamp; also honored when this node is a flex child
 ---@field maxWidth? number upper clamp; also honored when this node is a flex child
 ---@field minHeight? number lower clamp; also honored when this node is a flex child
@@ -1096,7 +1098,7 @@ local GlyphLoadOpts = {}
 ---@field clear fun(predicate: fun(layer: GlyphLayer)|nil)
 ---@field current fun(): GlyphLayer|nil
 ---@field isOpen fun(id: string|number): boolean
----@field layers GlyphLayer[]
+---@field layers fun(): GlyphLayer[]
 local GlyphSceneApi = {}
 
 ---@class GlyphModalApi
@@ -1111,10 +1113,82 @@ local GlyphModalApi = {}
 -- Offscreen Surfaces / Menori Adapter
 -- ---------------------------------------------------------------------------
 
+---@class GlyphSurfaceUi
+---@field text fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field textKey fun(key: string, props?: GlyphTextProps): GlyphNode
+---@field richText fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field richTextKey fun(key: string, props?: GlyphTextProps): GlyphNode
+---@field h1 fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field h2 fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field p fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field caption fun(value: string, props?: GlyphTextProps): GlyphNode
+---@field image fun(props?: GlyphImageProps): GlyphNode
+---@field path GlyphPathApi
+---@field box fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field row fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field column fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field stack fun(props?: GlyphProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field grid GlyphGridApi
+---@field portal fun(props?: GlyphPortalProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field button fun(props?: GlyphButtonProps): GlyphNode
+---@field input fun(props?: GlyphInputProps): GlyphNode
+---@field meter fun(props?: GlyphMeterProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field scrollView fun(props?: GlyphScrollViewProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field virtualList fun(props: GlyphVirtualListProps): GlyphNode
+---@field scrollTo fun(target: string|number, offset: number)
+---@field scrollToItem fun(target: string|number, index: number, itemHeight: number, opts?: GlyphScrollToItemOpts)
+---@field getScrollOffset fun(target: string|number): number
+---@field tabs fun(props?: GlyphTabsProps, tabs?: GlyphTab[]): GlyphNode
+---@field panel fun(props?: GlyphPanelProps, children?: GlyphNode[]|GlyphNode): GlyphNode
+---@field static fun(node: GlyphNode): GlyphNode
+---@field animation GlyphAnimationApi
+---@field accessibility GlyphAccessibilityApi
+---@field feedback GlyphFeedbackApi
+---@field i18n GlyphI18nApi
+---@field Navigate table
+---@field Responsive table
+---@field Style table
+---@field dialogue GlyphDialogueApi
+---@field transitions GlyphTransitionApi
+---@field runtime table
+---@field surface GlyphSurface
+---@field theme GlyphTheme
+---@field useState fun(initial: any): any, fun(value: any|fun(previous: any): any)
+---@field useEffect fun(fn: fun(): fun()|nil, deps?: any[])
+---@field memo fun(component: fun(): GlyphNode, deps?: any[]): GlyphNode
+---@field drag fun(opts: GlyphDragProps): GlyphDragStart
+---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
+---@field setTheme fun(theme: GlyphTheme)
+---@field getTheme fun(): GlyphTheme
+---@field style fun(style?: GlyphStyle): GlyphStyle
+---@field variant fun(name: string, style?: GlyphStyle): GlyphVariant
+---@field composeStyles fun(...: GlyphStyle): GlyphStyle
+---@field setLove fun(loveModule: table)
+---@field isHovered fun(node?: GlyphNode): boolean
+---@field isPressed fun(node?: GlyphNode): boolean
+---@field isFocused fun(node?: GlyphNode): boolean
+---@field isActive fun(node?: GlyphNode): boolean
+---@field isHot fun(node?: GlyphNode): boolean
+---@field setFocus fun(node?: GlyphNode)
+---@field on fun(name: string, fn: fun(...): any, opts?: table): fun()
+---@field dispatch fun(name: string, ...: any)
+---@field update fun(dt: number)
+---@field render fun(component?: fun(ui: GlyphSurfaceUi, ctx: GlyphSurfaceContext): GlyphNode): any
+---@field navigate fun(direction: GlyphNavDirection): GlyphNode|nil
+---@field mousemoved fun(x: number, y: number)
+---@field mousepressed fun(x: number, y: number, button: number)
+---@field mousereleased fun(x: number, y: number, button: number)
+---@field keypressed fun(key: string)
+---@field keyreleased fun(key: string)
+---@field textinput fun(text: string)
+---@field wheelmoved fun(dx: number, dy: number)
+---@field spriteSheet fun(image: any, opts: GlyphSpriteSheetProps): GlyphSpriteSheet
+local GlyphSurfaceUi = {}
+
 ---@class GlyphSurfaceOptions
 ---@field width number
 ---@field height number
----@field component fun(ui: glyph, ctx: GlyphSurfaceContext): GlyphNode
+---@field component? fun(ui: GlyphSurfaceUi, ctx: GlyphSurfaceContext): GlyphNode
 ---@field theme? GlyphTheme
 ---@field love? table
 ---@field clearColor? GlyphColor
@@ -1135,20 +1209,22 @@ local GlyphSurfaceOptions = {}
 local GlyphSurfaceContext = {}
 
 ---@class GlyphSurface
----@field ui glyph
+---@field ui GlyphSurfaceUi
 ---@field runtime table
 ---@field canvas any
 ---@field width number
 ---@field height number
 ---@field update fun(self: GlyphSurface, dt?: number): GlyphSurface
----@field render fun(self: GlyphSurface, component?: fun(ui: glyph, ctx: GlyphSurfaceContext): GlyphNode): any
+---@field render fun(self: GlyphSurface, component?: fun(ui: GlyphSurfaceUi, ctx: GlyphSurfaceContext): GlyphNode): any
 ---@field resize fun(self: GlyphSurface, width: number, height: number): GlyphSurface
 ---@field markDirty fun(self: GlyphSurface): GlyphSurface
 ---@field mousemoved fun(self: GlyphSurface, x: number, y: number)
 ---@field mousepressed fun(self: GlyphSurface, x: number, y: number, button: number)
 ---@field mousereleased fun(self: GlyphSurface, x: number, y: number, button: number)
+---@field wheelmoved fun(self: GlyphSurface, dx: number, dy: number)
 ---@field keypressed fun(self: GlyphSurface, key: string)
 ---@field keyreleased fun(self: GlyphSurface, key: string)
+---@field textinput fun(self: GlyphSurface, text: string)
 ---@field destroy fun(self: GlyphSurface): GlyphSurface
 local GlyphSurface = {}
 
@@ -1321,7 +1397,7 @@ local GlyphMenoriLoadingHandle = {}
 ---@field height number
 ---@field worldWidth? number
 ---@field worldHeight? number
----@field component fun(ui: glyph, ctx: GlyphSurfaceContext): GlyphNode
+---@field component fun(ui: GlyphSurfaceUi, ctx: GlyphSurfaceContext): GlyphNode
 ---@field parent? table
 ---@field camera? table
 ---@field environment? table
