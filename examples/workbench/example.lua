@@ -1,4 +1,5 @@
 local ui = require("glyph")
+local workbenchCommands = {}
 
 local colors = {
   chassis = { 0.045, 0.05, 0.052, 1 },
@@ -10,7 +11,7 @@ local colors = {
   text = { 0.93, 0.91, 0.86, 1 },
   muted = { 0.66, 0.64, 0.59, 1 },
   amber = { 0.74, 0.45, 0.08, 1 },
-  amberDark = { 0.12, 0.085, 0.035, 1 },
+  amberWash = { 0.16, 0.105, 0.035, 1 },
 }
 
 local seedLogs = {
@@ -19,9 +20,7 @@ local seedLogs = {
   { time = "0006", kind = "input", message = "Inspector focused" },
   { time = "0005", kind = "draw", message = "Signal field redrawn" },
   { time = "0004", kind = "state", message = "Counter ready" },
-  { time = "0003", kind = "theme", message = "Service palette resolved" },
-  { time = "0002", kind = "focus", message = "Navigation graph built" },
-  { time = "0001", kind = "mount", message = "Workbench mounted" },
+  { time = "0003", kind = "mount", message = "Workbench mounted" },
 }
 
 local function copyLogs()
@@ -56,28 +55,70 @@ end
 
 local function sectionLabel(label)
   return ui.text(label:upper(), {
-    textStyle = "caption",
+    font = "mono",
+    fontSize = 13,
+    lineHeight = 16,
     style = { color = colors.muted },
   })
 end
 
-local function metricRow(label, value)
-  return ui.stack({ width = "100%", height = 31 }, {
+local function commandButton(label, shortcut, compact, primary, onClick)
+  return ui.row({
+    key = "command-" .. label:lower(),
+    role = "button",
+    focusable = true,
+    accessibilityLabel = label,
+    width = "100%",
+    height = compact and 36 or 38,
+    align = "center",
+    padding = { x = 10, y = 5 },
+    style = {
+      background = primary and colors.field or colors.surface,
+      borderColor = primary and colors.amber or colors.rule,
+      borderWidth = 1,
+      radius = 0,
+      hover = { background = primary and colors.amberWash or colors.field },
+      pressed = { background = colors.surface },
+      focused = { borderColor = colors.text, borderWidth = 2 },
+    },
+    onClick = onClick,
+  }, {
+    ui.text(label, {
+      font = "mono",
+      fontSize = compact and 14 or 16,
+      lineHeight = compact and 18 or 20,
+      style = { color = primary and colors.amber or colors.text },
+    }),
+    ui.box({ flex = 1, height = 1, interactive = false }),
+    ui.text("[" .. shortcut .. "]", {
+      textStyle = "code",
+      style = { color = colors.muted },
+    }),
+  })
+end
+
+local function metricRow(label, value, compact)
+  local height = compact and 32 or 36
+  return ui.stack({ width = "100%", height = height }, {
     ui.row({
       width = "100%",
-      height = 30,
+      height = height - 1,
       align = "center",
-      gap = 12,
+      gap = compact and 12 or 16,
       padding = { x = 4 },
     }, {
       ui.text(label:upper(), {
-        width = 126,
-        textStyle = "caption",
+        width = compact and 116 or 175,
+        font = "mono",
+        fontSize = compact and 11 or 13,
+        lineHeight = 16,
         style = { color = colors.muted },
       }),
       ui.text(value, {
         flex = 1,
-        textStyle = "code",
+        font = "mono",
+        fontSize = compact and 13 or 16,
+        lineHeight = compact and 16 or 20,
         style = { color = colors.text },
       }),
     }),
@@ -104,12 +145,7 @@ local function logHeader()
     style = { background = colors.surface },
   }, {
     ui.text("SEQ", {
-      width = 78,
-      textStyle = "caption",
-      style = { color = colors.muted },
-    }),
-    ui.text("CHANNEL", {
-      width = 84,
+      width = 144,
       textStyle = "caption",
       style = { color = colors.muted },
     }),
@@ -122,26 +158,22 @@ local function logHeader()
 end
 
 local function logRow(entry)
-  return ui.stack({ width = "100%", minHeight = 27 }, {
+  return ui.stack({ width = "100%", minHeight = 30 }, {
     ui.row({
       width = "100%",
-      minHeight = 26,
+      minHeight = 29,
       align = "center",
       padding = { x = 4 },
     }, {
       ui.text(entry.time, {
-        width = 78,
+        width = 144,
         textStyle = "code",
         style = { color = colors.text },
       }),
-      ui.text(entry.kind:upper(), {
-        width = 84,
-        textStyle = "caption",
-        style = { color = colors.muted },
-      }),
-      ui.text(entry.message, {
+      ui.text(entry.kind:upper() .. " / " .. entry.message, {
         flex = 1,
         wrap = true,
+        textStyle = "code",
         style = { color = colors.text },
       }),
     }),
@@ -202,13 +234,16 @@ local function signalField(count)
   end
 end
 
-local function activityRegister(logs, filter, setFilter, expanded)
+local function activityRegister(logs, filter, setFilter, expanded, limit)
   local rows = {}
   local query = filter:lower()
   for _, entry in ipairs(logs) do
     local haystack = (entry.kind .. " " .. entry.message):lower()
     if query == "" or haystack:find(query, 1, true) then
       rows[#rows + 1] = logRow(entry)
+      if limit and #rows >= limit then
+        break
+      end
     end
   end
   if #rows == 0 then
@@ -241,6 +276,8 @@ local function activityRegister(logs, filter, setFilter, expanded)
 end
 
 local function App()
+  local viewport = ui.viewport()
+  local compact = viewport.width < 820 or viewport.height < 560
   local count, setCount = ui.useState(4)
   local activeTab, setActiveTab = ui.useState(1)
   local filter, setFilter = ui.useState("")
@@ -269,12 +306,14 @@ local function App()
     setLogs(copyLogs())
   end
 
-  local progress = (count % 12) / 12
-  local status = count == 0 and "READY" or (count % 3 == 0 and "SYNC" or "LIVE")
+  workbenchCommands.increment = increment
+  workbenchCommands.reset = reset
 
-  local overview = ui.column({ width = "100%", flex = 1, gap = 7 }, {
+  local progress = math.min(1, count / 6)
+
+  local overview = ui.column({ width = "100%", flex = 1, gap = compact and 7 or 11 }, {
     sectionLabel("Activity register"),
-    activityRegister(logs, "", function() end, false),
+    activityRegister(logs, "", function() end, false, 3),
   })
 
   local activity = ui.column({ width = "100%", flex = 1, gap = 7 }, {
@@ -303,66 +342,130 @@ local function App()
     }),
   })
 
+  local modeNames = { "Overview", "Activity", "Custom" }
+  local panes = { overview, activity, custom }
+
+  local function switchMode(index)
+    if index == activeTab then
+      return
+    end
+    setActiveTab(index)
+    record("input", "Mode changed to " .. modeNames[index])
+  end
+
+  local function modeButton(index)
+    local name = modeNames[index]
+    return ui.button({
+      key = "mode-" .. name:lower(),
+      label = (activeTab == index and ">       " or "   ") .. name:upper(),
+      role = "tab",
+      active = activeTab == index,
+      navGroup = "workbench-modes",
+      width = "100%",
+      height = 34,
+      padding = { left = compact and 12 or 29, right = 8, y = 5 },
+      style = {
+        background = colors.field,
+        color = colors.muted,
+        borderColor = colors.rule,
+        borderWidth = 1,
+        radius = 0,
+        hover = { background = colors.surface, color = colors.text },
+        pressed = { background = colors.amberWash },
+        focused = { borderColor = colors.text, borderWidth = 2 },
+        active = { background = colors.amberWash, color = colors.amber },
+      },
+      onClick = function()
+        switchMode(index)
+      end,
+    })
+  end
+
+  local topBarHeight = compact and 34 or 35
+  local topBar = ui.stack({ width = "100%", height = topBarHeight, shrink = 0 }, {
+    ui.row({
+      width = "100%",
+      height = topBarHeight - 1,
+      padding = { x = compact and 14 or 20, y = 5 },
+      gap = compact and 8 or 10,
+      align = "center",
+      style = { background = colors.surface },
+    }, {
+      ui.text("GLYPH", {
+        font = "subheader",
+        fontSize = compact and 16 or 18,
+        lineHeight = 22,
+        style = { color = colors.text },
+      }),
+      ui.text("/", { textStyle = "code", style = { color = colors.amber } }),
+      ui.text("MISSION CONSOLE", { textStyle = "code", style = { color = colors.muted } }),
+      ui.box({ flex = 1, height = 1, interactive = false }),
+      ui.box({
+        width = 7,
+        height = 7,
+        interactive = false,
+        accessibilityHidden = true,
+        style = { background = colors.amber, radius = 4 },
+      }),
+      ui.text("RUNTIME READY", { textStyle = "code", style = { color = colors.muted } }),
+    }),
+    ui.box({
+      position = "absolute",
+      left = 0,
+      right = 0,
+      bottom = 0,
+      height = 1,
+      interactive = false,
+      accessibilityHidden = true,
+      style = { background = colors.rule },
+    }),
+  })
+
   local rail = ui.stack({
-    width = "23%",
-    minWidth = 190,
-    maxWidth = 300,
+    width = "20%",
+    minWidth = 168,
+    maxWidth = 230,
     height = "100%",
   }, {
     ui.column({
       width = "100%",
       height = "100%",
-      padding = { left = 18, right = 18, top = 20, bottom = 16 },
-      gap = 12,
+      padding = {
+        left = compact and 14 or 20,
+        right = compact and 14 or 20,
+        top = compact and 18 or 26,
+        bottom = compact and 12 or 18,
+      },
+      gap = compact and 8 or 10,
       style = { background = colors.rail },
     }, {
       sectionLabel("Commands"),
-      ui.button({
-        label = "Increment",
-        width = "100%",
-        height = 36,
-        variant = "primary",
-        onClick = increment,
-      }),
-      ui.button({
-        label = "Reset",
-        width = "100%",
-        height = 36,
-        onClick = reset,
-      }),
+      commandButton("INCREMENT", "I", compact, true, increment),
+      commandButton("RESET", "R", compact, false, reset),
+      ui.box({ width = "100%", height = compact and 0 or 5, shrink = 0, interactive = false }),
       rule(),
+      ui.box({ width = "100%", height = 0, shrink = 0, interactive = false }),
       sectionLabel("Count"),
       ui.text(string.format("%02d", count), {
-        font = "monoDisplay",
-        fontSize = 36,
-        lineHeight = 40,
+        font = "mono",
+        fontSize = compact and 36 or 44,
+        lineHeight = compact and 40 or 50,
         style = { color = colors.text },
       }),
-      ui.text("12-step loop", {
-        textStyle = "code",
-        style = { color = colors.muted },
-      }),
       rule(),
-      sectionLabel("Status"),
-      ui.row({ width = "100%", gap = 8, align = "center" }, {
-        ui.box({
-          width = 8,
-          height = 8,
-          interactive = false,
-          style = { background = colors.amber, radius = 0 },
-        }),
-        ui.text(status, {
-          textStyle = "code",
-          style = { color = colors.text },
-        }),
+      ui.box({ width = "100%", height = 0, shrink = 0, interactive = false }),
+      sectionLabel("Modes"),
+      ui.column({
+        width = "100%",
+        gap = compact and 7 or 9,
+        role = "tablist",
+        accessibilityLabel = "Workbench modes",
+      }, {
+        modeButton(1),
+        modeButton(2),
+        modeButton(3),
       }),
       ui.box({ grow = 1, width = "100%", interactive = false }),
-      ui.text("KEYBOARD + GAMEPAD", {
-        textStyle = "caption",
-        wrap = true,
-        width = "100%",
-        style = { color = colors.muted },
-      }),
     }),
     ui.box({
       position = "absolute",
@@ -379,76 +482,66 @@ local function App()
   local workfield = ui.column({
     flex = 1,
     height = "100%",
-    padding = { left = 24, right = 20, top = 17, bottom = 14 },
-    gap = 9,
+    padding = {
+      left = compact and 24 or 30,
+      right = compact and 20 or 24,
+      top = compact and 20 or 32,
+      bottom = compact and 14 or 18,
+    },
+    gap = compact and 8 or 12,
     style = { background = colors.chassis },
   }, {
-    ui.row({ width = "100%", align = "center", gap = 12 }, {
-      ui.text("Mission sync", {
-        textStyle = "h1",
+    ui.row({ width = "100%", height = compact and 42 or 48, align = "center", gap = 12, shrink = 0 }, {
+      ui.text("MISSION SYNC", {
+        font = "mono",
+        fontSize = compact and 30 or 40,
+        lineHeight = compact and 38 or 48,
         style = { color = colors.text },
       }),
-      ui.box({ flex = 1, height = 1, interactive = false }),
-      ui.text(status, {
-        textStyle = "code",
-        style = { color = colors.muted },
-      }),
     }),
-    ui.row({ width = "100%", height = 18, gap = 12, align = "center" }, {
+    ui.row({ width = "100%", height = compact and 18 or 21, gap = 12, align = "center", shrink = 0 }, {
       ui.meter({
         value = progress,
         max = 1,
         flex = 1,
-        height = 8,
+        height = compact and 8 or 21,
         trackStyle = { background = colors.surface, radius = 0 },
         fillStyle = { background = colors.amber, radius = 0 },
       }),
       ui.text(string.format("%02d%%", math.floor(progress * 100 + 0.5)), {
-        width = 46,
-        textStyle = "code",
+        width = compact and 60 or 68,
+        font = "mono",
+        fontSize = compact and 18 or 23,
+        lineHeight = compact and 20 or 25,
         style = { color = colors.amber },
       }),
     }),
+    ui.box({ width = "100%", height = compact and 12 or 9, shrink = 0, interactive = false }),
     ui.column({ width = "100%", gap = 0 }, {
-      metricRow("Input route", "Keyboard + Gamepad"),
-      metricRow("Event rows", tostring(#logs)),
-      metricRow("Focus path", ({ "Overview", "Activity", "Custom" })[activeTab]),
+      metricRow("Input route", "Keyboard + Gamepad", compact),
+      metricRow("Event rows", tostring(#logs), compact),
+      metricRow("Focus path", modeNames[activeTab], compact),
     }),
-    ui.tabs({
+    ui.box({ width = "100%", height = compact and 0 or 12, shrink = 0, interactive = false }),
+    rule(),
+    ui.stack({
+      key = "pane-" .. tostring(activeTab),
       width = "100%",
       flex = 1,
-      active = activeTab,
-      onChange = function(index)
-        setActiveTab(index)
-        record("input", "Mode changed to " .. ({ "Overview", "Activity", "Custom" })[index])
-      end,
-      tabWidth = 104,
-      tabHeight = 30,
-      gap = 6,
-      tabStyle = {
-        background = colors.surface,
-        color = colors.muted,
-        borderColor = colors.rule,
-        borderWidth = 1,
-        radius = 0,
-        hover = { background = { 0.14, 0.15, 0.15, 1 }, color = colors.text },
-        pressed = { background = colors.field },
-        focused = { borderColor = colors.text, borderWidth = 2 },
-        active = {
-          background = colors.amber,
-          color = colors.amberDark,
-        },
-      },
+      clip = true,
+      role = "tabpanel",
+      accessibilityLabel = modeNames[activeTab] .. " workbench panel",
     }, {
-      { label = "Overview", content = overview },
-      { label = "Activity", content = activity },
-      { label = "Custom", content = custom },
+      panes[activeTab],
     }),
   })
 
-  return ui.row({ width = "100%", height = "100%" }, {
-    rail,
-    workfield,
+  return ui.column({ width = "100%", height = "100%", style = { background = colors.chassis } }, {
+    topBar,
+    ui.row({ width = "100%", flex = 1 }, {
+      rail,
+      workfield,
+    }),
   })
 end
 
@@ -456,10 +549,11 @@ return {
   id = "workbench",
   label = "Workbench",
   title = "Mission console",
-  description = "State, input, tabs, metrics, and custom drawing arranged as a compact service workbench.",
+  description = "State, input, semantic modes, metrics, and custom drawing arranged as a compact service workbench.",
+  chrome = false,
   window = {
-    width = 840,
-    height = 560,
+    width = 1024,
+    height = 680,
     minWidth = 680,
     minHeight = 480,
     resizable = true,
@@ -468,21 +562,23 @@ return {
   install = {
     gamepad = true,
   },
-  setup = function()
-    ui.setTheme({
-      typography = {
-        h1 = {
-          font = "title",
-          fontSize = 30,
-          lineHeight = 38,
-        },
-      },
-    })
-  end,
   component = function()
     return App()
   end,
   keypressed = function(key)
+    local focused = ui.accessibility.focused()
+    if not (focused and focused.type == "input") then
+      if key == "i" and workbenchCommands.increment then
+        workbenchCommands.increment()
+        return true
+      elseif key == "r" and workbenchCommands.reset then
+        workbenchCommands.reset()
+        return true
+      end
+    end
+    if focused and focused.type == "input" and (key == "left" or key == "right") then
+      return ui.keypressed(key)
+    end
     if key == "up" then
       return ui.navigate("up")
     elseif key == "down" then

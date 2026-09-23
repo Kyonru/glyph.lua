@@ -10,8 +10,9 @@ icon: lucide/boxes
 
 > [!TIP]
 > See the minimal text/button loop in [`examples/basic`](examples.md), then the
-> broader input, meter, tabs, and scroll-view composition in
-> [`examples/workbench`](examples.md).
+> broader input, meter, semantic-mode, and scroll-view composition in
+> [`examples/workbench`](examples.md). [`examples/themes`](examples.md) shows
+> `ui.tabs` in a conventional horizontal content region.
 
 Glyph components return virtual nodes. Components are plain Lua functions; there is no class system.
 

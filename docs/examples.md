@@ -96,10 +96,12 @@ in Workbench.
 
 ## Workbench
 
-Broad component sampler with state, a command rail, controlled input, tabs, a
-ruled activity register, meters, custom draw, and keyboard/gamepad navigation.
-Its constrained tab shell keeps the tab strip and workfield geometry fixed
-while pane content changes, including at the declared minimum window size.
+Broad component sampler with state, a command rail, controlled input, semantic
+mode controls, a ruled activity register, meters, custom draw, and
+keyboard/gamepad navigation. The mode rail swaps a single fixed workfield, so
+pane content does not resize the surrounding workflow, including at the
+declared minimum window size. `I` and `R` activate the rail commands when an
+input is not focused.
 
 ## Dashboard
 

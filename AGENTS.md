@@ -133,6 +133,9 @@ Poor core API examples:
 - `ui.tabs` mounts only the active pane. In a constrained shell, use `flex = 1` on the tabs and pane roots, keep oversized pane bodies in `scrollView`, and do not let pane intrinsic height resize the surrounding workflow.
 - Text with wrapping must draw with a numeric resolved width. Do not let percent-size strings leak into Love2D `printf`.
 - Typography measurement and drawing must share the same resolver so `textScale`, `textStyle`, and font refs stay layout-accurate. SYSL-backed rich text should measure from textbox `get.width`, `get.height`, and `get.lines`.
+- Registered Love Font objects are fixed-size. Use `{ path = ... }` or
+  `{ source = fileData }` font specs when one family must honor per-node
+  `fontSize` or `textScale`; specs are cached by resolved size.
 
 ## Runtime And Input Rules
 
@@ -208,7 +211,8 @@ Examples should demonstrate real workflows, not marketing pages:
 - `examples/audio-cues`: cue metadata and app-owned sound playback.
 - `examples/basic`: minimal API usage.
 - `examples/workbench`: broad component sampler arranged as a flat service
-  console with state, inputs, tabs, meters, custom draw, and an event register.
+  console with state, inputs, a semantic mode rail, meters, custom draw, and an
+  event register. Keep the active workfield geometry fixed across modes.
 - `examples/performance`: large data, memo/static, bounded work.
 - `examples/styles`: themes, variants, transitions, shader styling.
 - `examples/dashboard`: dense debugger/admin UI.
