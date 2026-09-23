@@ -76,7 +76,9 @@ For shop/combat/debug UI patterns that combine these examples, see
 
 ## Accessibility
 
-Love2D-friendly semantics demo with keyboard/gamepad focus traversal, localized labels, live region events, hidden decoration, semantic snapshots, and a fake TTS/log adapter.
+Service-workbench semantics demo with keyboard/gamepad focus traversal,
+localized labels, live-region events, hidden decoration, and paired registers
+that connect the fake adapter log to its semantic tree snapshot.
 
 ## Animations
 
