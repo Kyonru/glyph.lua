@@ -71,16 +71,6 @@ local function mergeInto(target, source)
 	return target
 end
 
-local function capTypographySize(style, maxFontSize, maxLineHeight)
-	if type(style.fontSize) ~= "number" or style.fontSize > maxFontSize then
-		style.fontSize = maxFontSize
-	end
-	if type(style.lineHeight) ~= "number" or style.lineHeight > maxLineHeight then
-		style.lineHeight = maxLineHeight
-	end
-	return style
-end
-
 local function addCandidate(candidates, seen, path)
 	if not path or path == "" or seen[path] then
 		return
@@ -209,16 +199,16 @@ function ExampleFonts.theme(base, opts)
 	local colors = opts.colors or {}
 	local fonts = ExampleFonts.load(opts.love or _G.love, opts.sizes)
 	local typography = base.typography or {}
-	typography.text = mergeInto(copy(typography.text or {}), { font = "body" })
-	typography.paragraph = mergeInto(copy(typography.paragraph or {}), { font = "body" })
-	typography.caption = mergeInto(copy(typography.caption or {}), { font = "body" })
-	typography.input = mergeInto(copy(typography.input or {}), { font = "body" })
-	typography.button = mergeInto(copy(typography.button or {}), { font = "body" })
-	typography.code = mergeInto(copy(typography.code or {}), { font = "mono" })
-	typography.h1 = capTypographySize(mergeInto(copy(typography.h1 or {}), { font = "title", color = colors.title }), 22, 34)
-	typography.h2 = capTypographySize(mergeInto(copy(typography.h2 or {}), { font = "subheader", color = colors.subheader }), 18, 24)
-	typography.h3 = capTypographySize(mergeInto(copy(typography.h3 or {}), { font = "subheader", color = colors.subheader }), 16, 22)
-	typography.description = mergeInto(copy(typography.description or {}), { font = "description" })
+	typography.text = mergeInto({ font = "body" }, copy(typography.text or {}))
+	typography.paragraph = mergeInto({ font = "body" }, copy(typography.paragraph or {}))
+	typography.caption = mergeInto({ font = "body" }, copy(typography.caption or {}))
+	typography.input = mergeInto({ font = "body" }, copy(typography.input or {}))
+	typography.button = mergeInto({ font = "body" }, copy(typography.button or {}))
+	typography.code = mergeInto({ font = "mono" }, copy(typography.code or {}))
+	typography.h1 = mergeInto({ font = "title", fontSize = 22, lineHeight = 34, color = colors.title }, copy(typography.h1 or {}))
+	typography.h2 = mergeInto({ font = "subheader", fontSize = 18, lineHeight = 24, color = colors.subheader }, copy(typography.h2 or {}))
+	typography.h3 = mergeInto({ font = "subheader", fontSize = 16, lineHeight = 22, color = colors.subheader }, copy(typography.h3 or {}))
+	typography.description = mergeInto({ font = "description" }, copy(typography.description or {}))
 	for _, id in ipairs(fallbackFontIds) do
 		typography[id] = mergeInto({ font = id }, typography[id])
 	end
@@ -236,7 +226,7 @@ function ExampleFonts.theme(base, opts)
 	for _, id in ipairs(fallbackFontIds) do
 		themeFonts[id] = fonts[id]
 	end
-	base.fonts = mergeInto(copy(base.fonts or {}), themeFonts)
+	base.fonts = mergeInto(themeFonts, copy(base.fonts or {}))
 	base.fontFallbacks = base.fontFallbacks or copy(fallbackFontIds)
 
 	base.typography = typography

@@ -108,6 +108,32 @@ describe("example fonts", function()
 		}, theme.fontFallbacks)
 	end)
 
+	it("fills shared defaults without replacing a later bespoke theme", function()
+		local applied = nil
+		local sentinelBody = "bespoke-body"
+		local fakeUi = {
+			setTheme = function(theme)
+				applied = theme
+			end,
+		}
+
+		ExampleFonts.install(fakeUi, { love = fakeLove() })
+		fakeUi.setTheme({
+			fonts = { body = sentinelBody },
+			typography = {
+				text = { font = "bespoke" },
+				h1 = { font = "bespoke", fontSize = 31, lineHeight = 40 },
+			},
+		})
+
+		assert.are.same(sentinelBody, applied.fonts.body)
+		assert.are.equal("bespoke", applied.typography.text.font)
+		assert.are.equal("bespoke", applied.typography.h1.font)
+		assert.are.equal(31, applied.typography.h1.fontSize)
+		assert.are.equal(40, applied.typography.h1.lineHeight)
+		assert.is_not_nil(applied.fonts.mono)
+	end)
+
 	it("does not cache a default fallback as the dev font", function()
 		local missing = ExampleFonts.load(fakeLove({ filesystem = false }), { japanese = 41 })
 		local loaded = ExampleFonts.load(fakeLove(), { japanese = 41 })
