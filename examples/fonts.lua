@@ -171,6 +171,12 @@ local function loadFont(graphics, loveModule, id, size)
 	return font
 end
 
+function ExampleFonts.font(loveModule, id, size)
+	loveModule = loveModule or _G.love
+	local graphics = loveModule and loveModule.graphics
+	return loadFont(graphics, loveModule, id, size or 14)
+end
+
 function ExampleFonts.load(loveModule, sizes)
 	loveModule = loveModule or _G.love
 	local graphics = loveModule and loveModule.graphics
