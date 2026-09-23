@@ -9,6 +9,8 @@ local theme = {
   surfacePressedColor = { 0.06, 0.065, 0.067, 1 },
   borderColor = { 0.27, 0.28, 0.28, 1 },
   accentColor = { 0.74, 0.45, 0.08, 1 },
+  accentHoverColor = { 0.95, 0.68, 0.24, 1 },
+  accentPressedColor = { 0.7, 0.42, 0.07, 1 },
   accentTextColor = { 0.07, 0.06, 0.045, 1 },
   disabledColor = { 0.14, 0.145, 0.145, 1 },
   inputColor = { 0.035, 0.04, 0.042, 1 },
@@ -131,10 +133,10 @@ theme.components = {
         background = theme.accentColor,
         color = theme.accentTextColor,
         hover = {
-          background = { 0.95, 0.68, 0.24, 1 },
+          background = theme.accentHoverColor,
         },
         pressed = {
-          background = { 0.7, 0.42, 0.07, 1 },
+          background = theme.accentPressedColor,
         },
         focused = {
           borderColor = theme.accentTextColor,
@@ -207,6 +209,19 @@ local function mergeInto(target, source)
   end
 end
 
+local function mixColor(color, target, amount)
+  if type(color) ~= "table" then
+    return color
+  end
+
+  return {
+    color[1] + (target - color[1]) * amount,
+    color[2] + (target - color[2]) * amount,
+    color[3] + (target - color[3]) * amount,
+    color[4] or 1,
+  }
+end
+
 local function syncDerivedDefaults(nextTheme)
   local typographyOverrides = nextTheme and nextTheme.typography or nil
 
@@ -244,6 +259,8 @@ local function syncDerivedDefaults(nextTheme)
   theme.components.button.disabled.color = theme.mutedTextColor
   theme.components.button.variants.primary.background = theme.accentColor
   theme.components.button.variants.primary.color = theme.accentTextColor
+  theme.components.button.variants.primary.hover.background = theme.accentHoverColor
+  theme.components.button.variants.primary.pressed.background = theme.accentPressedColor
   theme.components.button.variants.primary.focused.borderColor = theme.accentTextColor
   theme.components.button.variants.primary.focused.borderWidth = 2
 
@@ -293,6 +310,15 @@ function theme.merge(nextTheme)
     end
 
     mergeInto(theme, topLevel)
+
+    if nextTheme.accentColor ~= nil then
+      if nextTheme.accentHoverColor == nil then
+        theme.accentHoverColor = mixColor(theme.accentColor, 1, 0.2)
+      end
+      if nextTheme.accentPressedColor == nil then
+        theme.accentPressedColor = mixColor(theme.accentColor, 0, 0.2)
+      end
+    end
   end
 
   if hasTopLevelOverrides then

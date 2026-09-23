@@ -134,6 +134,11 @@ that are square or only slightly eased. This keeps tool screens and HUDs from
 turning every group into a rounded card. Applications can replace every token;
 the defaults are a legible starting point, not a required house style.
 
+Set `accentColor` to change the primary action color. Glyph derives matching
+hover and pressed colors when only that token changes; set
+`accentHoverColor` or `accentPressedColor` when the palette needs exact state
+values. Component-level variant states still take precedence.
+
 Set a theme globally:
 
 ```lua

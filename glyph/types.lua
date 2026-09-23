@@ -1005,6 +1005,8 @@ local GlyphViewportBackend = {}
 ---@field surfaceColor? GlyphColor
 ---@field borderColor? GlyphColor
 ---@field accentColor? GlyphColor
+---@field accentHoverColor? GlyphColor
+---@field accentPressedColor? GlyphColor
 ---@field accentTextColor? GlyphColor
 ---@field fontSize? number
 ---@field lineHeight? number

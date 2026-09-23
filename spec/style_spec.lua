@@ -211,6 +211,23 @@ describe("style", function()
     assert.is_true(contrastRatio(resolvedTab.color, resolvedTab.background) >= 4.5)
   end)
 
+  it("derives primary interaction colors from a custom accent", function()
+    local theme = dofile("glyph/theme.lua")
+    local accent = { 0.1, 0.5, 0.9, 1 }
+    theme.merge({ accentColor = accent })
+
+    local runtime = Runtime.new()
+    runtime.theme = theme
+    local button = Components.button({ label = "Launch", variant = "primary" })
+    button.path = "custom-accent"
+
+    assert.are.same(accent, Style.resolve(button, runtime, {}).background)
+    assert.are.same(theme.accentHoverColor, Style.resolve(button, runtime, { hover = true }).background)
+    assert.are.same(theme.accentPressedColor, Style.resolve(button, runtime, { pressed = true }).background)
+    assert.are_not.same({ 0.95, 0.68, 0.24, 1 }, theme.accentHoverColor)
+    assert.are_not.same({ 0.7, 0.42, 0.07, 1 }, theme.accentPressedColor)
+  end)
+
   it("invalidates static style cache when theme version changes", function()
     local runtime = Runtime.new()
     runtime.theme = {
