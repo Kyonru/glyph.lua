@@ -2,6 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local Runtime = require("glyph.runtime")
 local Components = require("glyph.components")
+local Accessibility = require("glyph.accessibility")
 local ui = require("glyph")
 
 describe("ui helpers", function()
@@ -1589,6 +1590,62 @@ describe("ui helpers", function()
     assert.are.equal("Power", ui.accessibility.describe(meter).valueText)
     assert.are.equal("panel", ui.accessibility.describe(panel).role)
     assert.are.equal("Status", ui.accessibility.describe(panel).label)
+    assert.is_nil(ui.accessibility.describe(button).selected)
+  end)
+
+  it("exposes active and inactive tab selection in accessibility snapshots", function()
+    local tabs = ui.tabs({ active = 2 }, {
+      { label = "Logs", content = ui.text("Log content") },
+      { label = "Stats", content = ui.text("Stat content") },
+    })
+    local snapshot = ui.accessibility.snapshot(tabs)
+    local selected = {}
+
+    for _, description in ipairs(snapshot) do
+      if description.role == "tab" then
+        selected[#selected + 1] = description.selected
+      end
+    end
+
+    assert.are.same({ false, true }, selected)
+
+    local activeButton = ui.button({ label = "Pinned", active = true })
+    assert.is_nil(ui.accessibility.describe(activeButton).selected)
+  end)
+
+  it("forwards tab selection through accessibility events without changing message policy", function()
+    local events = {}
+    local function capture(event)
+      events[#events + 1] = {
+        kind = event.kind,
+        message = event.message,
+        selected = event.selected,
+      }
+    end
+
+    local inactiveRuntime = Runtime.new()
+    inactiveRuntime:register("accessibility", capture)
+    inactiveRuntime:build(function()
+      return Components.button({ label = "Logs", role = "tab", styleType = "tab", active = false })
+    end)
+
+    local activeRuntime = Runtime.new()
+    activeRuntime:register("accessibility", capture)
+    activeRuntime:build(function()
+      return Components.button({ label = "Stats", role = "tab", styleType = "tab", active = true })
+    end)
+
+    inactiveRuntime:setFocus(inactiveRuntime.root)
+    activeRuntime:setFocus(activeRuntime.root)
+    Accessibility.emit(inactiveRuntime, "activate", inactiveRuntime.root)
+    Accessibility.emit(activeRuntime, "activate", activeRuntime.root)
+
+    assert.are.same({
+      { kind = "focus", message = "Logs, tab", selected = false },
+      { kind = "focus", message = "Stats, tab", selected = true },
+      { kind = "activate", message = "Logs, tab", selected = false },
+      { kind = "activate", message = "Stats, tab", selected = true },
+    }, events)
   end)
 
   it("defines, plays, and clears feedback sequences", function()

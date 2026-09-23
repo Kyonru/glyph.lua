@@ -729,6 +729,7 @@ local GlyphPanelProps = {}
 ---@field value? string|number
 ---@field valueText? string
 ---@field live? "off"|"polite"|"assertive"|string
+---@field selected? boolean true or false for semantic tabs; nil for other roles
 ---@field disabled? boolean
 ---@field focusable? boolean
 
@@ -742,6 +743,7 @@ local GlyphPanelProps = {}
 ---@field description? string
 ---@field valueText? string
 ---@field live? "off"|"polite"|"assertive"|string
+---@field selected? boolean
 
 ---@class GlyphAccessibilityEvent
 ---@field kind "focus"|"activate"|"live"|"announce"|string
@@ -753,6 +755,7 @@ local GlyphPanelProps = {}
 ---@field description? string
 ---@field valueText? string
 ---@field live? "off"|"polite"|"assertive"|string
+---@field selected? boolean true or false for semantic tabs; nil for other roles
 
 ---@class GlyphAccessibilityConfig
 ---@field enabled? boolean

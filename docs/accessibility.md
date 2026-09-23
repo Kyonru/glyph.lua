@@ -43,6 +43,17 @@ Useful props:
 Use `role = "none"` for purely structural nodes that should not appear in the
 semantic tree.
 
+### Tab Selection
+
+Semantic tabs expose a structured `selected` boolean. `ui.tabs` derives it from
+the generated tab button's existing `active` state, so both active and inactive
+tabs are explicit in descriptions and snapshots. Other roles leave `selected`
+unset, even when they use `active` for visual styling.
+
+Focus and activation events forward the same `selected` field. Glyph does not
+append selected/unselected wording to `message`; adapters remain responsible for
+speech, logging, or platform-specific state announcements.
+
 ## I18n Keys
 
 Semantic strings support the same keyed pattern as labels and placeholders:
@@ -75,7 +86,7 @@ end)
 ```
 
 Events include `kind`, `message`, `node`, `path`, `role`, `label`,
-`description`, `valueText`, and `live`.
+`description`, `valueText`, `live`, and tab `selected` state.
 
 Glyph emits:
 
@@ -113,7 +124,7 @@ Without a root, it snapshots the active runtime root and scene layers.
 
 ```lua
 for _, item in ipairs(ui.accessibility.snapshot()) do
-  print(item.role, item.label, item.valueText)
+  print(item.role, item.label, item.valueText, item.selected)
 end
 ```
 

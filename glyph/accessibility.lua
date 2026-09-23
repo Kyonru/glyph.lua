@@ -195,6 +195,10 @@ function Accessibility.describe(node)
   local description = resolveKey(props, "accessibilityDescription", props.accessibilityDescription)
   local valueText = resolveKey(props, "accessibilityValueText", props.accessibilityValueText or defaultValueText(node))
   local live = props.accessibilityLive
+  local selected = nil
+  if role == "tab" then
+    selected = props.active == true
+  end
   if live == nil then
     live = "off"
   end
@@ -213,6 +217,7 @@ function Accessibility.describe(node)
     value = props.accessibilityValue,
     valueText = valueText,
     live = live,
+    selected = selected,
     disabled = props.disabled == true,
     focusable = props.focusable == true or node.type == "button" or node.type == "input",
     hidden = false,
@@ -314,6 +319,10 @@ function Accessibility.announce(runtime, message, opts)
   if resolvedMessage == nil then
     return nil
   end
+  local selected = opts.selected
+  if description and description.selected ~= nil then
+    selected = description.selected
+  end
 
   local event = {
     kind = opts.kind or "announce",
@@ -325,6 +334,7 @@ function Accessibility.announce(runtime, message, opts)
     description = description and description.description or opts.description,
     valueText = description and description.valueText or opts.valueText,
     live = opts.live or (description and description.live),
+    selected = selected,
   }
 
   runtime:dispatch("accessibility", event)
