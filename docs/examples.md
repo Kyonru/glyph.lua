@@ -148,7 +148,7 @@ node-level command feedback.
 
 ## Modal
 
-Scene-backed modals, moving background, shader transitions, stencil/blob transition implemented outside core, isolated modal hook state, and backdrop dismissal.
+A service-workbench transition inspector with scene-backed modals, a live moving probe field, shader transitions, a stencil/blob transition implemented outside core, isolated modal hook state, and backdrop dismissal.
 
 ## Scene
 

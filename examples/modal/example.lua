@@ -1,11 +1,11 @@
 local ui = require("glyph")
 
-local BG = { 0.07, 0.07, 0.11, 1 }
-local SURFACE = { 0.11, 0.10, 0.17, 0.99 }
-local BORDER = { 0.42, 0.56, 1.0, 0.28 }
-local ACCENT = { 0.42, 0.56, 1.0, 1 }
-local TEXT = { 0.92, 0.92, 0.96, 1 }
-local MUTED = { 0.55, 0.55, 0.65, 1 }
+local BG = ui.theme.backgroundColor
+local SURFACE = ui.theme.surfaceColor
+local BORDER = ui.theme.borderColor
+local ACCENT = ui.theme.accentColor
+local TEXT = ui.theme.textColor
+local MUTED = ui.theme.mutedTextColor
 local DANGER = { 0.95, 0.32, 0.32, 1 }
 local SUCCESS = { 0.32, 0.88, 0.56, 1 }
 local W, H = 800, 520
@@ -13,15 +13,6 @@ local W, H = 800, 520
 local checkerShader
 local bgTime = 0
 local particles = {}
-
-local exampleTheme = {
-	backgroundColor = BG,
-	textColor = TEXT,
-	surfaceColor = SURFACE,
-	borderColor = BORDER,
-	accentColor = ACCENT,
-	radius = 10,
-}
 
 local Blob = {}
 Blob.__index = Blob
@@ -83,8 +74,8 @@ local function drawAnimatedBackground(_, x, y, width, height, love, _, ctx)
 		local drift = bgTime * p.speed
 		local px = x + ((p.x + drift) % 1) * width
 		local py = y + ((p.y + math.sin(bgTime * 0.2 + p.phase) * 0.04) % 1) * height
-		local alpha = 0.12 + (math.sin(bgTime * 2.2 + p.phase) + 1) * 0.08
-		local color = p.tint > 0.5 and ACCENT or SUCCESS
+		local alpha = 0.05 + (math.sin(bgTime * 2.2 + p.phase) + 1) * 0.035
+		local color = p.tint > 0.72 and ACCENT or MUTED
 
 		ctx:color({ color[1], color[2], color[3], alpha })
 		graphics.circle("fill", px, py, p.radius)
@@ -99,14 +90,14 @@ local function drawAnimatedBackground(_, x, y, width, height, love, _, ctx)
 	local orbitY = y + height * 0.58 + math.sin(bgTime * 1.05) * height * 0.22
 	local pulse = (math.sin(bgTime * 4.2) + 1) / 2
 
-	ctx:color({ 0.92, 0.38, 0.72, 0.12 })
+	ctx:color({ ACCENT[1], ACCENT[2], ACCENT[3], 0.08 })
 	graphics.circle("fill", orbitX, orbitY, 72 + pulse * 24)
-	ctx:color({ 0.92, 0.38, 0.72, 0.5 })
+	ctx:color({ ACCENT[1], ACCENT[2], ACCENT[3], 0.58 })
 	graphics.circle("line", orbitX, orbitY, 40 + pulse * 10)
-	ctx:color({ 1.0, 0.88, 0.45, 1 })
+	ctx:color(ACCENT)
 	graphics.circle("fill", orbitX, orbitY, 11)
 
-	ctx:color({ ACCENT[1], ACCENT[2], ACCENT[3], 0.16 })
+	ctx:color({ BORDER[1], BORDER[2], BORDER[3], 0.22 })
 	for index = 0, 8 do
 		local lx = x + index * width / 8 + math.sin(bgTime + index) * 16
 		ctx:line(lx, y, lx - 110, y + height)
@@ -159,13 +150,16 @@ local function shaderTransition()
 	})
 end
 
-local function chip(label, color)
-	return ui.box({
-		style = {
-			background = { color[1], color[2], color[3], 0.15 },
-		},
-	}, {
-		ui.text(label, { style = { color = color } }),
+local function statusLabel(label, color)
+	return ui.row({ gap = 8, align = "center" }, {
+		ui.box({
+			width = 7,
+			height = 7,
+			interactive = false,
+			accessibilityHidden = true,
+			style = { background = color, radius = 0 },
+		}),
+		ui.text(label, { textStyle = "code", style = { color = MUTED } }),
 	})
 end
 
@@ -173,18 +167,11 @@ local function closeButton(label, id)
 	return ui.button({
 		label = label,
 		width = "100%",
-		padding = { top = 11, bottom = 11, left = 16, right = 16 },
+		height = 36,
+		variant = "primary",
 		onClick = function()
 			ui.modal.close(id)
 		end,
-		style = {
-			background = ACCENT,
-			borderColor = { 0.6, 0.72, 1.0, 0.6 },
-			borderWidth = 1,
-			radius = 8,
-			color = { 0.06, 0.06, 0.12, 1 },
-			hover = { background = { 0.52, 0.66, 1.0, 1 } },
-		},
 	})
 end
 
@@ -192,13 +179,13 @@ local function card(height, children)
 	return ui.column({
 		width = W,
 		height = height or H,
-		gap = 24,
-		padding = { top = 42, left = 52, right = 52, bottom = 38 },
+		gap = 20,
+		padding = { top = 36, left = 44, right = 44, bottom = 34 },
 		style = {
 			background = SURFACE,
 			borderColor = BORDER,
 			borderWidth = 1,
-			radius = 16,
+			radius = ui.theme.radius,
 		},
 	}, children)
 end
@@ -206,11 +193,15 @@ end
 local function ModalBody(tag, tagColor, title, description, buttonLabel, id)
 	return card(H, {
 		ui.column({ gap = 12 }, {
-			chip(tag, tagColor),
-			ui.text(title, { style = { color = TEXT } }),
+			ui.row({ width = "100%", align = "center", gap = 16 }, {
+				ui.text(title, { textStyle = "h1", style = { color = TEXT } }),
+				ui.box({ grow = 1, height = 1, interactive = false }),
+				statusLabel(tag, tagColor),
+			}),
 			ui.text(description, {
+				textStyle = "paragraph",
 				wrap = true,
-				width = W - 104,
+				width = W - 88,
 				style = { color = MUTED },
 			}),
 		}),
@@ -277,11 +268,15 @@ end
 local function ConfirmModal()
 	return card(340, {
 		ui.column({ gap = 12 }, {
-			chip("ACTION / CONFIRM", DANGER),
-			ui.text("Delete this item?", { style = { color = TEXT } }),
+			ui.row({ width = "100%", align = "center", gap = 16 }, {
+				ui.text("Delete this item?", { textStyle = "h1", style = { color = TEXT } }),
+				ui.box({ grow = 1, height = 1, interactive = false }),
+				statusLabel("ACTION / CONFIRM", DANGER),
+			}),
 			ui.text("This action cannot be undone. Backdrop dismissal is disabled for this modal.", {
+				textStyle = "paragraph",
 				wrap = true,
-				width = W - 104,
+				width = W - 88,
 				style = { color = MUTED },
 			}),
 		}),
@@ -297,7 +292,7 @@ local function ConfirmModal()
 					background = DANGER,
 					borderColor = { 1, 0.45, 0.45, 0.5 },
 					borderWidth = 1,
-					radius = 8,
+					radius = ui.theme.radius,
 					color = { 1, 1, 1, 1 },
 					hover = { background = { 1.0, 0.42, 0.42, 1 } },
 				},
@@ -308,14 +303,6 @@ local function ConfirmModal()
 				onClick = function()
 					ui.modal.close("confirm")
 				end,
-				style = {
-					background = { 0, 0, 0, 0 },
-					borderColor = BORDER,
-					borderWidth = 1,
-					radius = 8,
-					color = MUTED,
-					hover = { background = { 1, 1, 1, 0.04 }, color = TEXT },
-				},
 			}),
 		}),
 	})
@@ -326,13 +313,17 @@ local function CounterModal()
 
 	return card(360, {
 		ui.column({ gap = 12 }, {
-			chip("STATE / ISOLATED", ACCENT),
-			ui.text("Layer-local hook state", { style = { color = TEXT } }),
+			ui.row({ width = "100%", align = "center", gap = 16 }, {
+				ui.text("Layer-local hook state", { textStyle = "h1", style = { color = TEXT } }),
+				ui.box({ grow = 1, height = 1, interactive = false }),
+				statusLabel("STATE / ISOLATED", ACCENT),
+			}),
 			ui.text(
 				"Each scene or modal layer owns its own hook scope. This counter does not affect the main tree or other modals.",
 				{
+					textStyle = "paragraph",
 					wrap = true,
-					width = W - 104,
+					width = W - 88,
 					style = { color = MUTED },
 				}
 			),
@@ -341,13 +332,15 @@ local function CounterModal()
 		ui.row({ width = "100%", align = "center", gap = 20 }, {
 			ui.button({
 				label = "-",
+				width = 44,
 				onClick = function()
 					setCount(count - 1)
 				end,
 			}),
-			ui.text(tostring(count), { style = { color = ACCENT } }),
+			ui.text(tostring(count), { textStyle = "code", style = { color = ACCENT } }),
 			ui.button({
 				label = "+",
+				width = 44,
 				onClick = function()
 					setCount(count + 1)
 				end,
@@ -357,47 +350,42 @@ local function CounterModal()
 	})
 end
 
-local function launchBtn(label, accent, onClick)
+local function launchBtn(label, onClick)
 	return ui.button({
 		label = label,
-		padding = { top = 11, bottom = 11, left = 22, right = 22 },
+		width = "100%",
+		height = 36,
 		onClick = onClick,
-		style = {
-			background = { accent[1], accent[2], accent[3], 0.12 },
-			borderColor = { accent[1], accent[2], accent[3], 0.35 },
-			borderWidth = 1,
-			radius = 8,
-			color = TEXT,
-			hover = {
-				background = { accent[1], accent[2], accent[3], 0.22 },
-				borderColor = { accent[1], accent[2], accent[3], 0.6 },
-			},
-		},
+	})
+end
+
+local function commandGroup(label, children)
+	return ui.column({ gap = 6, width = "100%" }, {
+		ui.text(label, { textStyle = "code", style = { color = MUTED } }),
+		ui.column({ gap = 6, width = "100%" }, children),
 	})
 end
 
 local function App()
-	return ui.stack({
-		width = "100%",
-		height = "100%",
-		style = { background = BG },
-	}, {
-		ui.box({
-			position = "absolute",
-			inset = 0,
-			interactive = false,
-			draw = drawAnimatedBackground,
-		}),
+	return ui.row({ width = "100%", height = "100%", style = { background = BG } }, {
 		ui.column({
-			position = "absolute",
-			top = 126,
-			left = 0,
-			right = 0,
-			align = "center",
-			gap = 10,
+			width = 236,
+			height = "100%",
+			padding = 18,
+			gap = 16,
+			style = { background = SURFACE },
 		}, {
-			ui.row({ gap = 10 }, {
-				launchBtn("Fade", ACCENT, function()
+			ui.column({ gap = 5, width = "100%" }, {
+				ui.text("Modal routes", { textStyle = "h2", style = { color = TEXT } }),
+				ui.text("Open a layer over the live probe field.", {
+					textStyle = "caption",
+					wrap = true,
+					width = "100%",
+					style = { color = MUTED },
+				}),
+			}),
+			commandGroup("BUILT-IN", {
+				launchBtn("Fade", function()
 					ui.modal.open("fade", FadeModal, {
 						transition = ui.transitions.fade({ duration = 0.28 }),
 						width = W,
@@ -405,7 +393,7 @@ local function App()
 						dismissOnBackdrop = true,
 					})
 				end),
-				launchBtn("Slide", SUCCESS, function()
+				launchBtn("Slide", function()
 					ui.modal.open("slide", SlideModal, {
 						transition = ui.transitions.slide({ direction = "bottom", duration = 0.32 }),
 						width = W,
@@ -413,7 +401,7 @@ local function App()
 						dismissOnBackdrop = true,
 					})
 				end),
-				launchBtn("Scale", { 1.0, 0.72, 0.28, 1 }, function()
+				launchBtn("Scale", function()
 					ui.modal.open("scale", ScaleModal, {
 						transition = ui.transitions.scale({ duration = 0.26 }),
 						width = W,
@@ -421,30 +409,32 @@ local function App()
 						dismissOnBackdrop = true,
 					})
 				end),
-				launchBtn("Blob", { 0.92, 0.38, 0.72, 1 }, function()
+			}),
+			commandGroup("CUSTOM DRAW", {
+				launchBtn("Blob", function()
 					ui.modal.open(
 						"blob",
 						BlobModal,
 						{ transition = blobTransition(), width = W, height = H, dismissOnBackdrop = true }
 					)
 				end),
-			}),
-			ui.row({ gap = 10 }, {
-				launchBtn("Shader", { 0.55, 0.86, 1.0, 1 }, function()
+				launchBtn("Shader", function()
 					ui.modal.open(
 						"shader",
 						ShaderModal,
 						{ transition = shaderTransition(), width = W, height = H, dismissOnBackdrop = true }
 					)
 				end),
-				launchBtn("Confirm", DANGER, function()
+			}),
+			commandGroup("PATTERNS", {
+				launchBtn("Confirm", function()
 					ui.modal.open(
 						"confirm",
 						ConfirmModal,
 						{ transition = ui.transitions.scale({ duration = 0.22 }), width = W, height = 340 }
 					)
 				end),
-				launchBtn("Counter", { 0.55, 0.42, 1.0, 1 }, function()
+				launchBtn("Counter", function()
 					ui.modal.open(
 						"counter",
 						CounterModal,
@@ -453,13 +443,51 @@ local function App()
 				end),
 			}),
 		}),
+		ui.box({ width = 1, height = "100%", interactive = false, style = { background = BORDER } }),
+		ui.stack({ grow = 1, height = "100%" }, {
+			ui.box({
+				position = "absolute",
+				inset = 0,
+				interactive = false,
+				draw = drawAnimatedBackground,
+			}),
+			ui.column({
+				position = "absolute",
+				top = 24,
+				left = 28,
+				right = 28,
+				gap = 8,
+			}, {
+				ui.text("Live layer field", { textStyle = "h1", style = { color = TEXT } }),
+				ui.text("Motion remains visible beneath each blocking modal so clipping, backdrop coverage, and transition timing are easy to inspect.", {
+					textStyle = "paragraph",
+					wrap = true,
+					width = 470,
+					style = { color = MUTED },
+				}),
+			}),
+			ui.row({
+				position = "absolute",
+				left = 28,
+				bottom = 22,
+				align = "center",
+			}, {
+				statusLabel("BACKGROUND ACTIVE", ACCENT),
+			}),
+			ui.text("ESC CLOSES THE TOP LAYER", {
+				position = "absolute",
+				right = 28,
+				bottom = 22,
+				textStyle = "code",
+				style = { color = MUTED },
+			}),
+		}),
 	})
 end
 
 local function setup()
-	ui.setTheme(exampleTheme)
 	math.randomseed(os.time())
-	initParticles(90)
+	initParticles(56)
 
 	if love.graphics and love.graphics.newShader then
 		checkerShader = love.graphics.newShader([[
@@ -467,7 +495,7 @@ local function setup()
     extern number time;
     vec4 effect(vec4 color, Image tex, vec2 uv, vec2 px) {
       number bars = step(0.5, fract((px.x + px.y + time * 80.0) / 18.0));
-      vec3 tint = mix(vec3(0.45, 0.86, 1.0), vec3(1.0, 0.48, 0.86), bars);
+      vec3 tint = mix(vec3(0.74, 0.45, 0.08), vec3(0.93, 0.91, 0.86), bars);
       vec4 base = Texel(tex, uv) * color;
       base.rgb = mix(base.rgb, base.rgb * tint * 1.25, 1.0 - amount);
       return base;
