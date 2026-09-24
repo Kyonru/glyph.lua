@@ -31,6 +31,12 @@ local pads = {
   { label = "Leaf", color = { 0.45, 0.95, 0.28, 1 }, key = "4" },
 }
 
+local function invalidateView()
+  if ui.runtime and type(ui.runtime.markDirty) == "function" then
+    ui.runtime:markDirty()
+  end
+end
+
 local function rgba(color, alpha)
   return { color[1], color[2], color[3], alpha }
 end
@@ -106,6 +112,7 @@ local function resetGame()
   paused = false
   status = "Watch the pattern"
   screenFlash = 0
+  invalidateView()
 end
 
 local function addStep()
@@ -120,6 +127,7 @@ local function beginPlayback()
   padFlashTimer = 0
   inputIndex = 1
   status = "Watch the pattern"
+  invalidateView()
 end
 
 local function setup()
@@ -282,21 +290,25 @@ local function update(dt)
       if litPad then
         litPad = nil
         showTimer = 0.16
+        invalidateView()
       elseif showIndex <= #pattern then
         litPad = pattern[showIndex]
         showIndex = showIndex + 1
         showTimer = 0.42
+        invalidateView()
       else
         showing = false
         inputIndex = 1
         litPad = nil
         status = "Repeat it"
+        invalidateView()
       end
     end
   elseif litPad then
     padFlashTimer = padFlashTimer - dt
     if padFlashTimer <= 0 then
       litPad = nil
+      invalidateView()
     end
   end
 end
@@ -329,6 +341,7 @@ local function handlePad(index, node)
     beginPlayback()
     status = "Missed it. Watch again."
   end
+  invalidateView()
 end
 
 local function drawBackdrop(_, x, y, width, height, love, _, ctx)
@@ -507,6 +520,7 @@ local function controls()
       feedback = { press = "pad.press", release = "pad.release", activate = "pad.hit" },
       onClick = function()
         paused = not paused
+        invalidateView()
       end,
     }),
     ui.button({
@@ -516,6 +530,7 @@ local function controls()
       feedback = { press = "pad.press", release = "pad.release", activate = "pad.hit" },
       onClick = function()
         muted = not muted
+        invalidateView()
       end,
     }),
   })
@@ -624,6 +639,7 @@ local function pauseMenu()
           feedback = { press = "pad.press", release = "pad.release", activate = "pad.hit" },
           onClick = function()
             paused = false
+            invalidateView()
           end,
         }),
         ui.button({
@@ -640,6 +656,7 @@ local function pauseMenu()
           feedback = { press = "pad.press", release = "pad.release", activate = "pad.hit" },
           onClick = function()
             muted = not muted
+            invalidateView()
           end,
         }),
       }),
@@ -722,6 +739,7 @@ return {
       return ui.navigate("right")
     elseif key == "escape" then
       paused = not paused
+      invalidateView()
       return true
     elseif key == "1" or key == "2" or key == "3" or key == "4" then
       local index = tonumber(key)
