@@ -181,9 +181,10 @@ Borders are structural and normally one pixel. Focus may strengthen the existing
 
 - **Shape:** Compact rectangles; general defaults use the small radius while diagnostic examples may use square corners.
 - **Primary:** Service Amber with Accent Ink, reserved for the main available action.
-- **Command rails:** Amber corner rails may mark the available command while
-  reserving solid amber for selection and live instrumentation. They stay
-  inside the control footprint; keyboard focus remains a separate full border.
+- **Command rails:** Amber corner rails may mark the last activated command
+  while reserving solid amber for selection and live instrumentation. They
+  stay inside the control footprint; keyboard focus remains a separate full
+  border.
 - **Secondary:** Surface Graphite with Warm Paper and a Rule Graphite boundary.
 - **Hover / Focus:** Hover changes the fill within the same footprint. Focus uses a precise two-pixel border in Warm Paper or Accent Ink; no glow.
 - **Disabled:** Lower-contrast graphite with Muted Stone, while preserving the control's size.

@@ -127,7 +127,7 @@ local function readFile(path, loveModule)
 end
 
 local function filterFor(id)
-	local smooth = id == "body" or id == "title" or id == "subheader" or id == "description"
+	local smooth = id == "body" or id == "title" or id == "subheader" or id == "description" or id == "mono"
 	return smooth and "linear" or "nearest"
 end
 

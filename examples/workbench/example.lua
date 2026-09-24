@@ -65,7 +65,7 @@ local function sectionLabel(label)
   })
 end
 
-local function commandButton(label, shortcut, compact, primary, onClick)
+local function commandButton(label, shortcut, compact, active, onClick)
   local children = {
     ui.row({
       width = "100%",
@@ -79,17 +79,19 @@ local function commandButton(label, shortcut, compact, primary, onClick)
         font = "mono",
         fontSize = compact and 14 or 16,
         lineHeight = compact and 18 or 20,
-        style = { color = primary and colors.amberBright or colors.text },
+        interactive = false,
+        style = { color = active and colors.amberBright or colors.text },
       }),
       ui.box({ flex = 1, height = 1, interactive = false }),
       ui.text("[" .. shortcut .. "]", {
         textStyle = "code",
+        interactive = false,
         style = { color = colors.muted },
       }),
     }),
   }
 
-  if primary then
+  if active then
     local markLength = compact and 8 or 10
     local markWidth = 2
     local function mark(props)
@@ -117,9 +119,9 @@ local function commandButton(label, shortcut, compact, primary, onClick)
     style = {
       background = colors.surfaceRaised,
       borderColor = colors.rule,
-      borderWidth = primary and 0 or 1,
+      borderWidth = active and 0 or 1,
       radius = 0,
-      hover = { background = primary and colors.amberWash or colors.field },
+      hover = { background = active and colors.amberWash or colors.field },
       pressed = { background = colors.surface },
       focused = { borderColor = colors.text, borderWidth = 2 },
     },
@@ -331,6 +333,7 @@ local function App()
   local viewport = ui.viewport()
   local compact = viewport.width < 820 or viewport.height < 560
   local count, setCount = ui.useState(4)
+  local activeCommand, setActiveCommand = ui.useState("increment")
   local activeTab, setActiveTab = ui.useState(1)
   local filter, setFilter = ui.useState("")
   local logs, setLogs = ui.useState(copyLogs)
@@ -348,11 +351,13 @@ local function App()
 
   local function increment()
     local nextCount = count + 1
+    setActiveCommand("increment")
     setCount(nextCount)
     record("state", "Counter changed to " .. tostring(nextCount))
   end
 
   local function reset()
+    setActiveCommand("reset")
     setCount(0)
     setFilter("")
     setLogs(copyLogs())
@@ -423,6 +428,7 @@ local function App()
           font = "mono",
           fontSize = compact and 15 or 18,
           lineHeight = 20,
+          interactive = false,
           style = { color = colors.amberBright },
         }),
         ui.text(name:upper(), {
@@ -430,6 +436,7 @@ local function App()
           font = "mono",
           fontSize = compact and 15 or 18,
           lineHeight = 20,
+          interactive = false,
           style = { color = selected and colors.amberBright or colors.muted },
         }),
       }),
@@ -533,8 +540,8 @@ local function App()
       style = { background = colors.rail },
     }, {
       sectionLabel("Commands"),
-      commandButton("INCREMENT", "I", compact, true, increment),
-      commandButton("RESET", "R", compact, false, reset),
+      commandButton("INCREMENT", "I", compact, activeCommand == "increment", increment),
+      commandButton("RESET", "R", compact, activeCommand == "reset", reset),
       ui.box({ width = "100%", height = compact and 0 or 5, shrink = 0, interactive = false }),
       rule(),
       ui.box({ width = "100%", height = 0, shrink = 0, interactive = false }),
