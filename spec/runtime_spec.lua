@@ -1971,6 +1971,172 @@ describe("runtime", function()
     assert.are.equal(0.5, colors[1][4])
   end)
 
+  it("interpolates opt-in meter values without changing their semantic value", function()
+    local runtime = Runtime.new()
+    local value = 40
+    local drawn
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+      },
+    })
+
+    local function App()
+      return Components.meter({
+        key = "charge",
+        value = value,
+        min = 0,
+        max = 100,
+        width = 100,
+        height = 10,
+        animate = { duration = 1, ease = "linear" },
+        draw = function(node, _, _, _, _, _, _, ctx)
+          drawn = {
+            actual = node.props.value,
+            visual = ctx.visualValue,
+          }
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+    assert.are.same({ actual = 40, visual = 40 }, drawn)
+
+    value = 80
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:update(0.5)
+    runtime:draw(runtime.root)
+    assert.are.same({ actual = 80, visual = 60 }, drawn)
+    assert.are.equal("80", Accessibility.describe(runtime.root).valueText)
+    assert.are.equal(100, runtime.root.layout.width)
+
+    value = 20
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:update(0.5)
+    runtime:draw(runtime.root)
+    assert.are.same({ actual = 20, visual = 40 }, drawn)
+  end)
+
+  it("draws built-in meter fills from the interpolated visual value", function()
+    local runtime = Runtime.new()
+    local value = 20
+    local fills = {}
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function(mode, _, _, width)
+          if mode == "fill" then
+            fills[#fills + 1] = width
+          end
+        end,
+        print = function() end,
+      },
+    })
+
+    local function App()
+      return Components.meter({
+        value = value,
+        max = 100,
+        width = 100,
+        height = 10,
+        animate = { duration = 1, ease = "linear" },
+      })
+    end
+
+    runtime:build(App)
+    value = 80
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:update(0.5)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(100, fills[1])
+    assert.are.equal(50, fills[#fills])
+  end)
+
+  it("can animate a meter's initial value from an explicit visual baseline", function()
+    local runtime = Runtime.new()
+    local visualValue
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+      },
+    })
+
+    local function App()
+      return Components.meter({
+        value = 50,
+        min = 0,
+        max = 100,
+        width = 100,
+        height = 10,
+        animate = {
+          duration = 0.25,
+          ease = "linear",
+          initial = true,
+          initialValue = 10,
+          initialDuration = 2,
+        },
+        draw = function(_, _, _, _, _, _, _, ctx)
+          visualValue = ctx.visualValue
+        end,
+      })
+    end
+
+    runtime:build(App)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+    assert.are.equal(10, visualValue)
+
+    runtime:update(1)
+    runtime:draw(runtime.root)
+    assert.are.equal(30, visualValue)
+  end)
+
+  it("stops meter value animations when their nodes unmount", function()
+    local runtime = Runtime.new()
+    local show = true
+
+    local function App()
+      if not show then
+        return Components.box({ width = 100, height = 10 })
+      end
+      return Components.meter({
+        value = 50,
+        min = 0,
+        max = 100,
+        animate = { initial = true, duration = 10 },
+        width = 100,
+        height = 10,
+      })
+    end
+
+    runtime:build(App)
+    assert.are.equal(1, Animation.active())
+
+    show = false
+    runtime:build(App)
+    assert.are.equal(0, Animation.active())
+    assert.is_nil(next(runtime.meterAnimationStates))
+  end)
+
   it("keeps removed nodes drawable until exit animation completes", function()
     local runtime = Runtime.new()
     local show = true

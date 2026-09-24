@@ -165,6 +165,7 @@ local GlyphPathDrawOpts = {}
 ---@field graphics table|nil
 ---@field style GlyphStyle
 ---@field animation? GlyphAnimationValues
+---@field visualValue? number animated display value for meter custom drawing; semantic props keep the real value
 ---@field runtime table
 ---@field hovered boolean
 ---@field pressed boolean
@@ -218,6 +219,14 @@ local GlyphAnimationValues = {}
 ---@field onUpdate? fun(subject: GlyphAnimationValues)
 ---@field onComplete? fun(subject: GlyphAnimationValues)
 local GlyphAnimationSpec = {}
+
+---@class GlyphMeterAnimation
+---@field duration? number seconds used when `value` changes; defaults to 0.2
+---@field ease? string flux easing name; defaults to `quadout`
+---@field initial? boolean animate the first rendered value from `initialValue` or `min`; defaults to false
+---@field initialValue? number starting value when `initial` is true; defaults to `min`
+---@field initialDuration? number seconds used for the initial animation; defaults to `duration`
+local GlyphMeterAnimation = {}
 
 ---@class GlyphAnimationTweenOpts
 ---@field ease? string
@@ -610,6 +619,7 @@ local GlyphInputProps = {}
 ---@field thickness? number
 ---@field startAngle? number
 ---@field endAngle? number
+---@field animate? boolean|GlyphMeterAnimation opt-in visual interpolation; true uses defaults
 ---@field label? string|fun(value: number, min: number, max: number): string
 ---@field labelKey? string
 ---@field labelParams? table

@@ -69,6 +69,35 @@ ui.animation.to(subject, 0.25, { value = 1 }, {
 The focused `examples/animations` demo shows this API driving meters, custom
 draw movement, selection feedback, and size changes.
 
+## Meter Value Animation
+
+Meters can interpolate changing values without app-owned tween state:
+
+```lua
+ui.meter({
+  value = charge,
+  min = 0,
+  max = 100,
+  animate = {
+    duration = 0.24,
+    ease = "expoout",
+    initial = true,
+    initialDuration = 0.4,
+  },
+})
+```
+
+`animate = true` uses a `0.2` second `quadout` transition. Mounts begin at the
+real value by default; set `initial = true` to animate from `min`, or provide
+`initialValue`. A new value interrupts the active tween and continues from the
+currently drawn value.
+
+The interpolation is visual-only. Glyph keeps layout, pointer geometry, and
+accessibility metadata on the real `value`. Function-based meter labels receive
+the interpolated value while drawing, and custom draw callbacks can read it as
+`ctx.visualValue`. Use `animate = false` when the app's reduced-motion setting
+requests immediate updates.
+
 ## Layer Transitions
 
 Scenes and modals can use the same animation spec shape:

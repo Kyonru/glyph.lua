@@ -186,6 +186,7 @@ Poor core API examples:
 - Animations are powered by vendored `rxi/flux` through `glyph/animation.lua`.
 - Node `enter`/`exit` and `ui.transitions.animate` use the same animation spec shape.
 - Animations are visual-only: they must not change layout, hit testing, focus/navigation geometry, or semantic snapshots.
+- Meter `animate` interpolation follows the same rule: semantics keep the real `value`; built-in drawing and function labels use the visual value, and custom meter drawing reads `ctx.visualValue`.
 - Path `progress` stroke reveal and `morph` drawing are visual-only for the same reason.
 - Apply transforms with graphics push/pop and transform around the node center. Opacity multiplies resolved style opacity.
 - Exiting nodes may be retained as visual ghosts until exit completes. Avoid duplicate exit animations for descendants of an exiting parent.

@@ -394,6 +394,7 @@ ui.meter({
   value = hp,
   min = 0,
   max = maxHp,
+  animate = { duration = 0.2, ease = "quadout" },
   width = 180,
   height = 14,
   shape = { kind = "skew", skew = 12 },
@@ -412,6 +413,31 @@ Meters support:
 - radial and arc meters draw open arcs and honor `fillStyle.background` or `fillStyle.color`
 - `label`, children overlays, `trackStyle`, `fillStyle`, `overfillStyle`, and `backgroundStyle`
 - `labelKey`, `labelParams`, and `labelCacheKey` for localized labels
+- `animate = true` or an animation table for opt-in, interruptible value
+  interpolation. Tables support `duration`, `ease`, `initial`, `initialValue`,
+  and `initialDuration`. The default duration is `0.2` seconds with
+  `ease = "quadout"`; initial values do not animate unless `initial = true`.
+
+Meter animation changes only the drawn fill and function-based label. Layout,
+hit testing, and accessibility continue to use the current `value`. Bind
+`animate` to the app's motion preference when players can reduce motion.
+
+Custom meter drawing reads the same interpolated number from
+`ctx.visualValue`:
+
+```lua
+ui.meter({
+  value = charge,
+  max = 100,
+  animate = { duration = 0.24, ease = "expoout", initial = true },
+  draw = function(_, x, y, width, height, _, _, ctx)
+    local ratio = ctx.visualValue / ctx.props.max
+    ctx:rect("fill", x, y, width * ratio, height)
+  end,
+})
+```
+
+Radial and arc meters use the same value and animation options:
 
 ```lua
 ui.meter({

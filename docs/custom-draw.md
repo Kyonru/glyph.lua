@@ -41,6 +41,8 @@ Useful fields:
 - `ctx.graphics`
 - `ctx.style`
 - `ctx.runtime`
+- `ctx.visualValue` — a meter's interpolated display value, or its current
+  value when meter animation is inactive
 - `ctx.hovered`
 - `ctx.pressed`
 - `ctx.focused`

@@ -480,6 +480,8 @@ function Runtime.new()
     animationStates = {},
     animationMounted = {},
     animationMountedByRoot = {},
+    meterAnimationStates = {},
+    meterAnimationMountedByRoot = {},
     exitAnimations = {},
     feedbackStates = {},
     styleClock = 0,
@@ -822,12 +824,123 @@ local function copyAnimationSpecWithFrom(spec, from)
   return copy
 end
 
+---@param node GlyphNode
+---@return GlyphMeterAnimation|table|nil
+local function meterAnimationConfig(node)
+  if not node or node.type ~= "meter" then
+    return nil
+  end
+
+  local animate = node.props and node.props.animate
+  if animate == true then
+    return {}
+  end
+  if type(animate) == "table" then
+    return animate
+  end
+  return nil
+end
+
+---@param runtime table
+---@param id string
+---@return nil
+local function clearMeterAnimationState(runtime, id)
+  local state = runtime.meterAnimationStates[id]
+  if state and state.tween then
+    state.tween:stop()
+  end
+  runtime.meterAnimationStates[id] = nil
+end
+
+---@param runtime table
+---@param state table
+---@param target number
+---@param config GlyphMeterAnimation|table
+---@param duration number
+---@return nil
+local function startMeterAnimation(runtime, state, target, config, duration)
+  if state.tween then
+    state.tween:stop()
+    state.tween = nil
+  end
+
+  state.target = target
+  duration = math.max(0, tonumber(duration) or 0)
+  if duration == 0 or state.subject.value == target then
+    state.subject.value = target
+    return
+  end
+
+  local tween
+  tween = Animation.to(state.subject, duration, { value = target }, {
+    ease = config.ease or "quadout",
+    onComplete = function()
+      if state.tween == tween then
+        state.tween = nil
+      end
+    end,
+  })
+  state.tween = tween
+  runtime:markDirty()
+end
+
+---@param runtime table
+---@param node GlyphNode
+---@param rootKey string
+---@param current table<string, boolean>
+---@return nil
+local function prepareMeterAnimationNode(runtime, node, rootKey, current)
+  local config = meterAnimationConfig(node)
+  if not config then
+    return
+  end
+
+  local rawId = animationId(node)
+  if not rawId then
+    return
+  end
+
+  local id = rootKey .. "|meter|" .. rawId
+  local props = node.props or {}
+  local target = tonumber(props.value) or 0
+  local state = runtime.meterAnimationStates[id]
+
+  if not state then
+    local initialValue = target
+    if config.initial == true then
+      initialValue = tonumber(config.initialValue)
+        or tonumber(props.min)
+        or 0
+    end
+
+    state = {
+      id = id,
+      target = target,
+      subject = { value = initialValue },
+    }
+    runtime.meterAnimationStates[id] = state
+
+    if initialValue ~= target then
+      startMeterAnimation(runtime, state, target, config, config.initialDuration or config.duration or 0.2)
+    end
+  elseif state.target ~= target then
+    startMeterAnimation(runtime, state, target, config, config.duration or 0.2)
+  end
+
+  node._glyphMeterAnimation = state.subject
+  current[id] = true
+end
+
 function Runtime:prepareAnimations(root, rootKey)
   rootKey = rootKey or "root"
   local current = {}
   local previousMounted = self.animationMountedByRoot[rootKey] or {}
+  local currentMeters = {}
+  local previousMeters = self.meterAnimationMountedByRoot[rootKey] or {}
 
   walkNodes(root, function(node)
+    prepareMeterAnimationNode(self, node, rootKey, currentMeters)
+
     if not hasAnimationProps(node) then
       return
     end
@@ -936,24 +1049,36 @@ function Runtime:prepareAnimations(root, rootKey)
   end
 
   self.animationMountedByRoot[rootKey] = current
+  for id in pairs(previousMeters) do
+    if not currentMeters[id] then
+      clearMeterAnimationState(self, id)
+    end
+  end
+  self.meterAnimationMountedByRoot[rootKey] = currentMeters
 end
 
 function Runtime:clearAnimationRoot(rootKey)
   local mounted = self.animationMountedByRoot[rootKey]
-  if not mounted then
-    return
-  end
-
-  for id in pairs(mounted) do
-    self.animationMounted[id] = nil
-    self.animationStates[id] = nil
-    for _, ghost in ipairs(self.exitAnimations) do
-      if ghost.id == id then
-        ghost.done = true
+  if mounted then
+    for id in pairs(mounted) do
+      self.animationMounted[id] = nil
+      self.animationStates[id] = nil
+      for _, ghost in ipairs(self.exitAnimations) do
+        if ghost.id == id then
+          ghost.done = true
+        end
       end
     end
+    self.animationMountedByRoot[rootKey] = nil
   end
-  self.animationMountedByRoot[rootKey] = nil
+
+  local meterMounted = self.meterAnimationMountedByRoot[rootKey]
+  if meterMounted then
+    for id in pairs(meterMounted) do
+      clearMeterAnimationState(self, id)
+    end
+    self.meterAnimationMountedByRoot[rootKey] = nil
+  end
 end
 
 function Runtime:withHookScope(scope, fn)
@@ -3119,9 +3244,10 @@ local function clamp01(value)
 end
 
 ---@param props GlyphMeterProps|table
+---@param value? number
 ---@return number ratio
 ---@return number overfill
-local function meterRatio(props)
+local function meterRatio(props, value)
   local minValue = props.min or 0
   local maxValue = props.max or 1
   local span = maxValue - minValue
@@ -3129,7 +3255,7 @@ local function meterRatio(props)
     return 0, 0
   end
 
-  local raw = ((props.value or 0) - minValue) / span
+  local raw = ((value ~= nil and value or props.value or 0) - minValue) / span
   return clamp01(raw), math.max(0, raw - 1)
 end
 
@@ -3166,7 +3292,7 @@ local function linearFillBounds(bounds, ratio, direction)
   return { x = bounds.x, y = bounds.y, width = bounds.width * ratio, height = bounds.height }
 end
 
----@type fun(graphics: table, bounds: GlyphBounds, props: GlyphMeterProps|table, style: GlyphStyle, ctx: GlyphDrawContext)
+---@type fun(graphics: table, bounds: GlyphBounds, props: GlyphMeterProps|table, style: GlyphStyle, ctx: GlyphDrawContext, value?: number)
 local drawMeter
 
 ---@param graphics table
@@ -3221,9 +3347,10 @@ end
 ---@param props GlyphMeterProps|table
 ---@param style GlyphStyle
 ---@param ctx GlyphDrawContext
+---@param value? number
 ---@return nil
-local function drawLinearMeter(graphics, bounds, props, style, ctx)
-  local ratio, overfill = meterRatio(props)
+local function drawLinearMeter(graphics, bounds, props, style, ctx, value)
+  local ratio, overfill = meterRatio(props, value)
   local shape = props.shape or style.shape or { kind = "rect", radius = style.radius or 0 }
   local trackFallback = {
     background = { 0, 0, 0, 0.28 },
@@ -3282,9 +3409,10 @@ end
 ---@param props GlyphMeterProps|table
 ---@param style GlyphStyle
 ---@param ctx GlyphDrawContext
+---@param value? number
 ---@return nil
-local function drawRadialMeter(graphics, bounds, props, style, ctx)
-  local ratio = meterRatio(props)
+local function drawRadialMeter(graphics, bounds, props, style, ctx, value)
+  local ratio = meterRatio(props, value)
   local track = partStyle(nil, props.trackStyle, { background = style.background or { 0, 0, 0, 0.3 } })
   local fill = partStyle(nil, props.fillStyle, { background = style.color or { 0.16, 0.72, 0.48, 1 } })
   local thickness = props.thickness or style.lineWidth or style.borderWidth or 8
@@ -3314,7 +3442,7 @@ local function drawRadialMeter(graphics, bounds, props, style, ctx)
   end
 end
 
-drawMeter = function(graphics, bounds, props, style, ctx)
+drawMeter = function(graphics, bounds, props, style, ctx, value)
   if not graphics then
     return
   end
@@ -3326,9 +3454,9 @@ drawMeter = function(graphics, bounds, props, style, ctx)
   end
 
   if props.kind == "radial" or props.kind == "arc" then
-    drawRadialMeter(graphics, bounds, props, style, ctx)
+    drawRadialMeter(graphics, bounds, props, style, ctx, value)
   else
-    drawLinearMeter(graphics, bounds, props, style, ctx)
+    drawLinearMeter(graphics, bounds, props, style, ctx, value)
   end
 end
 
@@ -3580,6 +3708,9 @@ local function createDrawContext(runtime, node, x, y, width, height, love, style
     graphics = graphics,
     style = style,
     animation = node._glyphAnimation,
+    visualValue = node.type == "meter"
+      and ((node._glyphMeterAnimation and node._glyphMeterAnimation.value) or props.value)
+      or nil,
     runtime = runtime,
     hovered = runtime.hoverNode == node or runtime.hoverPath == node.path,
     pressed = runtime.mouseDownNode == node or runtime.mouseDownPath == node.path or runtime.keyDownNode == node or runtime.keyDownPath == node.path,
@@ -4118,11 +4249,11 @@ function Runtime:drawNode(node, x, y, stackContext)
     end
   elseif node.type == "meter" then
     ctx = createDrawContext(self, node, absX, absY, width, height, love, style)
-    drawMeter(love.graphics, boundsFor(absX, absY, width, height), props, style, ctx)
+    drawMeter(love.graphics, boundsFor(absX, absY, width, height), props, style, ctx, ctx.visualValue)
     if props.label then
       local label = props.label
       if type(label) == "function" then
-        label = label(props.value or 0, props.min or 0, props.max or 1)
+        label = label(ctx.visualValue or 0, props.min or 0, props.max or 1)
       end
       local labelTextStyle = Typography.resolve(self.theme, props, style, "text")
       drawPlainText(self, node, label, absX + 8, absY + math.max(2, height / 2 - (labelTextStyle.lineHeight or self.theme.lineHeight or 14) / 2), width - 16, love, style, opacity, "text")

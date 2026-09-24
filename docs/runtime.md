@@ -37,7 +37,11 @@ ui.load({
 })
 ```
 
-`ui.update(dt)` advances Glyph's runtime clock, visual animations, style transitions, and `ui.feedback` sequences, including Feel-backed spring steps. Raw `ui.spring(...)` values are intentionally app-driven; call `spring:update(dt)` from your own update loop when you use one outside a feedback sequence.
+`ui.update(dt)` advances Glyph's runtime clock, visual animations, animated
+meter values, style transitions, and `ui.feedback` sequences, including
+Feel-backed spring steps. Raw `ui.spring(...)` values are intentionally
+app-driven; call `spring:update(dt)` from your own update loop when you use one
+outside a feedback sequence.
 
 ## Hooks
 
