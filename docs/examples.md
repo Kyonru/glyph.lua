@@ -97,7 +97,8 @@ in Workbench.
 ## Workbench
 
 Broad component sampler with state, a command rail, controlled input, semantic
-mode controls, a ruled activity register, meters, custom draw, and
+mode controls, a ruled activity register, an animated primary instrument meter,
+custom draw, and
 keyboard/gamepad navigation. The mode rail swaps a single fixed workfield, so
 pane content does not resize the surrounding workflow, including at the
 declared minimum window size. `I` and `R` activate the rail commands when an

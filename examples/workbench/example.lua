@@ -367,6 +367,24 @@ local function App()
   workbenchCommands.reset = reset
 
   local progress = math.min(1, count / 6)
+  local progressMotion = ui.useState(function()
+    return { value = 0, initialized = false }
+  end)
+
+  ui.useEffect(function()
+    local duration = progressMotion.initialized and 0.24 or 0.44
+    progressMotion.initialized = true
+
+    local tween = ui.animation.to(progressMotion, duration, { value = progress }, {
+      ease = "expoout",
+    })
+
+    return function()
+      tween:stop()
+    end
+  end, { progress })
+
+  local displayedProgress = progressMotion.value
 
   local overview = ui.column({ width = "100%", flex = 1, gap = compact and 7 or 11 }, {
     sectionLabel("Activity register"),
@@ -605,13 +623,17 @@ local function App()
         max = 1,
         flex = 1,
         height = compact and 8 or 21,
-        draw = instrumentMeter(progress),
+        accessibilityLabel = "Mission sync progress",
+        accessibilityValue = math.floor(progress * 100 + 0.5),
+        accessibilityValueText = string.format("%d percent", math.floor(progress * 100 + 0.5)),
+        draw = instrumentMeter(displayedProgress),
       }),
-      ui.text(string.format("%02d%%", math.floor(progress * 100 + 0.5)), {
+      ui.text(string.format("%02d%%", math.floor(displayedProgress * 100 + 0.5)), {
         width = compact and 60 or 68,
         font = "mono",
         fontSize = compact and 18 or 23,
         lineHeight = compact and 20 or 25,
+        accessibilityHidden = true,
         style = { color = colors.amberBright },
       }),
     }),

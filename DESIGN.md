@@ -219,9 +219,11 @@ Registers are the signature pattern. A shallow neutral header establishes column
 
 Meters are square-ended tracks with one amber fill. Inline meters stay thin;
 the primary instrument meter may expand to a 20–22 pixel band with a hotter
-inner fill and one-pixel highlight/shadow edges. Instrument cells form a shared
-matrix with rules between cells; they are not individual metric cards. Labels
-stay quiet and values carry the visual weight.
+inner fill and one-pixel highlight/shadow edges. Its fill and numeric readout
+ease together when the underlying value changes, preserving the track's fixed
+geometry. Instrument cells form a shared matrix with rules between cells; they
+are not individual metric cards. Labels stay quiet and values carry the visual
+weight.
 
 ## Do's and Don'ts
 
