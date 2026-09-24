@@ -447,6 +447,9 @@ function Runtime.new()
   local self = setmetatable({
     root = nil,
     rootComponent = nil,
+    rootLayoutRoot = nil,
+    rootLayoutWidth = nil,
+    rootLayoutHeight = nil,
     hooks = {},
     hookCursor = 0,
     effects = {},
@@ -1250,16 +1253,28 @@ function Runtime:render(component)
 
   local ok, err = xpcall(function()
     local hasSceneRoot = self.scene and #self.scene.layers > 0 and component == nil
+    local rebuilt = false
 
     if not hasSceneRoot and (self.needsRender or component ~= self.rootComponent or self.root == nil) then
       root = self:build(component)
+      rebuilt = true
     end
 
     if not hasSceneRoot and root then
       local loveModule = self.love or _G.love
       local viewportWidth, viewportHeight = viewportSize(self, loveModule)
-      self:layoutRoot(root, viewportWidth, viewportHeight)
-      self:publishLayoutCallbacks(root, 0, 0)
+      local needsLayout = rebuilt
+        or self.rootLayoutRoot ~= root
+        or self.rootLayoutWidth ~= viewportWidth
+        or self.rootLayoutHeight ~= viewportHeight
+
+      if needsLayout then
+        self:layoutRoot(root, viewportWidth, viewportHeight)
+        self:publishLayoutCallbacks(root, 0, 0)
+        self.rootLayoutRoot = root
+        self.rootLayoutWidth = viewportWidth
+        self.rootLayoutHeight = viewportHeight
+      end
       self:draw(root)
     end
 

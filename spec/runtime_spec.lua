@@ -20,6 +20,95 @@ describe("runtime", function()
     runtime:publishLayoutCallbacks(runtime.root, originX or 0, originY or 0)
   end
 
+  local function renderLove(width, height)
+    return {
+      graphics = {
+        getDimensions = function() return width(), height() end,
+        getLineWidth = function() return 1 end,
+        setLineWidth = function() end,
+        getShader = function() return nil end,
+        setShader = function() end,
+        setColor = function() end,
+        rectangle = function() end,
+        print = function() end,
+        push = function() end,
+        pop = function() end,
+        translate = function() end,
+        scale = function() end,
+        setScissor = function() end,
+        setStencilTest = function() end,
+      },
+    }
+  end
+
+  it("reuses clean root layout while continuing to draw", function()
+    local runtime = Runtime.new()
+    local builds = 0
+    local layouts = 0
+    local draws = 0
+    runtime:setLove(renderLove(function() return 320 end, function() return 180 end))
+    runtime:register("layout", function()
+      layouts = layouts + 1
+    end)
+
+    local function App()
+      builds = builds + 1
+      return Components.box({
+        width = "100%",
+        height = "100%",
+        draw = function()
+          draws = draws + 1
+        end,
+      })
+    end
+
+    runtime:render(App)
+    runtime:render(App)
+
+    assert.are.equal(1, builds)
+    assert.are.equal(1, layouts)
+    assert.are.equal(2, draws)
+
+    runtime:markDirty()
+    runtime:render(App)
+
+    assert.are.equal(2, builds)
+    assert.are.equal(2, layouts)
+    assert.are.equal(3, draws)
+  end)
+
+  it("relayouts a clean root when viewport dimensions change", function()
+    local runtime = Runtime.new()
+    local viewportWidth = 320
+    local builds = 0
+    local layouts = 0
+    local publishedWidths = {}
+    runtime:setLove(renderLove(function() return viewportWidth end, function() return 180 end))
+    runtime:register("layout", function()
+      layouts = layouts + 1
+    end)
+
+    local function App()
+      builds = builds + 1
+      return Components.box({
+        width = "100%",
+        height = "100%",
+        onLayout = function(bounds)
+          publishedWidths[#publishedWidths + 1] = bounds.width
+        end,
+      })
+    end
+
+    runtime:render(App)
+    viewportWidth = 640
+    runtime:render(App)
+
+    assert.are.equal(1, builds)
+    assert.are.equal(2, layouts)
+    assert.are.same({ 320, 640 }, publishedWidths)
+    assert.are.equal(640, runtime.root.layout.width)
+  end)
+
   it("persists useState values across renders", function()
     local runtime = Runtime.new()
     local setCount

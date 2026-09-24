@@ -43,6 +43,12 @@ Feel-backed spring steps. Raw `ui.spring(...)` values are intentionally
 app-driven; call `spring:update(dt)` from your own update loop when you use one
 outside a feedback sequence.
 
+`ui.render(App)` always draws the mounted tree. It rebuilds and lays out that
+tree only after invalidation or a viewport-size change; otherwise it reuses the
+completed geometry and skips layout-callback traversal. State setters and Glyph
+input helpers invalidate automatically. If app-owned state outside hooks changes
+layout or component props, call `ui.runtime:markDirty()` after the mutation.
+
 ## Hooks
 
 `ui.useState(initial)` stores a hook slot by call order in the current render

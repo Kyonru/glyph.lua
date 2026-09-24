@@ -27,15 +27,17 @@ function love.draw()     ui.render(App) end
      focus/hover, an animation is mid-flight, or the root component changed), it
      calls your `App` function, which calls child component functions, producing
      a fresh node tree. On an idle frame it reuses the existing tree.
-  2. **Layout** — `Layout.compute` sizes and positions every node (see below).
-     Static/unchanged subtrees short-circuit, so idle frames are cheap.
+  2. **Layout** — when the tree was rebuilt or the viewport changed,
+     `Layout.compute` sizes and positions every node (see below). A clean tree
+     at the same viewport reuses its completed geometry.
   3. **Draw** — it walks the tree, resolves each node's style, and paints it.
   4. **Input** — pointer/keyboard events you forward are hit-tested against the
      laid-out tree and dispatched to handlers and focus.
 
-The takeaway: **building is change-driven; layout and draw run every frame.** You
-never mutate nodes by hand — you change state, the affected subtree rebuilds, and
-the next render reflects it.
+The takeaway: **building and layout are change-driven; draw runs every frame.**
+You never mutate nodes by hand — you change state, the affected subtree rebuilds,
+and the next render lays it out before drawing. Custom draw callbacks remain
+live on clean frames, so time-driven visual effects do not need layout churn.
 
 ## State and identity
 

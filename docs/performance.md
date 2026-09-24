@@ -65,14 +65,14 @@ caching them, avoiding both unbounded memory growth and whole-cache rebuilds.
 
 A render rebuilds the tree only when it is **dirty** — a `useState` setter ran,
 input changed focus/hover, or an animation is in flight — then lays out and
-draws. On an idle frame the existing tree is reused; layout short-circuits
-unchanged/static subtrees, so idle cost is low. (See
+draws. On an idle frame with an unchanged viewport, the existing tree and its
+completed geometry are reused while custom and built-in drawing still run. (See
 [Architecture](architecture.md).)
 
 The example runner keeps the root component function stable between draws, so
-an idle example exercises this clean-root path. Clean-root reuse skips the
-component build; it does not skip the mounted tree's layout, callback
-publication, or draw work.
+an idle example exercises this clean-root path. Clean-root reuse skips component
+build, layout, and layout-callback traversal; it never skips drawing. A dirty
+tree or changed viewport rebuilds and republishes geometry before drawing.
 
 Glyph does not yet do fine-grained diffing or automatic memoization: a dirty
 render rebuilds and re-allocates the affected tree. For large or rapidly-changing
@@ -141,9 +141,10 @@ See `examples/performance`.
 The performance example presents these readings in one flat instrument register
 beside its 10,000-event ledger. It reports the previous completed frame as
 `IDLE / REUSE` or `DIRTY / BUILD`. `ROOT BUILDS` counts component executions,
-`LAYOUT PASSES` counts root layout events rather than visited nodes, and
-`LAST TOTAL` measures the whole Glyph render call, including build work when the
-frame is dirty plus layout, callback publication, and drawing.
+`LAYOUT PASSES` counts root layout events rather than visited nodes, so it reads
+zero on a clean frame. `LAST TOTAL` measures the whole Glyph render call:
+clean frames contain drawing, while dirty or resized frames also include build,
+layout, and callback publication.
 
 ## Scenes And Layers
 

@@ -461,7 +461,7 @@ local function App()
     }, {
       ui.memo(VisibleRows, { windowStart, filter }),
     }),
-    ui.text("Idle frames reuse the root; interaction rebuilds it. Layout, callback publication, and draw still run every frame.", {
+    ui.text("Idle frames reuse the root and geometry; only drawing runs every frame. Interaction or resize rebuilds and republishes layout.", {
       width = "100%",
       wrap = true,
       textStyle = "caption",
