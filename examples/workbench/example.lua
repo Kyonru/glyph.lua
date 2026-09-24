@@ -129,25 +129,43 @@ local function commandButton(label, shortcut, compact, active, onClick)
   }, children)
 end
 
-local function instrumentMeter(progress)
+local function instrumentMeter(compact)
   return function(_, x, y, width, height, _, _, ctx)
-    local fillWidth = math.floor(width * progress + 0.5)
+    local progress = ctx.visualValue or 0
+    local readoutWidth = compact and 60 or 68
+    local gap = 12
+    local barHeight = compact and 8 or 21
+    local barWidth = math.max(0, width - readoutWidth - gap)
+    local barY = y + (height - barHeight) / 2
+    local fillWidth = math.floor(barWidth * progress + 0.5)
 
     ctx:color(colors.progressTrack)
-    ctx:rect("fill", x, y, width, height)
+    ctx:rect("fill", x, barY, barWidth, barHeight)
     ctx:color({ 0.2, 0.215, 0.225, 0.8 })
-    ctx:rect("fill", x, y, width, 1)
+    ctx:rect("fill", x, barY, barWidth, 1)
 
     if fillWidth > 0 then
       ctx:color(colors.amber)
-      ctx:rect("fill", x, y, fillWidth, height)
+      ctx:rect("fill", x, barY, fillWidth, barHeight)
       ctx:color(colors.amberBright)
-      ctx:rect("fill", x, y + 1, fillWidth, math.max(1, height - 3))
+      ctx:rect("fill", x, barY + 1, fillWidth, math.max(1, barHeight - 3))
       ctx:color({ 1, 0.79, 0.34, 0.9 })
-      ctx:rect("fill", x, y, fillWidth, 1)
+      ctx:rect("fill", x, barY, fillWidth, 1)
       ctx:color({ 0.58, 0.3, 0.035, 0.9 })
-      ctx:rect("fill", x, y + height - 1, fillWidth, 1)
+      ctx:rect("fill", x, barY + barHeight - 1, fillWidth, 1)
     end
+
+    local fontSize = compact and 18 or 23
+    local lineHeight = compact and 20 or 25
+    ctx:color(colors.amberBright)
+    ctx:printf(
+      string.format("%02d%%", math.floor(progress * 100 + 0.5)),
+      x + barWidth + gap,
+      y + (height - lineHeight) / 2,
+      readoutWidth,
+      "left",
+      { font = "mono", fontSize = fontSize, lineHeight = lineHeight }
+    )
   end
 end
 
@@ -367,24 +385,6 @@ local function App()
   workbenchCommands.reset = reset
 
   local progress = math.min(1, count / 6)
-  local progressMotion = ui.useState(function()
-    return { value = 0, initialized = false }
-  end)
-
-  ui.useEffect(function()
-    local duration = progressMotion.initialized and 0.24 or 0.44
-    progressMotion.initialized = true
-
-    local tween = ui.animation.to(progressMotion, duration, { value = progress }, {
-      ease = "expoout",
-    })
-
-    return function()
-      tween:stop()
-    end
-  end, { progress })
-
-  local displayedProgress = progressMotion.value
 
   local overview = ui.column({ width = "100%", flex = 1, gap = compact and 7 or 11 }, {
     sectionLabel("Activity register"),
@@ -617,25 +617,22 @@ local function App()
         style = { color = colors.text },
       }),
     }),
-    ui.row({ width = "100%", height = compact and 18 or 21, gap = 12, align = "center", shrink = 0 }, {
-      ui.meter({
-        value = progress,
-        max = 1,
-        flex = 1,
-        height = compact and 8 or 21,
-        accessibilityLabel = "Mission sync progress",
-        accessibilityValue = math.floor(progress * 100 + 0.5),
-        accessibilityValueText = string.format("%d percent", math.floor(progress * 100 + 0.5)),
-        draw = instrumentMeter(displayedProgress),
-      }),
-      ui.text(string.format("%02d%%", math.floor(displayedProgress * 100 + 0.5)), {
-        width = compact and 60 or 68,
-        font = "mono",
-        fontSize = compact and 18 or 23,
-        lineHeight = compact and 20 or 25,
-        accessibilityHidden = true,
-        style = { color = colors.amberBright },
-      }),
+    ui.meter({
+      value = progress,
+      max = 1,
+      width = "100%",
+      height = compact and 18 or 21,
+      shrink = 0,
+      animate = {
+        duration = 0.24,
+        ease = "expoout",
+        initial = true,
+        initialDuration = 0.44,
+      },
+      accessibilityLabel = "Mission sync progress",
+      accessibilityValue = math.floor(progress * 100 + 0.5),
+      accessibilityValueText = string.format("%d percent", math.floor(progress * 100 + 0.5)),
+      draw = instrumentMeter(compact),
     }),
     ui.box({ width = "100%", height = compact and 12 or 9, shrink = 0, interactive = false }),
     ui.column({ width = "100%", gap = 0 }, {
