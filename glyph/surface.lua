@@ -8,6 +8,7 @@ local Filter = require(prefix .. ".filter")
 local Feedback = require(prefix .. ".feedback")
 local GridMath = require(prefix .. ".grid_math")
 local I18n = require(prefix .. ".i18n")
+local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
 local Path = require(prefix .. ".path")
 local Responsive = require(prefix .. ".responsive")
@@ -258,6 +259,31 @@ function Surface.scopedUi(runtime, surface)
     runtime:setLove(loveModule)
   end
 
+  function ui.resize(width, height)
+    Responsive.resize(runtime.responsive, width, height)
+    runtime:markDirty()
+  end
+
+  function ui.viewport()
+    return Responsive.viewport(runtime.responsive)
+  end
+
+  function ui.breakpoint()
+    return Responsive.breakpoint(runtime.responsive)
+  end
+
+  function ui.atLeast(name)
+    return Responsive.atLeast(runtime.responsive, name)
+  end
+
+  function ui.below(name)
+    return Responsive.below(runtime.responsive, name)
+  end
+
+  function ui.responsive(values)
+    return Responsive.pick(runtime.responsive, values)
+  end
+
   function ui.isHovered(node)
     return node ~= nil and (runtime.hoverNode == node or runtime.hoverPath == node.path)
   end
@@ -280,6 +306,22 @@ function Surface.scopedUi(runtime, surface)
 
   function ui.setFocus(node)
     return runtime:setFocus(node)
+  end
+
+  function ui.focused()
+    return runtime:activeFocusNode()
+  end
+
+  function ui.hasFocus()
+    return runtime:activeFocusNode() ~= nil
+  end
+
+  function ui.hitTest(x, y)
+    return runtime:hitTest(x, y)
+  end
+
+  function ui.markDirty()
+    runtime:markDirty()
   end
 
   function ui.on(name, fn, opts)
@@ -305,6 +347,49 @@ function Surface.scopedUi(runtime, surface)
   function ui.navigate(direction)
     return Navigate.move(runtime, direction)
   end
+
+  ui.scene = {
+    set = function(id, component, opts)
+      return runtime.scene:set(id, component, opts)
+    end,
+    push = function(id, component, opts)
+      return runtime.scene:push(id, component, opts)
+    end,
+    pop = function(id)
+      return runtime.scene:pop(id)
+    end,
+    close = function(id)
+      return runtime.scene:close(id)
+    end,
+    clear = function(predicate)
+      return runtime.scene:clear(predicate)
+    end,
+    current = function()
+      return runtime.scene:current()
+    end,
+    isOpen = function(id)
+      return runtime.scene:isOpen(id)
+    end,
+    layers = function()
+      return runtime.scene.layers
+    end,
+  }
+
+  ui.modal = {
+    open = function(id, component, opts)
+      return Modal.open(runtime.scene, id, component, opts)
+    end,
+    close = function(id)
+      return Modal.close(runtime.scene, id)
+    end,
+    closeAll = function()
+      return Modal.closeAll(runtime.scene)
+    end,
+    isOpen = function(id)
+      return Modal.isOpen(runtime.scene, id)
+    end,
+    transitions = Transitions,
+  }
 
   function ui.mousemoved(x, y)
     return runtime:mousemoved(x, y)
@@ -433,6 +518,18 @@ function SurfaceInstance:mousemoved(x, y)
   return self.runtime:mousemoved(x, y)
 end
 
+function SurfaceInstance:hitTest(x, y)
+  return self.runtime:hitTest(x, y)
+end
+
+function SurfaceInstance:focused()
+  return self.runtime:activeFocusNode()
+end
+
+function SurfaceInstance:hasFocus()
+  return self.runtime:activeFocusNode() ~= nil
+end
+
 function SurfaceInstance:mousepressed(x, y, button)
   return self.runtime:mousepressed(x, y, button)
 end
@@ -458,11 +555,8 @@ function SurfaceInstance:keyreleased(key)
 end
 
 function SurfaceInstance:destroy()
-  self.runtime:disposeHookScope()
-  Feedback.clear(self.runtime)
+  self.runtime:destroy()
   self.canvas = nil
-  self.runtime.root = nil
-  self.runtime.rootComponent = nil
   return self
 end
 

@@ -31,6 +31,7 @@ build = {
     ["glyph.filter"] = "glyph/filter.lua",
     ["glyph.grid_math"] = "glyph/grid_math.lua",
     ["glyph.i18n"] = "glyph/i18n.lua",
+    ["glyph.instance"] = "glyph/instance.lua",
     ["glyph.layout"] = "glyph/layout.lua",
     ["glyph.menori"] = "glyph/menori.lua",
     ["glyph.modal"] = "glyph/modal.lua",

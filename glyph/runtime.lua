@@ -1707,6 +1707,17 @@ function Runtime:activeFocusNode()
   return self.focusNode
 end
 
+---@return boolean
+function Runtime:hasBlockingInputLayer()
+  for index = #((self.scene and self.scene.layers) or {}), 1, -1 do
+    local layer = self.scene.layers[index]
+    if layer.blocking == true then
+      return true
+    end
+  end
+  return false
+end
+
 function Runtime:cursorKey(node)
   return node and node.path or nil
 end
@@ -2051,6 +2062,9 @@ function Runtime:cancelDrag(reason)
   return true
 end
 
+---@param x number
+---@param y number
+---@return boolean
 function Runtime:mousemoved(x, y)
   if self.activeScrollbar then
     local state = self.activeScrollbar
@@ -2064,15 +2078,27 @@ function Runtime:mousemoved(x, y)
       end
     end
     self.bus:dispatch("event", "mousemoved", x, y, state.node)
-    return
+    return true
   end
 
   local node = self:hitTest(x, y)
-  self:handleDragMove(x, y, node)
+  local activeLayer = nil
+  if self.scene then
+    local _, routedLayer = self.scene:topInteractiveHit(x, y, function(root, ox, oy, hitX, hitY)
+      return walkHitTest(self, root, ox, oy, hitX, hitY)
+    end)
+    activeLayer = routedLayer
+  end
+  local captured = self:handleDragMove(x, y, node)
   self:setHover(node)
   self.bus:dispatch("event", "mousemoved", x, y, node)
+  return captured or node ~= nil or activeLayer ~= nil
 end
 
+---@param x number
+---@param y number
+---@param button number
+---@return boolean
 function Runtime:mousepressed(x, y, button)
   if button == 1 then
     local hit = self:findScrollbarAt(x, y)
@@ -2094,7 +2120,7 @@ function Runtime:mousepressed(x, y, button)
       self:setHover(hit.node)
       self.bus:dispatch("event", "mousepressed", x, y, button, hit.node)
       self:markDirty()
-      return
+      return true
     end
   end
 
@@ -2112,7 +2138,7 @@ function Runtime:mousepressed(x, y, button)
         self.scene:close(activeLayer.id)
       end
       self:markDirty()
-      return
+      return true
     end
   else
     node = self:hitTest(x, y)
@@ -2140,8 +2166,13 @@ function Runtime:mousepressed(x, y, button)
 
   self.bus:dispatch("event", "mousepressed", x, y, button, node)
   self:markDirty()
+  return node ~= nil
 end
 
+---@param x number
+---@param y number
+---@param button number
+---@return boolean
 function Runtime:mousereleased(x, y, button)
   if self.activeScrollbar and self.activeScrollbar.button == button then
     local state = self.activeScrollbar
@@ -2149,10 +2180,18 @@ function Runtime:mousereleased(x, y, button)
     self:setScrollbarPressed(state.path, false)
     self.bus:dispatch("event", "mousereleased", x, y, button, state.node)
     self:markDirty()
-    return
+    return true
   end
 
+  local hadCapture = self.activeDrag ~= nil or self.mouseDownNode ~= nil or self.mouseDownPath ~= nil
   local node = self:hitTest(x, y)
+  local activeLayer = nil
+  if self.scene then
+    local _, routedLayer = self.scene:topInteractiveHit(x, y, function(root, ox, oy, hitX, hitY)
+      return walkHitTest(self, root, ox, oy, hitX, hitY)
+    end)
+    activeLayer = routedLayer
+  end
   local down = self.mouseDownNode
   local downPath = self.mouseDownPath
   local suppressClick = self:finishDrag(x, y, button, node)
@@ -2176,10 +2215,15 @@ function Runtime:mousereleased(x, y, button)
 
   self.bus:dispatch("event", "mousereleased", x, y, button, node)
   self:markDirty()
+  return hadCapture or node ~= nil or activeLayer ~= nil
 end
 
+---@param dx number
+---@param dy number
+---@return boolean
 function Runtime:wheelmoved(dx, dy)
   local node = self.hoverNode
+  local consumed = node ~= nil or self:hasBlockingInputLayer()
   while node do
     if node.type == "scrollView" then
       local scrollKey = node.path
@@ -2193,10 +2237,14 @@ function Runtime:wheelmoved(dx, dy)
   end
 
   self.bus:dispatch("event", "wheelmoved", dx, dy, node)
+  return consumed
 end
 
+---@param text string
+---@return boolean
 function Runtime:textinput(text)
   local node = self:activeFocusNode()
+  local consumed = node ~= nil and node.type == "input"
   if node and node.type == "input" and node.props and type(node.props.onChange) == "function" then
     local value, cursor, key, edit = self:inputEditState(node)
     local nextValue = value:sub(1, cursor) .. text .. value:sub(cursor + 1)
@@ -2206,23 +2254,28 @@ function Runtime:textinput(text)
   end
 
   self.bus:dispatch("event", "textinput", text, node)
+  consumed = consumed or self:hasBlockingInputLayer()
+  return consumed
 end
 
+---@param key string
+---@return boolean
 function Runtime:keypressed(key)
   local node = self:activeFocusNode()
 
   if key == "escape" and self:cancelDrag("escape") then
     self.bus:dispatch("event", "keypressed", key, node)
     self:markDirty()
-    return
+    return true
   end
 
   if key == "escape" and self.scene and self.scene:closeTopEscapable() then
     self.bus:dispatch("event", "keypressed", key, node)
     self:markDirty()
-    return
+    return true
   end
 
+  local consumed = node ~= nil and node.type == "input"
   if node and node.type == "input" and node.props and type(node.props.onChange) == "function" then
     local value, cursor, cursorKey, edit = self:inputEditState(node)
     if key == "backspace" then
@@ -2249,6 +2302,7 @@ function Runtime:keypressed(key)
       self:markDirty()
     end
   elseif node and isActivationKey(key) and isActivatable(node) then
+    consumed = true
     if self.keyDownPath ~= node.path or self.keyDownKey ~= key then
       self.keyDownNode = node
       self.keyDownPath = node.path
@@ -2260,13 +2314,18 @@ function Runtime:keypressed(key)
   end
 
   self.bus:dispatch("event", "keypressed", key, node)
+  consumed = consumed or self:hasBlockingInputLayer()
+  return consumed
 end
 
+---@param key string
+---@return boolean
 function Runtime:keyreleased(key)
   local node = self:activeFocusNode()
   local down = self.keyDownNode
   local downPath = self.keyDownPath
   local downKey = self.keyDownKey
+  local consumed = (node ~= nil and node.type == "input") or (isActivationKey(key) and downKey == key)
 
   if isActivationKey(key) and downKey == key then
     self.keyDownNode = nil
@@ -2288,6 +2347,42 @@ function Runtime:keyreleased(key)
   end
 
   self.bus:dispatch("event", "keyreleased", key, node)
+  consumed = consumed or self:hasBlockingInputLayer()
+  return consumed
+end
+
+---@return nil
+function Runtime:destroy()
+  if self.destroyed then
+    return
+  end
+  self.destroyed = true
+
+  self:cancelDrag("destroy")
+  self:disposeHookScope()
+  for _, layer in ipairs((self.scene and self.scene.layers) or {}) do
+    self:disposeHookScope(layer.scope)
+    self:clearAnimationRoot("layer:" .. tostring(layer.id))
+  end
+  if self.scene then
+    self.scene.layers = {}
+  end
+
+  Feedback.clear(self)
+  self:clearAnimationRoot("root")
+  self.root = nil
+  self.rootComponent = nil
+  self.rootLayoutRoot = nil
+  self.focusNode = nil
+  self.focusPath = nil
+  self.hoverNode = nil
+  self.hoverPath = nil
+  self.mouseDownNode = nil
+  self.mouseDownPath = nil
+  self.keyDownNode = nil
+  self.keyDownPath = nil
+  self.keyDownKey = nil
+  self.activeScrollbar = nil
 end
 
 ---@param love? table

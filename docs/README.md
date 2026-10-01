@@ -14,6 +14,7 @@ Glyph is a declarative UI runtime for Love2D 11.x. It is designed for game tools
 - [Layout](layout.md)
 - [Styling And Themes](styling.md)
 - [Runtime, Hooks, And Events](runtime.md)
+- [Isolated Screen Instances](instance.md)
 
 ## Systems
 

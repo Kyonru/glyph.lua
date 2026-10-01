@@ -152,6 +152,8 @@ Poor core API examples:
 - Use `ui.drag` for generic pointer drag lifecycles. Keep app-specific swapping, collision, placement, validation, and drag previews outside core.
 - Use `ui.grid.pointToCell` with `onLayout` bounds for uniform grid pointer mapping. Keep variable-size placement, collision, and inventory rules app-owned.
 - Use `ui.surface.new` when a Glyph tree needs its own canvas/runtime, such as a texture-backed UI panel, tooltip render target, or Menori billboard. Surface components receive a scoped UI API; do not use the root singleton for surface-owned hooks or drag state.
+- Use `ui.instance.new` when an existing app needs an isolated screen-space Glyph root without an offscreen Canvas, especially editor shells that arbitrate UI against a custom canvas. Use the instance's scoped UI and lifecycle methods rather than reaching into `ui.runtime`.
+- Pointer, wheel, key, and text forwarding methods return strict consumption booleans. Preserve pointer capture through release, let focused inputs suppress app shortcuts, and let blocking layers claim input behind them.
 - Scene layers route input top-down. Blocking layers stop input from reaching lower layers; non-blocking overlays pass through.
 - Modals are scene layers with `kind = "modal"`, not a separate runtime.
 - Escape should close the top eligible scene/modal layer unless `escapeToClose = false`.

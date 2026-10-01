@@ -1130,7 +1130,7 @@ local GlyphModalApi = {}
 -- Offscreen Surfaces / Menori Adapter
 -- ---------------------------------------------------------------------------
 
----@class GlyphSurfaceUi
+---@class GlyphScopedUi
 ---@field text fun(value: string, props?: GlyphTextProps): GlyphNode
 ---@field textKey fun(key: string, props?: GlyphTextProps): GlyphNode
 ---@field richText fun(value: string, props?: GlyphTextProps): GlyphNode
@@ -1167,8 +1167,11 @@ local GlyphModalApi = {}
 ---@field Style table
 ---@field dialogue GlyphDialogueApi
 ---@field transitions GlyphTransitionApi
+---@field scene GlyphSceneApi
+---@field modal GlyphModalApi
 ---@field runtime table
----@field surface GlyphSurface
+---@field surface? GlyphSurface
+---@field instance? GlyphInstance
 ---@field theme GlyphTheme
 ---@field useState fun(initial: any): any, fun(value: any|fun(previous: any): any)
 ---@field useEffect fun(fn: fun(): fun()|nil, deps?: any[])
@@ -1181,26 +1184,38 @@ local GlyphModalApi = {}
 ---@field variant fun(name: string, style?: GlyphStyle): GlyphVariant
 ---@field composeStyles fun(...: GlyphStyle): GlyphStyle
 ---@field setLove fun(loveModule: table)
+---@field resize fun(width: number, height: number)
+---@field viewport fun(): GlyphViewport
+---@field breakpoint fun(): string
+---@field atLeast fun(name: string): boolean
+---@field below fun(name: string): boolean
+---@field responsive fun(values: table): any
 ---@field isHovered fun(node?: GlyphNode): boolean
 ---@field isPressed fun(node?: GlyphNode): boolean
 ---@field isFocused fun(node?: GlyphNode): boolean
 ---@field isActive fun(node?: GlyphNode): boolean
 ---@field isHot fun(node?: GlyphNode): boolean
 ---@field setFocus fun(node?: GlyphNode)
+---@field focused fun(): GlyphNode|nil
+---@field hasFocus fun(): boolean
+---@field hitTest fun(x: number, y: number): GlyphNode|nil
+---@field markDirty fun()
 ---@field on fun(name: string, fn: fun(...): any, opts?: table): fun()
 ---@field dispatch fun(name: string, ...: any)
 ---@field update fun(dt: number)
 ---@field render fun(component?: fun(ui: GlyphSurfaceUi, ctx: GlyphSurfaceContext): GlyphNode): any
 ---@field navigate fun(direction: GlyphNavDirection): GlyphNode|nil
----@field mousemoved fun(x: number, y: number)
----@field mousepressed fun(x: number, y: number, button: number)
----@field mousereleased fun(x: number, y: number, button: number)
----@field keypressed fun(key: string)
----@field keyreleased fun(key: string)
----@field textinput fun(text: string)
----@field wheelmoved fun(dx: number, dy: number)
+---@field mousemoved fun(x: number, y: number): boolean
+---@field mousepressed fun(x: number, y: number, button: number): boolean
+---@field mousereleased fun(x: number, y: number, button: number): boolean
+---@field keypressed fun(key: string): boolean
+---@field keyreleased fun(key: string): boolean
+---@field textinput fun(text: string): boolean
+---@field wheelmoved fun(dx: number, dy: number): boolean
 ---@field spriteSheet fun(image: any, opts: GlyphSpriteSheetProps): GlyphSpriteSheet
-local GlyphSurfaceUi = {}
+local GlyphScopedUi = {}
+
+---@alias GlyphSurfaceUi GlyphScopedUi
 
 ---@class GlyphSurfaceOptions
 ---@field width number
@@ -1235,19 +1250,64 @@ local GlyphSurfaceContext = {}
 ---@field render fun(self: GlyphSurface, component?: fun(ui: GlyphSurfaceUi, ctx: GlyphSurfaceContext): GlyphNode): any
 ---@field resize fun(self: GlyphSurface, width: number, height: number): GlyphSurface
 ---@field markDirty fun(self: GlyphSurface): GlyphSurface
----@field mousemoved fun(self: GlyphSurface, x: number, y: number)
----@field mousepressed fun(self: GlyphSurface, x: number, y: number, button: number)
----@field mousereleased fun(self: GlyphSurface, x: number, y: number, button: number)
----@field wheelmoved fun(self: GlyphSurface, dx: number, dy: number)
----@field keypressed fun(self: GlyphSurface, key: string)
----@field keyreleased fun(self: GlyphSurface, key: string)
----@field textinput fun(self: GlyphSurface, text: string)
+---@field mousemoved fun(self: GlyphSurface, x: number, y: number): boolean
+---@field mousepressed fun(self: GlyphSurface, x: number, y: number, button: number): boolean
+---@field mousereleased fun(self: GlyphSurface, x: number, y: number, button: number): boolean
+---@field wheelmoved fun(self: GlyphSurface, dx: number, dy: number): boolean
+---@field keypressed fun(self: GlyphSurface, key: string): boolean
+---@field keyreleased fun(self: GlyphSurface, key: string): boolean
+---@field textinput fun(self: GlyphSurface, text: string): boolean
+---@field hitTest fun(self: GlyphSurface, x: number, y: number): GlyphNode|nil
+---@field focused fun(self: GlyphSurface): GlyphNode|nil
+---@field hasFocus fun(self: GlyphSurface): boolean
 ---@field destroy fun(self: GlyphSurface): GlyphSurface
 local GlyphSurface = {}
 
 ---@class GlyphSurfaceApi
 ---@field new fun(opts: GlyphSurfaceOptions): GlyphSurface
 local GlyphSurfaceApi = {}
+
+---@class GlyphInstanceOptions
+---@field component? fun(ui: GlyphScopedUi, ctx: GlyphInstanceContext): GlyphNode
+---@field theme? GlyphTheme
+---@field love? table
+---@field width? number fallback width when Love graphics dimensions are unavailable
+---@field height? number fallback height when Love graphics dimensions are unavailable
+local GlyphInstanceOptions = {}
+
+---@class GlyphInstanceContext
+---@field instance GlyphInstance
+---@field width number
+---@field height number
+local GlyphInstanceContext = {}
+
+---@class GlyphInstance
+---@field ui GlyphScopedUi runtime-scoped component and hook API
+---@field component? fun(ui: GlyphScopedUi, ctx: GlyphInstanceContext): GlyphNode
+---@field width number
+---@field height number
+---@field destroyed boolean
+---@field update fun(self: GlyphInstance, dt?: number): GlyphInstance
+---@field render fun(self: GlyphInstance, component?: fun(ui: GlyphScopedUi, ctx: GlyphInstanceContext): GlyphNode): GlyphNode|nil
+---@field resize fun(self: GlyphInstance, width: number, height: number): GlyphInstance
+---@field markDirty fun(self: GlyphInstance): GlyphInstance
+---@field hitTest fun(self: GlyphInstance, x: number, y: number): GlyphNode|nil
+---@field focused fun(self: GlyphInstance): GlyphNode|nil
+---@field hasFocus fun(self: GlyphInstance): boolean
+---@field setFocus fun(self: GlyphInstance, node?: GlyphNode): GlyphInstance
+---@field mousemoved fun(self: GlyphInstance, x: number, y: number, dx?: number, dy?: number): boolean
+---@field mousepressed fun(self: GlyphInstance, x: number, y: number, button: number): boolean
+---@field mousereleased fun(self: GlyphInstance, x: number, y: number, button: number): boolean
+---@field wheelmoved fun(self: GlyphInstance, dx: number, dy: number): boolean
+---@field keypressed fun(self: GlyphInstance, key: string): boolean
+---@field keyreleased fun(self: GlyphInstance, key: string): boolean
+---@field textinput fun(self: GlyphInstance, text: string): boolean
+---@field destroy fun(self: GlyphInstance): GlyphInstance
+local GlyphInstance = {}
+
+---@class GlyphInstanceApi
+---@field new fun(opts?: GlyphInstanceOptions): GlyphInstance
+local GlyphInstanceApi = {}
 
 ---@class GlyphDialogueRenderModelSpeaker
 ---@field name string

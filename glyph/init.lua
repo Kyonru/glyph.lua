@@ -12,6 +12,7 @@ local CallbackBus = require(prefix .. ".callback_bus")
 local Feedback = require(prefix .. ".feedback")
 local GridMath = require(prefix .. ".grid_math")
 local I18n = require(prefix .. ".i18n")
+local Instance = require(prefix .. ".instance")
 local Modal = require(prefix .. ".modal")
 local Navigate = require(prefix .. ".navigate")
 local Menori = require(prefix .. ".menori")
@@ -29,6 +30,7 @@ local VirtualList = require(prefix .. ".virtual_list")
 local theme = require(prefix .. ".theme")
 
 local runtime = Runtime.new()
+local viewportPoint
 
 ---@class glyph
 ---@field text fun(value: string, props?: GlyphTextProps): GlyphNode
@@ -66,6 +68,7 @@ local runtime = Runtime.new()
 ---@field spriteSheet fun(image: any, opts: GlyphSpriteSheetProps): GlyphSpriteSheet
 ---@field spriteSheetBackend GlyphSpriteSheetBackendApi
 ---@field surface GlyphSurfaceApi
+---@field instance GlyphInstanceApi
 ---@field menori GlyphMenoriApi
 ---@field dialogue GlyphDialogueApi
 ---@field t fun(key: string, params?: table, opts?: GlyphI18nTranslateOpts): string
@@ -75,9 +78,18 @@ local runtime = Runtime.new()
 ---@field modal GlyphModalApi
 ---@field drag fun(opts: GlyphDragProps): GlyphDragStart
 ---@field setFocus fun(node?: GlyphNode)
+---@field focused fun(): GlyphNode|nil
+---@field hasFocus fun(): boolean
+---@field hitTest fun(x: number, y: number): GlyphNode|nil
+---@field markDirty fun()
 ---@field navigate fun(direction: "up"|"down"|"left"|"right"): GlyphNode|nil
----@field keypressed fun(key: string)
----@field keyreleased fun(key: string)
+---@field mousemoved fun(x: number, y: number, dx?: number, dy?: number): boolean
+---@field mousepressed fun(x: number, y: number, button: number): boolean
+---@field mousereleased fun(x: number, y: number, button: number): boolean
+---@field wheelmoved fun(dx: number, dy: number): boolean
+---@field textinput fun(text: string): boolean
+---@field keypressed fun(key: string): boolean
+---@field keyreleased fun(key: string): boolean
 ---@field gamepadpressed fun(joystick: any, button: string, opts?: boolean|GlyphGamepadMapperOpts): any
 ---@field gamepadreleased fun(joystick: any, button: string, opts?: boolean|GlyphGamepadMapperOpts): any
 local ui = {
@@ -88,6 +100,7 @@ local ui = {
   i18n = I18n,
   richTextBackend = nil,
   surface = nil,
+  instance = nil,
   menori = nil,
   dialogue = nil,
   spriteSheetBackend = nil,
@@ -200,6 +213,14 @@ ui.surface = {
   ---@return GlyphSurface
   new = function(opts)
     return Surface.new(opts)
+  end,
+}
+
+ui.instance = {
+  ---@param opts? GlyphInstanceOptions
+  ---@return GlyphInstance
+  new = function(opts)
+    return Instance.new(opts)
   end,
 }
 
@@ -487,6 +508,32 @@ function ui.setFocus(node)
   return runtime:setFocus(node)
 end
 
+---@return GlyphNode|nil
+function ui.focused()
+  return runtime:activeFocusNode()
+end
+
+---@return boolean
+function ui.hasFocus()
+  return runtime:activeFocusNode() ~= nil
+end
+
+---@param x number
+---@param y number
+---@return GlyphNode|nil
+function ui.hitTest(x, y)
+  local inside, viewX, viewY = viewportPoint(x, y)
+  if not inside then
+    return nil
+  end
+  return runtime:hitTest(viewX, viewY)
+end
+
+---@return nil
+function ui.markDirty()
+  runtime:markDirty()
+end
+
 ---@param a number
 ---@param b number
 ---@param t number
@@ -587,7 +634,6 @@ function ui.render(component)
   return runtime:render(component)
 end
 
-local viewportPoint
 local clearPointerTarget
 
 local defaultGamepadNavigation = {
@@ -637,20 +683,22 @@ end
 ---@param y number
 ---@param dx number
 ---@param dy number
+---@return boolean
 function ui.mousemoved(x, y, dx, dy)
   local inside, viewX, viewY = viewportPoint(x, y)
   if not inside then
     runtime:cancelDrag("viewport")
     clearPointerTarget(false)
-    return nil
+    return false
   end
   local routedActive = Menori.routePointer("mousemoved", viewX, viewY, nil, { priority = "active" })
   local screenHit = runtime:hitTest(viewX, viewY) ~= nil
   local result = runtime:mousemoved(viewX, viewY, dx, dy)
+  local routed = false
   if not routedActive then
-    Menori.routePointer("mousemoved", viewX, viewY, nil, { priority = screenHit and "always" or "behind-ui" })
+    routed = Menori.routePointer("mousemoved", viewX, viewY, nil, { priority = (screenHit or result) and "always" or "behind-ui" })
   end
-  return result
+  return result == true or routedActive or routed
 end
 
 local function refreshHoverFromMouse()
@@ -675,62 +723,69 @@ end
 ---@param x number
 ---@param y number
 ---@param button number
+---@return boolean
 function ui.mousepressed(x, y, button)
   local inside, viewX, viewY = viewportPoint(x, y)
   if not inside then
     runtime:cancelDrag("viewport")
     clearPointerTarget(true)
-    return nil
+    return false
   end
   local screenHit = runtime:hitTest(viewX, viewY) ~= nil
   local result = runtime:mousepressed(viewX, viewY, button)
-  Menori.routePointer("mousepressed", viewX, viewY, button, { priority = screenHit and "always" or "behind-ui" })
-  return result
+  local routed = Menori.routePointer("mousepressed", viewX, viewY, button, { priority = (screenHit or result) and "always" or "behind-ui" })
+  return result == true or routed
 end
 
 ---@param x number
 ---@param y number
 ---@param button number
+---@return boolean
 function ui.mousereleased(x, y, button)
   local inside, viewX, viewY = viewportPoint(x, y)
   if not inside then
     runtime:cancelDrag("viewport")
     clearPointerTarget(false)
-    return nil
+    return false
   end
   local routedActive = Menori.routePointer("mousereleased", viewX, viewY, button, { priority = "active" })
   local screenHit = runtime:hitTest(viewX, viewY) ~= nil
   local result = runtime:mousereleased(viewX, viewY, button)
+  local routed = false
   if not routedActive then
-    Menori.routePointer("mousereleased", viewX, viewY, button, { priority = screenHit and "always" or "behind-ui" })
+    routed = Menori.routePointer("mousereleased", viewX, viewY, button, { priority = (screenHit or result) and "always" or "behind-ui" })
   end
-  return result
+  return result == true or routedActive or routed
 end
 
 ---@param dx number
 ---@param dy number
+---@return boolean
 function ui.wheelmoved(dx, dy)
   refreshHoverFromMouse()
   return runtime:wheelmoved(dx, dy)
 end
 
 ---@param text string
+---@return boolean
 function ui.textinput(text)
   return runtime:textinput(text)
 end
 
 ---@param key string
+---@return boolean
 function ui.keypressed(key)
   local result = runtime:keypressed(key)
-  Menori.routeKey("keypressed", key)
-  return result
+  local routed = result ~= true and Menori.routeKey("keypressed", key) or false
+  return result == true or routed
 end
 
 ---@param key string
+---@return boolean
 function ui.keyreleased(key)
   local result = runtime:keyreleased(key)
-  Menori.routeKey("keyreleased", key)
-  return result
+  local routed = result ~= true and Menori.routeKey("keyreleased", key) or false
+  return result == true or routed
 end
 
 ---@param joystick any

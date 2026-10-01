@@ -12,7 +12,11 @@ icon: lucide/cpu
 > See it in action: [`examples/basic`](examples.md) is a full app with state,
 > input, focus, and the update/render loop.
 
-Glyph has one shared runtime exposed through `ui.update`, `ui.render`, input forwarding functions, hooks, and helper APIs.
+Glyph has a default shared runtime exposed through `ui.update`, `ui.render`,
+input forwarding functions, hooks, and helper APIs. Existing applications that
+need a separate screen-space root can create an
+[`ui.instance`](instance.md); texture-backed roots use
+[`ui.surface`](surface.md). Each form owns independent hooks and input state.
 
 ## Rendering
 
@@ -146,6 +150,26 @@ function love.gamepadreleased(joystick, button)
   ui.gamepadreleased(joystick, button)
 end
 ```
+
+Every pointer, wheel, key, and text forwarder returns a boolean. `true` means
+Glyph claimed the event; `false` means it can be routed to another system. This
+is particularly useful for an editor canvas or game viewport behind the UI:
+
+```lua
+function love.mousepressed(x, y, button)
+  if ui.mousepressed(x, y, button) then
+    return
+  end
+  world.mousepressed(x, y, button)
+end
+```
+
+Pointer capture keeps a matching release consumed outside the original node.
+Wheel input is consumed over interactive UI, focused inputs consume keyboard
+and text events to suppress app shortcuts while typing, and blocking layers
+consume pointer, keyboard, and text events. See
+[Isolated Screen Instances](instance.md#input-arbitration) for the complete
+arbitration contract.
 
 `ui.install` and `ui.load` can install common callbacks automatically.
 Gamepad callbacks are installed only when `install.gamepad` is enabled.

@@ -37,6 +37,7 @@ Add to core:
 - Backend-agnostic i18n and accessibility adapter surfaces.
 - Backend-agnostic fixed viewport adapter hooks.
 - Offscreen Glyph surfaces with scoped runtimes for canvas-backed UI.
+- Isolated screen-space Glyph instances for apps that own callback and input arbitration.
 - Optional Menori adapter surfaces for scene layers, loading overlays, transitions, and interactive world-space billboards.
 - Optional Love-Dialogue adapter (`ui.dialogue`) that renders an app-provided dialogue engine with Glyph primitives.
 - Visual-only animation primitives.
@@ -97,8 +98,14 @@ Use `onLayout` or `onBounds` for app-owned geometry capture such as drag/drop ta
 Use `ui.drag` for generic pointer drag lifecycles. Keep app-specific swapping, collision, placement, validation, and drag previews outside core.
 Use `ui.grid.pointToCell` with `onLayout` bounds for uniform grid pointer mapping. Keep variable-size placement, collision, and inventory rules app-owned.
 Use `ui.surface.new` for texture-backed Glyph UI with its own runtime, such as Menori billboards or offscreen HUD panels. Surface component callbacks receive a scoped UI API; use that scoped API for hooks, tabs, feedback, drag helpers, and input state.
+Use `ui.instance.new` for a separate screen-space root inside an existing app. Keep its runtime private behind instance lifecycle, hit-test, focus-query, and boolean input-consumption methods.
 
 For input changes, add runtime tests that press and release controls, not just geometry assertions.
+
+Input forwarders return strict booleans: pointer capture claims release even
+outside the node, wheel claims hovered interactive UI, focused inputs claim key
+and text events so app shortcuts do not leak through, and blocking layers claim
+events behind them.
 
 Keyboard, mouse, touch, and mapped gamepad activation should share the same press/release lifecycle so pressed styles, feedback, audio cues, and accessibility activation remain consistent. Focusable non-button nodes with `role = "button"` and `onClick` should participate in that lifecycle.
 
