@@ -2929,6 +2929,72 @@ local function drawPath(runtime, love, pathSource, bounds, opts, style, opacity,
   end
 end
 
+local function buttonIconSources(props)
+  if type(props.iconPaths) == "table" then
+    return props.iconPaths
+  end
+  if props.icon ~= nil then
+    return { props.icon }
+  end
+  return nil
+end
+
+local function drawButtonContent(runtime, node, absX, absY, width, height, love, style, opacity)
+  local props = node.props or {}
+  local label = tostring(props.label or "")
+  local icons = buttonIconSources(props)
+  local hasIcon = icons ~= nil and #icons > 0
+  local showLabel = not props.iconOnly and label ~= ""
+  local pad = spacing(props.padding or { x = 10, y = 5 })
+  if not hasIcon then
+    drawPlainText(runtime, node, label, absX + pad.left, absY + pad.top,
+      math.max(0, width - pad.left - pad.right), love, style, opacity, "button")
+    return
+  end
+  local iconSize = hasIcon and math.max(0, tonumber(props.iconSize) or 16) or 0
+  local gap = hasIcon and showLabel and math.max(0, tonumber(props.iconGap) or 6) or 0
+  local textWidth, textHeight = 0, 0
+  if showLabel then
+    textWidth, textHeight = Typography.measurePlain(label, props, runtime.theme, love, nil, "button")
+  end
+  local contentWidth = iconSize + gap + textWidth
+  local contentHeight = math.max(iconSize, textHeight)
+  local availableWidth = math.max(0, width - pad.left - pad.right)
+  local availableHeight = math.max(0, height - pad.top - pad.bottom)
+  local align = props.textAlign or "center"
+  local contentX = absX + pad.left
+  if align == "center" then
+    contentX = contentX + math.max(0, (availableWidth - contentWidth) * 0.5)
+  elseif align == "right" or align == "end" then
+    contentX = contentX + math.max(0, availableWidth - contentWidth)
+  end
+  local contentY = absY + pad.top + math.max(0, (availableHeight - contentHeight) * 0.5)
+  local iconOnRight = props.iconPosition == "right" or props.iconPosition == "end"
+
+  if showLabel then
+    local textX = contentX + (hasIcon and not iconOnRight and iconSize + gap or 0)
+    local textY = contentY + math.max(0, (contentHeight - textHeight) * 0.5)
+    drawPlainText(runtime, node, label, textX, textY, textWidth, love, style, opacity, "button")
+  end
+
+  if hasIcon then
+    local iconX = contentX + (showLabel and iconOnRight and textWidth + gap or 0)
+    local iconY = contentY + math.max(0, (contentHeight - iconSize) * 0.5)
+    local iconOpts = {
+      fit = "contain",
+      mode = props.iconMode or "line",
+      stroke = props.iconColor,
+      strokeWidth = props.iconStrokeWidth or 2,
+      fill = props.iconFill,
+      samples = props.iconSamples,
+    }
+    local iconBounds = { x = iconX, y = iconY, width = iconSize, height = iconSize }
+    for _, source in ipairs(icons) do
+      drawPath(runtime, love, source, iconBounds, iconOpts, style, opacity, iconOpts.mode, false)
+    end
+  end
+end
+
 ---@param a number
 ---@param b number
 ---@param t number
@@ -4387,8 +4453,7 @@ function Runtime:drawNode(node, x, y, stackContext)
         drawRect(love, "line", absX, absY, width, height, radius)
       end
     end
-    local pad = spacing(props.padding or { x = 10, y = 5 })
-    drawPlainText(self, node, props.label or "", absX + pad.left, absY + pad.top, math.max(0, width - pad.left - pad.right), love, style, opacity, "button")
+    drawButtonContent(self, node, absX, absY, width, height, love, style, opacity)
   elseif node.type == "input" then
     if style.background then
       color(love, withOpacity(style.background, opacity))

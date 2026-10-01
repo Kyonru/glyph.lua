@@ -451,7 +451,13 @@ function Layout.measureNode(node, context)
     textWidth, textHeight = measureText(context, label, props, theme, node.type)
 
     local pad = spacing(props.padding or { x = 10, y = 5 })
-    return textWidth + pad.left + pad.right, textHeight + pad.top + pad.bottom
+    local hasIcon = props.icon ~= nil or props.iconPaths ~= nil
+    local iconSize = hasIcon and math.max(0, tonumber(props.iconSize) or 16) or 0
+    local showLabel = not props.iconOnly and label ~= ""
+    local gap = hasIcon and showLabel and math.max(0, tonumber(props.iconGap) or 6) or 0
+    local contentWidth = iconSize + gap + (showLabel and textWidth or 0)
+    local contentHeight = math.max(iconSize, showLabel and textHeight or 0)
+    return contentWidth + pad.left + pad.right, contentHeight + pad.top + pad.bottom
   end
 
   if node.type == "meter" then

@@ -59,6 +59,25 @@ describe("layout", function()
     assert.are.equal(50, tree.children[2].layout.x)
   end)
 
+  it("includes button icons in intrinsic layout and keeps icon-only labels semantic", function()
+    local icon = "M2 2 L22 22"
+    local tree = ui.row({ gap = 4 }, {
+      ui.button({ label = "Save", icon = icon, iconSize = 16, iconGap = 6,
+        padding = { x = 10, y = 4 } }),
+      ui.button({ label = "Undo", icon = icon, iconOnly = true, iconSize = 18,
+        padding = { x = 7, y = 5 } }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(82, tree.children[1].layout.width)
+    assert.are.equal(28, tree.children[1].layout.height)
+    assert.are.equal(32, tree.children[2].layout.width)
+    assert.are.equal(28, tree.children[2].layout.height)
+    assert.are.equal("Undo", tree.children[2].props.label)
+    assert.are.equal(118, tree.layout.width)
+  end)
+
   it("justifies row children along the main axis", function()
     local tree = ui.row({ width = 100, gap = 10, justify = "center" }, {
       ui.box({ width = 20, height = 10 }),

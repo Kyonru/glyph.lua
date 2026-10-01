@@ -77,6 +77,24 @@ describe("runtime", function()
     assert.are.equal(3, draws)
   end)
 
+  it("draws compound button icons without drawing icon-only labels", function()
+    local love = renderLove(function() return 120 end, function() return 40 end)
+    local lines, printed = 0, {}
+    love.graphics.line = function() lines = lines + 1 end
+    love.graphics.print = function(value) printed[#printed + 1] = value end
+    love.graphics.getColor = function() return 1, 1, 1, 1 end
+    local runtime = Runtime.new()
+    runtime:setLove(love)
+
+    runtime:render(function()
+      return Components.button({ label = "Undo", iconOnly = true, iconSize = 18,
+        iconPaths = { "M2 12 H22", "M8 6 L2 12 L8 18" } })
+    end)
+
+    assert.are.equal(2, lines)
+    assert.are.same({}, printed)
+  end)
+
   it("relayouts a clean root when viewport dimensions change", function()
     local runtime = Runtime.new()
     local viewportWidth = 320

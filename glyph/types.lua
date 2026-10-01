@@ -587,6 +587,17 @@ local GlyphSpriteSheetBackendApi = {}
 ---@field labelParams? table
 ---@field labelFallback? string
 ---@field labelCacheKey? string|number
+---@field icon? GlyphPathInput vector path rendered beside the label
+---@field iconPaths? GlyphPathInput[] compound vector icon paths rendered in one icon box
+---@field iconOnly? boolean hide the visual label while retaining it for semantics
+---@field iconSize? number icon width and height; defaults to 16
+---@field iconGap? number spacing between icon and visible label; defaults to 6
+---@field iconPosition? "left"|"right"|"start"|"end"
+---@field iconMode? "line"|"fill"|"both"
+---@field iconColor? GlyphColor
+---@field iconFill? GlyphColor
+---@field iconStrokeWidth? number
+---@field iconSamples? number
 ---@field onClick? fun()
 ---@field focusable? boolean
 local GlyphButtonProps = {}

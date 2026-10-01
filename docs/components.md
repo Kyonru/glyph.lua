@@ -351,6 +351,37 @@ ui.row({ padding = 12, gap = 8 }, {
 })
 ```
 
+Buttons can render one vector path with `icon`, or a compound icon with
+`iconPaths`. The icon participates in intrinsic measurement alongside the label.
+Use `iconOnly = true` for compact controls while keeping a meaningful `label`;
+the label remains available to focus and accessibility metadata even though it
+is not painted.
+
+```lua
+ui.button({
+  label = "Save",
+  iconPaths = {
+    "M5 3 H15 L21 9 V19 Q21 21 19 21 H5 Q3 21 3 19 V5 Q3 3 5 3 Z",
+    "M7 3 V8 H15",
+  },
+  iconSize = 18,
+  iconGap = 7,
+  onClick = save,
+})
+
+ui.button({
+  label = "Undo",
+  icon = "M9 14 4 9 9 4 M4 9 H15",
+  iconOnly = true,
+  description = "Undo the last edit",
+  onClick = undo,
+})
+```
+
+`iconPosition` accepts `left`/`start` (the default) or `right`/`end`.
+`iconMode`, `iconColor`, `iconFill`, `iconStrokeWidth`, and `iconSamples` expose
+the matching path drawing controls without changing button interaction.
+
 > [!NOTE]
 > The default theme gives focused buttons a two-pixel contrasting border.
 > Primary buttons use a dark focus border against the amber surface. The
