@@ -2322,6 +2322,15 @@ function Runtime:keypressed(key)
     return true
   end
 
+  if key == "escape" and node and node.type == "input" and node.props and
+      type(node.props.onCancel) == "function" then
+    local value = self:inputEditState(node)
+    node.props.onCancel(value)
+    self.bus:dispatch("event", "keypressed", key, node)
+    self:markDirty()
+    return true
+  end
+
   if key == "escape" and self.scene and self.scene:closeTopEscapable() then
     self.bus:dispatch("event", "keypressed", key, node)
     self:markDirty()
@@ -2331,7 +2340,10 @@ function Runtime:keypressed(key)
   local consumed = node ~= nil and node.type == "input"
   if node and node.type == "input" and node.props and type(node.props.onChange) == "function" then
     local value, cursor, cursorKey, edit = self:inputEditState(node)
-    if key == "backspace" then
+    if (key == "return" or key == "kpenter") and type(node.props.onSubmit) == "function" then
+      node.props.onSubmit(value)
+      self:markDirty()
+    elseif key == "backspace" then
       if cursor > 0 then
         local previousCursor = previousInputCursor(value, cursor)
         local nextValue = value:sub(1, previousCursor) .. value:sub(cursor + 1)

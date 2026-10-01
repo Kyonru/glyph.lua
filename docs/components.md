@@ -370,12 +370,17 @@ ui.input({
   value = query,
   placeholder = "Filter logs...",
   onChange = setQuery,
+  onSubmit = applyQuery,
+  onCancel = restoreQuery,
   flex = 1,
 })
 ```
 
 Inputs are controlled: keep the value in state and update it through `onChange`.
 Use `placeholderKey` for localized placeholder text.
+`onSubmit(value)` receives the pending value on Return or keypad Enter.
+`onCancel(value)` receives it on Escape and takes precedence over closing an
+enclosing scene, which is useful for reverting editor fields.
 
 Pointer presses place the cursor at the nearest glyph boundary. Left, Right,
 Backspace, and Delete preserve UTF-8 codepoint boundaries, and consecutive

@@ -600,6 +600,7 @@ local GlyphButtonProps = {}
 ---@field placeholderCacheKey? string|number
 ---@field onChange? fun(value: string)
 ---@field onSubmit? fun(value: string)
+---@field onCancel? fun(value: string)
 ---@field focusable? boolean
 local GlyphInputProps = {}
 

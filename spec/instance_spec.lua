@@ -104,6 +104,8 @@ describe("screen-space instance", function()
 
   it("claims keyboard and text events while an input owns focus", function()
     local value = ""
+    local submitted = nil
+    local cancelled = nil
     local instance = Instance.new({
       love = fakeLove(),
       component = function(ui)
@@ -113,6 +115,12 @@ describe("screen-space instance", function()
           value = value,
           onChange = function(nextValue)
             value = nextValue
+          end,
+          onSubmit = function(nextValue)
+            submitted = nextValue
+          end,
+          onCancel = function(nextValue)
+            cancelled = nextValue
           end,
         })
       end,
@@ -124,6 +132,10 @@ describe("screen-space instance", function()
     assert.is_true(instance:keypressed("s"))
     assert.is_true(instance:keyreleased("s"))
     assert.are.equal("a", value)
+    assert.is_true(instance:keypressed("return"))
+    assert.are.equal("a", submitted)
+    assert.is_true(instance:keypressed("escape"))
+    assert.are.equal("a", cancelled)
   end)
 
   it("traverses focus in tree order and wraps", function()
