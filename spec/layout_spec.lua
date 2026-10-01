@@ -41,6 +41,24 @@ describe("layout", function()
     assert.are.equal(20, tree.children[2].layout.x)
   end)
 
+  it("lets intrinsic buttons and their padding size the parent flow", function()
+    local tree = ui.row({ padding = { left = 3, right = 4, top = 2, bottom = 5 }, gap = 7 }, {
+      ui.button({ label = "Go", padding = { x = 10, y = 4 } }),
+      ui.button({ label = "Long", padding = { x = 6, y = 6 } }),
+    })
+
+    Layout.compute(tree, context)
+
+    assert.are.equal(40, tree.children[1].layout.width)
+    assert.are.equal(28, tree.children[1].layout.height)
+    assert.are.equal(52, tree.children[2].layout.width)
+    assert.are.equal(32, tree.children[2].layout.height)
+    assert.are.equal(106, tree.layout.width)
+    assert.are.equal(39, tree.layout.height)
+    assert.are.equal(3, tree.children[1].layout.x)
+    assert.are.equal(50, tree.children[2].layout.x)
+  end)
+
   it("justifies row children along the main axis", function()
     local tree = ui.row({ width = 100, gap = 10, justify = "center" }, {
       ui.box({ width = 20, height = 10 }),

@@ -336,6 +336,21 @@ ui.button({
 
 Buttons are focusable by default.
 
+Without an explicit `width` or `height`, a button measures from its resolved
+label and padding. That intrinsic size participates in row/column flow, so
+longer labels or larger padding resize the button and its unconstrained parent
+in the same pass. Parent `gap`, child `margin`, `min*`/`max*`, and flex props
+then apply normally. Set an explicit dimension only when it is an intentional
+constraint; use `minHeight` for a minimum control target that should still grow
+when content or padding needs more space.
+
+```lua
+ui.row({ padding = 12, gap = 8 }, {
+  ui.button({ label = "Back", padding = { x = 12, y = 8 } }),
+  ui.button({ label = "Save and continue", padding = { x = 16, y = 8 } }),
+})
+```
+
 > [!NOTE]
 > The default theme gives focused buttons a two-pixel contrasting border.
 > Primary buttons use a dark focus border against the amber surface. The

@@ -40,6 +40,12 @@ not retain a stale intrinsic size.
 `align` controls the cross axis; `justify` controls the main axis. In a row, `justify = "center"`
 centers children horizontally. In a column, it centers children vertically.
 
+Intrinsic controls participate in this flow before the parent resolves its own
+unconstrained size. For example, a button contributes its label measurement
+plus padding; changing either reflows its siblings and parent. Prefer
+`minWidth`/`minHeight` when a control needs a floor but should remain responsive,
+and reserve fixed `width`/`height` for deliberate constraints.
+
 > [!NOTE]
 > `align` is the flex **cross-axis** alignment of children — it is not text
 > alignment. To align text inside a node, use `textAlign = "left" | "center" |
