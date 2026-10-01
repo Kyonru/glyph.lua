@@ -1598,8 +1598,6 @@ function Runtime:findReachableNode(path, target)
         if layer.blocking then
           return nil
         end
-      elseif layer.blocking then
-        return nil
       end
     end
   end

@@ -243,10 +243,16 @@ describe("screen-space instance", function()
   end)
 
   it("stops claiming input as soon as a blocking modal closes", function()
+    local value = ""
     local instance = Instance.new({
       love = fakeLove(),
       component = function(ui)
-        return ui.box({ width = 20, height = 20, interactive = false })
+        return ui.input({
+          value = value,
+          width = 80,
+          height = 24,
+          onChange = function(nextValue) value = nextValue end,
+        })
       end,
     })
     instance:render()
@@ -261,6 +267,12 @@ describe("screen-space instance", function()
     assert.is_false(instance:keypressed("s"))
     assert.is_false(instance:keyreleased("s"))
     assert.is_false(instance:textinput("a"))
+
+    local input = instance:render()
+    instance:setFocus(input)
+    assert.are.equal(input, instance:focused())
+    assert.is_true(instance:textinput("a"))
+    assert.are.equal("a", value)
   end)
 
   it("disposes effects and becomes inert exactly once", function()
