@@ -260,6 +260,29 @@ ui.setFocus(okButton)
 ui.setFocus(nil)
 ```
 
+## Ordered focus traversal
+
+Use `ui.focusNext(reverse?)` for Tab and Shift-Tab traversal. It follows the
+declarative tree order returned by `ui.Navigate.collect`, skips disabled and
+non-focusable nodes, and wraps at both ends. With no current focus it chooses
+the first candidate, or the last candidate when `reverse` is true.
+
+```lua
+function love.keypressed(key)
+  if key == "tab" then
+    local reverse = love.keyboard.isDown("lshift", "rshift")
+    return ui.focusNext(reverse)
+  end
+  return ui.keypressed(key)
+end
+```
+
+The function returns `true` when it focused a candidate. Candidate collection
+respects blocking scene/modal layers, input-disabled layers, and reachable app
+roots. When focus is inside a trapped `navScope`, traversal wraps within that
+scope. Isolated instances expose the same operation as
+`instance:focusNext(reverse?)` and on their scoped `ui`.
+
 ## Layer and modal awareness
 
 Navigation respects the scene layer stack. Only nodes in accessible layers are

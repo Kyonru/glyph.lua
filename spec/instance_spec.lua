@@ -118,6 +118,70 @@ describe("screen-space instance", function()
     assert.are.equal("a", value)
   end)
 
+  it("traverses focus in tree order and wraps", function()
+    local instance = Instance.new({
+      love = fakeLove(),
+      component = function(ui)
+        return ui.column({}, {
+          ui.button({ label = "a" }),
+          ui.button({ label = "b" }),
+          ui.button({ label = "c" }),
+        })
+      end,
+    })
+    instance:render()
+
+    assert.is_true(instance:focusNext())
+    assert.are.equal("a", instance:focused().props.label)
+    assert.is_true(instance:focusNext(true))
+    assert.are.equal("c", instance:focused().props.label)
+    assert.is_true(instance.ui.focusNext())
+    assert.are.equal("a", instance:focused().props.label)
+  end)
+
+  it("releases focus and input capture when the window loses focus", function()
+    local cancelReason = nil
+    local clicks = 0
+    local instance = Instance.new({
+      love = fakeLove(),
+      component = function(ui)
+        local startDrag = ui.drag({
+          onCancel = function(ctx)
+            cancelReason = ctx.reason
+          end,
+        })
+        return ui.button({
+          label = "Drag",
+          width = 80,
+          height = 32,
+          onMousePressed = function(x, y, button, node)
+            startDrag(x, y, button, node)
+          end,
+          onClick = function()
+            clicks = clicks + 1
+          end,
+        })
+      end,
+    })
+    instance:render()
+
+    local node = instance:hitTest(10, 10)
+    instance:mousemoved(10, 10)
+    instance:mousepressed(10, 10, 1)
+    instance:keypressed("return")
+    assert.is_true(instance.ui.isPressed(node))
+    assert.is_true(instance:hasFocus())
+
+    assert.is_true(instance:focus(false))
+    assert.are.equal("focus", cancelReason)
+    assert.is_false(instance.ui.isPressed(node))
+    assert.is_false(instance:hasFocus())
+    assert.is_false(instance:focus(true))
+    instance:mousereleased(10, 10, 1)
+    instance:keyreleased("return")
+    assert.are.equal(0, clicks)
+  end)
+
   it("claims wheel events over UI and releases events outside it", function()
     local instance = Instance.new({
       love = fakeLove(),

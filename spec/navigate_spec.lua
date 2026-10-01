@@ -288,6 +288,66 @@ describe("spatial navigation", function()
   end)
 end)
 
+describe("ordered focus traversal", function()
+  it("chooses an endpoint without focus and wraps in both directions", function()
+    local runtime = Runtime.new()
+    layout(runtime, Components.row({ gap = 8 }, {
+      Components.button({ label = "a" }),
+      Components.button({ label = "b" }),
+      Components.button({ label = "c" }),
+    }))
+
+    assert.are.equal("a", Navigate.focusNext(runtime).props.label)
+    assert.are.equal("b", Navigate.focusNext(runtime).props.label)
+    assert.are.equal("c", Navigate.focusNext(runtime).props.label)
+    assert.are.equal("a", Navigate.focusNext(runtime).props.label)
+    assert.are.equal("c", Navigate.focusNext(runtime, true).props.label)
+
+    runtime:setFocus(nil)
+    assert.are.equal("c", Navigate.focusNext(runtime, true).props.label)
+  end)
+
+  it("wraps inside the active trapped navigation scope", function()
+    local runtime = Runtime.new()
+    local root = layout(runtime, Components.row({ gap = 8 }, {
+      Components.column({ navScope = true, navTrap = true }, {
+        Components.button({ label = "scope-a" }),
+        Components.button({ label = "scope-b" }),
+      }),
+      Components.button({ label = "outside" }),
+    }))
+
+    runtime:setFocus(root.children[1].children[1])
+    assert.are.equal("scope-b", Navigate.focusNext(runtime, true).props.label)
+    assert.are.equal("scope-a", Navigate.focusNext(runtime).props.label)
+  end)
+
+  it("limits traversal to the active blocking modal", function()
+    local runtime = Runtime.new()
+    runtime:setLove(fakeLove())
+    runtime.scene:set("main", function()
+      return Components.button({ label = "main", width = 100, height = 40 })
+    end, { transition = "none" })
+    runtime.scene:push("dialog", function()
+      return Components.column({}, {
+        Components.button({ label = "modal-a", width = 100, height = 40 }),
+        Components.button({ label = "modal-b", width = 100, height = 40 }),
+      })
+    end, { kind = "modal", transition = "none", width = 100, height = 80 })
+    runtime:render()
+
+    assert.are.equal("modal-a", Navigate.focusNext(runtime).props.label)
+    assert.are.equal("modal-b", Navigate.focusNext(runtime).props.label)
+    assert.are.equal("modal-a", Navigate.focusNext(runtime).props.label)
+  end)
+
+  it("returns nil when no reachable node is focusable", function()
+    local runtime = Runtime.new()
+    layout(runtime, Components.box({ width = 20, height = 20, interactive = false }))
+    assert.is_nil(Navigate.focusNext(runtime))
+  end)
+end)
+
 describe("row-end fallback and complex layouts", function()
   it("prefers a beam-overlap candidate over a nearer angled candidate", function()
     local runtime = Runtime.new()

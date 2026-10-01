@@ -1718,6 +1718,43 @@ function Runtime:hasBlockingInputLayer()
   return false
 end
 
+---@param focused boolean
+---@return boolean released whether any focus or input-capture state was cleared
+function Runtime:focus(focused)
+  local released = false
+  if focused == false then
+    released = self.activeDrag ~= nil
+      or self.activeScrollbar ~= nil
+      or self.mouseDownNode ~= nil
+      or self.mouseDownPath ~= nil
+      or self.keyDownNode ~= nil
+      or self.keyDownPath ~= nil
+      or self.focusNode ~= nil
+      or self.focusPath ~= nil
+      or self.hoverNode ~= nil
+      or self.hoverPath ~= nil
+
+    self:cancelDrag("focus")
+    if self.activeScrollbar then
+      self:setScrollbarPressed(self.activeScrollbar.path, false)
+      self.activeScrollbar = nil
+    end
+    self.mouseDownNode = nil
+    self.mouseDownPath = nil
+    self.keyDownNode = nil
+    self.keyDownPath = nil
+    self.keyDownKey = nil
+    self:setHover(nil)
+    self:setFocus(nil)
+    if released then
+      self:markDirty()
+    end
+  end
+
+  self.bus:dispatch("event", "focus", focused)
+  return released
+end
+
 function Runtime:cursorKey(node)
   return node and node.path or nil
 end

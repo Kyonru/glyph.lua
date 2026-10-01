@@ -95,6 +95,24 @@ function InstanceObject:hasFocus()
   return self:focused() ~= nil
 end
 
+---@param reverse? boolean
+---@return boolean
+function InstanceObject:focusNext(reverse)
+  if self.destroyed then
+    return false
+  end
+  return self.ui.focusNext(reverse)
+end
+
+---@param focused boolean
+---@return boolean released whether any focus or input-capture state was cleared
+function InstanceObject:focus(focused)
+  if self.destroyed then
+    return false
+  end
+  return self._runtime:focus(focused)
+end
+
 ---@param node? GlyphNode
 ---@return GlyphInstance
 function InstanceObject:setFocus(node)

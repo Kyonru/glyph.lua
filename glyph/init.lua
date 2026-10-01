@@ -80,6 +80,8 @@ local viewportPoint
 ---@field setFocus fun(node?: GlyphNode)
 ---@field focused fun(): GlyphNode|nil
 ---@field hasFocus fun(): boolean
+---@field focusNext fun(reverse?: boolean): boolean
+---@field focus fun(focused: boolean): boolean
 ---@field hitTest fun(x: number, y: number): GlyphNode|nil
 ---@field markDirty fun()
 ---@field navigate fun(direction: "up"|"down"|"left"|"right"): GlyphNode|nil
@@ -518,6 +520,18 @@ function ui.hasFocus()
   return runtime:activeFocusNode() ~= nil
 end
 
+---@param reverse? boolean
+---@return boolean
+function ui.focusNext(reverse)
+  return Navigate.focusNext(runtime, reverse) ~= nil
+end
+
+---@param focused boolean
+---@return boolean released whether any focus or input-capture state was cleared
+function ui.focus(focused)
+  return runtime:focus(focused)
+end
+
 ---@param x number
 ---@param y number
 ---@return GlyphNode|nil
@@ -931,10 +945,7 @@ local autoCallbacks = {
     ui.dispatch("event", "mousefocus", focused)
   end,
   focus = function(focused)
-    if focused == false then
-      runtime:cancelDrag("focus")
-    end
-    ui.dispatch("event", "focus", focused)
+    ui.focus(focused)
   end,
   visible = function(visible)
     ui.dispatch("event", "visible", visible)

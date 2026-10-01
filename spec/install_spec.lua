@@ -69,6 +69,23 @@ describe("install", function()
     off()
   end)
 
+  it("releases focused and pressed controls when the Love window loses focus", function()
+    local fakeLove = {}
+    ui.runtime:build(function()
+      return ui.button({ label = "Focused" })
+    end)
+    ui.runtime:layoutRoot(ui.runtime.root)
+    ui.setFocus(ui.runtime.root)
+    ui.keypressed("return")
+    local unregister = ui.install(fakeLove)
+
+    fakeLove.focus(false)
+
+    assert.is_nil(ui.focused())
+    assert.is_nil(ui.runtime.keyDownNode)
+    unregister()
+  end)
+
   it("does not install gamepad callbacks by default", function()
     local previousPressed = function() end
     local fakeLove = {

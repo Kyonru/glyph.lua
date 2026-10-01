@@ -316,6 +316,14 @@ function Surface.scopedUi(runtime, surface)
     return runtime:activeFocusNode() ~= nil
   end
 
+  function ui.focusNext(reverse)
+    return Navigate.focusNext(runtime, reverse) ~= nil
+  end
+
+  function ui.focus(focused)
+    return runtime:focus(focused)
+  end
+
   function ui.hitTest(x, y)
     return runtime:hitTest(x, y)
   end
@@ -528,6 +536,14 @@ end
 
 function SurfaceInstance:hasFocus()
   return self.runtime:activeFocusNode() ~= nil
+end
+
+function SurfaceInstance:focusNext(reverse)
+  return Navigate.focusNext(self.runtime, reverse) ~= nil
+end
+
+function SurfaceInstance:focus(focused)
+  return self.runtime:focus(focused)
 end
 
 function SurfaceInstance:mousepressed(x, y, button)

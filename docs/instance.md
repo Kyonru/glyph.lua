@@ -50,6 +50,10 @@ function love.resize(width, height)
   editorUi:resize(width, height)
 end
 
+function love.focus(focused)
+  editorUi:focus(focused)
+end
+
 function unloadEditor()
   editorUi:destroy()
 end
@@ -65,6 +69,10 @@ end
 - `instance:destroy()` runs root and scene effect cleanups, clears feedback and
   input captures, and makes the instance inert. It is safe to call more than
   once.
+- `instance:focus(false)` cancels active drags and pointer/key capture, clears
+  hover and control focus, and returns whether any state was released. Forward
+  Love's `focus` callback so switching away from the window cannot leave editor
+  controls pressed. `focus(true)` reports the event without changing state.
 
 ## Input Arbitration
 
@@ -133,6 +141,9 @@ end
 - `focused()` returns the current reachable focused node, or `nil`.
 - `hasFocus()` is the boolean form.
 - `setFocus(node)` focuses a known node; pass `nil` to clear focus.
+- `focusNext(reverse?)` focuses the next or previous reachable control in tree
+  order, wraps, and returns whether a candidate was found. It is suitable for
+  Tab and Shift-Tab.
 
 Hit testing requires a rendered tree. Decorative or pass-through regions and
 their covering container ancestors should set `interactive = false`; interactive

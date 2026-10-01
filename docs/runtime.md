@@ -171,6 +171,17 @@ consume pointer, keyboard, and text events. See
 [Isolated Screen Instances](instance.md#input-arbitration) for the complete
 arbitration contract.
 
+Forward `love.focus` to `ui.focus` when wiring callbacks manually. On focus
+loss Glyph cancels drags and pointer/key capture and clears hover/control focus,
+preventing a lost release event from leaving a control pressed. Automatic
+`ui.install` / `ui.load` wiring does this for the default runtime.
+
+```lua
+function love.focus(focused)
+  ui.focus(focused)
+end
+```
+
 `ui.install` and `ui.load` can install common callbacks automatically.
 Gamepad callbacks are installed only when `install.gamepad` is enabled.
 

@@ -481,4 +481,52 @@ function Navigate.move(runtime, direction)
   return nil
 end
 
+---@param runtime table
+---@param reverse? boolean
+---@return GlyphNode|nil
+function Navigate.focusNext(runtime, reverse)
+  local candidates = Navigate.collect(runtime)
+  if #candidates == 0 then
+    return nil
+  end
+
+  local focused = runtime.activeFocusNode and runtime:activeFocusNode() or runtime.focusNode
+  local current = candidateForNode(candidates, focused)
+  local ordered = candidates
+
+  if current and current.scope ~= nil and navScopeProps(current.scope).navTrap == true then
+    ordered = filterScope(candidates, current.scope)
+  end
+
+  if #ordered == 0 then
+    return nil
+  end
+
+  local currentIndex = nil
+  if current then
+    for index, candidate in ipairs(ordered) do
+      if candidate.node == current.node
+          or (current.node.path ~= nil and candidate.node.path == current.node.path) then
+        currentIndex = index
+        break
+      end
+    end
+  end
+
+  local targetIndex
+  if currentIndex == nil then
+    targetIndex = reverse == true and #ordered or 1
+  elseif reverse == true then
+    targetIndex = currentIndex == 1 and #ordered or currentIndex - 1
+  else
+    targetIndex = currentIndex == #ordered and 1 or currentIndex + 1
+  end
+
+  local target = ordered[targetIndex] and ordered[targetIndex].node or nil
+  if target then
+    runtime:setFocus(target)
+  end
+  return target
+end
+
 return Navigate

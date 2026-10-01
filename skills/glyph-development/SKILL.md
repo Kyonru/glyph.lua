@@ -106,6 +106,9 @@ Input forwarders return strict booleans: pointer capture claims release even
 outside the node, wheel claims hovered interactive UI, focused inputs claim key
 and text events so app shortcuts do not leak through, and blocking layers claim
 events behind them.
+Ordered focus traversal uses reachable candidate tree order, wraps in either
+direction, and remains inside trapped navigation scopes. Host focus loss clears
+focus and all drag/pointer/key capture without activation.
 
 Keyboard, mouse, touch, and mapped gamepad activation should share the same press/release lifecycle so pressed styles, feedback, audio cues, and accessibility activation remain consistent. Focusable non-button nodes with `role = "button"` and `onClick` should participate in that lifecycle.
 

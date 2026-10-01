@@ -1198,6 +1198,8 @@ local GlyphModalApi = {}
 ---@field setFocus fun(node?: GlyphNode)
 ---@field focused fun(): GlyphNode|nil
 ---@field hasFocus fun(): boolean
+---@field focusNext fun(reverse?: boolean): boolean
+---@field focus fun(focused: boolean): boolean released whether focus/capture state was cleared
 ---@field hitTest fun(x: number, y: number): GlyphNode|nil
 ---@field markDirty fun()
 ---@field on fun(name: string, fn: fun(...): any, opts?: table): fun()
@@ -1260,6 +1262,8 @@ local GlyphSurfaceContext = {}
 ---@field hitTest fun(self: GlyphSurface, x: number, y: number): GlyphNode|nil
 ---@field focused fun(self: GlyphSurface): GlyphNode|nil
 ---@field hasFocus fun(self: GlyphSurface): boolean
+---@field focusNext fun(self: GlyphSurface, reverse?: boolean): boolean
+---@field focus fun(self: GlyphSurface, focused: boolean): boolean
 ---@field destroy fun(self: GlyphSurface): GlyphSurface
 local GlyphSurface = {}
 
@@ -1294,6 +1298,8 @@ local GlyphInstanceContext = {}
 ---@field hitTest fun(self: GlyphInstance, x: number, y: number): GlyphNode|nil
 ---@field focused fun(self: GlyphInstance): GlyphNode|nil
 ---@field hasFocus fun(self: GlyphInstance): boolean
+---@field focusNext fun(self: GlyphInstance, reverse?: boolean): boolean
+---@field focus fun(self: GlyphInstance, focused: boolean): boolean released whether focus/capture state was cleared
 ---@field setFocus fun(self: GlyphInstance, node?: GlyphNode): GlyphInstance
 ---@field mousemoved fun(self: GlyphInstance, x: number, y: number, dx?: number, dy?: number): boolean
 ---@field mousepressed fun(self: GlyphInstance, x: number, y: number, button: number): boolean

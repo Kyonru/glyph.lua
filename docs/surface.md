@@ -80,7 +80,8 @@ end
 forward the same way. Each input method returns the same strict consumption
 boolean described for [screen instances](instance.md#input-arbitration).
 Surfaces also expose `hitTest(x, y)`, `focused()`, and `hasFocus()` in their
-local coordinate space. For UI
+local coordinate space, plus `focusNext(reverse?)` for ordered traversal and
+`focus(focused)` for releasing capture on host focus loss. For UI
 mapped onto 3D geometry, convert the hit point to surface UV space first — the
 same pattern the [Menori adapter](menori.md) uses for world-space billboards.
 
