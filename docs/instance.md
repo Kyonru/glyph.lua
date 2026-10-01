@@ -108,7 +108,8 @@ Forward the matching methods as needed:
 Pointer events are claimed over interactive Glyph nodes. A release remains
 claimed when Glyph captured the matching press or drag, even if the pointer was
 moved outside the original node. Blocking scene/modal backdrops also claim
-pointer input.
+pointer input. Button activation uses the primary mouse button; secondary
+buttons are still claimed over UI without firing `onClick`.
 
 Wheel input is claimed whenever the current hover target is interactive UI.
 This prevents an editor canvas from zooming behind a panel, including when a

@@ -462,6 +462,7 @@ function Runtime.new()
     focusNode = nil,
     mouseDownNode = nil,
     mouseDownPath = nil,
+    mouseDownButton = nil,
     activeDrag = nil,
     keyDownNode = nil,
     keyDownPath = nil,
@@ -1632,6 +1633,7 @@ function Runtime:reconcileTreeReferences(root, rootPath)
     self.mouseDownNode = findByPath(root, self.mouseDownPath)
     if not self.mouseDownNode then
       self.mouseDownPath = nil
+      self.mouseDownButton = nil
     end
   end
 
@@ -1674,6 +1676,7 @@ function Runtime:reconcileInputReferences()
     self.mouseDownNode = self:findReachableNode(self.mouseDownPath, self.mouseDownNode)
     if not self.mouseDownNode then
       self.mouseDownPath = nil
+      self.mouseDownButton = nil
     end
   end
 
@@ -1741,6 +1744,7 @@ function Runtime:focus(focused)
     end
     self.mouseDownNode = nil
     self.mouseDownPath = nil
+    self.mouseDownButton = nil
     self.keyDownNode = nil
     self.keyDownPath = nil
     self.keyDownKey = nil
@@ -2127,6 +2131,7 @@ function Runtime:mousemoved(x, y)
     activeLayer = routedLayer
   end
   local captured = self:handleDragMove(x, y, node)
+    or self.mouseDownNode ~= nil or self.mouseDownPath ~= nil
   self:setHover(node)
   self.bus:dispatch("event", "mousemoved", x, y, node)
   return captured or node ~= nil or activeLayer ~= nil
@@ -2154,6 +2159,7 @@ function Runtime:mousepressed(x, y, button)
       self:setScrollFromScrollbar(hit, y, dragOffset)
       self.mouseDownNode = nil
       self.mouseDownPath = nil
+      self.mouseDownButton = nil
       self:setHover(hit.node)
       self.bus:dispatch("event", "mousepressed", x, y, button, hit.node)
       self:markDirty()
@@ -2180,21 +2186,24 @@ function Runtime:mousepressed(x, y, button)
   else
     node = self:hitTest(x, y)
   end
-  self.mouseDownNode = node
-  self.mouseDownPath = node and node.path or nil
   self:setHover(node)
-  self:emitAudio("press", node)
-  Feedback.trigger(self, node, "press")
+  if button == 1 then
+    self.mouseDownNode = node
+    self.mouseDownPath = node and node.path or nil
+    self.mouseDownButton = node and button or nil
+    self:emitAudio("press", node)
+    Feedback.trigger(self, node, "press")
 
-  if node and (node.type == "input" or node.type == "button" or node.props.focusable) then
-    self:setFocus(node)
-    if node.type == "input" then
-      local key = self:cursorKey(node)
-      self:inputEditState(node)
-      self.inputCursors[key] = self:inputCursorAtX(node, x)
+    if node and (node.type == "input" or node.type == "button" or node.props.focusable) then
+      self:setFocus(node)
+      if node.type == "input" then
+        local key = self:cursorKey(node)
+        self:inputEditState(node)
+        self.inputCursors[key] = self:inputCursorAtX(node, x)
+      end
+    else
+      self:setFocus(nil)
     end
-  else
-    self:setFocus(nil)
   end
 
   if node and node.props and type(node.props.onMousePressed) == "function" then
@@ -2220,7 +2229,10 @@ function Runtime:mousereleased(x, y, button)
     return true
   end
 
-  local hadCapture = self.activeDrag ~= nil or self.mouseDownNode ~= nil or self.mouseDownPath ~= nil
+  local dragCapture = self.activeDrag ~= nil and self.activeDrag.button == button
+  local pointerCapture = self.mouseDownButton == button and
+    (self.mouseDownNode ~= nil or self.mouseDownPath ~= nil)
+  local hadCapture = dragCapture or pointerCapture
   local node = self:hitTest(x, y)
   local activeLayer = nil
   if self.scene then
@@ -2232,14 +2244,18 @@ function Runtime:mousereleased(x, y, button)
   local down = self.mouseDownNode
   local downPath = self.mouseDownPath
   local suppressClick = self:finishDrag(x, y, button, node)
-  self.mouseDownNode = nil
-  self.mouseDownPath = nil
+  if pointerCapture then
+    self.mouseDownNode = nil
+    self.mouseDownPath = nil
+    self.mouseDownButton = nil
+  end
 
-  if down then
+  if pointerCapture and down then
     Feedback.trigger(self, down, "release")
   end
 
-  if not suppressClick and node and (node == down or node.path == downPath) and isActivatable(node) then
+  if pointerCapture and not suppressClick and node and
+      (node == down or node.path == downPath) and isActivatable(node) then
     self:emitAudio("activate", node)
     Feedback.trigger(self, node, "activate")
     Accessibility.emit(self, "activate", node)
@@ -2416,6 +2432,7 @@ function Runtime:destroy()
   self.hoverPath = nil
   self.mouseDownNode = nil
   self.mouseDownPath = nil
+  self.mouseDownButton = nil
   self.keyDownNode = nil
   self.keyDownPath = nil
   self.keyDownKey = nil
