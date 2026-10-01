@@ -400,6 +400,32 @@ local function boundsFromFlat(points)
   }
 end
 
+local function normalizedViewBox(viewBox)
+  if viewBox == nil then
+    return nil
+  end
+
+  local x, y, width, height
+  if type(viewBox) == "string" then
+    local values = {}
+    for value in viewBox:gmatch("[-+]?%d*%.?%d+[eE]?[-+]?%d*") do
+      values[#values + 1] = tonumber(value)
+    end
+    x, y, width, height = values[1], values[2], values[3], values[4]
+  elseif type(viewBox) == "table" then
+    x = tonumber(viewBox.x ~= nil and viewBox.x or viewBox[1])
+    y = tonumber(viewBox.y ~= nil and viewBox.y or viewBox[2])
+    width = tonumber(viewBox.width ~= nil and viewBox.width or viewBox[3])
+    height = tonumber(viewBox.height ~= nil and viewBox.height or viewBox[4])
+  end
+
+  if x == nil or y == nil or width == nil or height == nil or width <= 0 or height <= 0 then
+    error("path viewBox must contain x, y, width, and height with positive dimensions", 3)
+  end
+
+  return { x = x, y = y, width = width, height = height }
+end
+
 function Path.bounds(path)
   local commands = Path.normalize(path)
   local raw = {}
@@ -691,6 +717,99 @@ function Path.transform(points, sourceBounds, bounds, opts)
   return result
 end
 
+local function splitCommands(commands)
+  local subpaths = {}
+  local current = nil
+
+  for _, command in ipairs(commands) do
+    if command[1] == "M" then
+      current = { command }
+      subpaths[#subpaths + 1] = current
+    elseif current then
+      current[#current + 1] = command
+    end
+  end
+
+  return subpaths
+end
+
+local function commandVertices(commands)
+  local points = {}
+  local startX, startY
+  for _, command in ipairs(commands) do
+    local kind = command[1]
+    local x, y
+    if kind == "M" or kind == "L" then
+      x, y = command[2], command[3]
+      if kind == "M" then
+        startX, startY = x, y
+      end
+    elseif kind == "C" then
+      x, y = command[6], command[7]
+    elseif kind == "Q" then
+      x, y = command[4], command[5]
+    elseif kind == "Z" then
+      x, y = startX, startY
+    end
+    if x ~= nil and y ~= nil then
+      addPoint(points, x, y)
+    end
+  end
+  return points
+end
+
+---Return independently drawable contours while preserving SVG moveto boundaries.
+---@param path string|table
+---@param bounds table
+---@param opts? table
+---@return table[]
+function Path.contours(path, bounds, opts)
+  opts = opts or {}
+  local morphTo = opts.morphTo
+  local morph = clamp(opts.morph or 0, 0, 1)
+  if morphTo ~= nil and morph > 0 then
+    local points = Path.points(path, bounds, opts)
+    return { {
+      points = points,
+      vertices = #points >= 4 and { points[1], points[2], points[#points - 1], points[#points] } or copyPoints(points),
+      closed = #points >= 4 and points[1] == points[#points - 1] and points[2] == points[#points],
+    } }
+  end
+
+  local commands = Path.normalize(path)
+  local sourceBounds = normalizedViewBox(opts.viewBox) or Path.bounds(commands)
+  local contours = {}
+  for _, subpath in ipairs(splitCommands(commands)) do
+    local flat = Path.flatten(subpath, { samples = opts.samples })
+    if #flat >= 2 then
+      contours[#contours + 1] = {
+        points = Path.transform(flat, sourceBounds, bounds, opts),
+        vertices = Path.transform(commandVertices(subpath), sourceBounds, bounds, opts),
+        closed = subpath[#subpath] and subpath[#subpath][1] == "Z" or false,
+      }
+    end
+  end
+  return contours
+end
+
+---Return the uniform stroke scale introduced by fitting a viewBox into bounds.
+---@param viewBox table|string
+---@param bounds table
+---@param opts? table
+---@return number
+function Path.strokeScale(viewBox, bounds, opts)
+  opts = opts or {}
+  local source = normalizedViewBox(viewBox)
+  local scaleX = bounds.width / source.width
+  local scaleY = bounds.height / source.height
+  if (opts.fit or "contain") == "none" then
+    return 1
+  elseif opts.fit == "stretch" then
+    return math.min(math.abs(scaleX), math.abs(scaleY))
+  end
+  return math.min(math.abs(scaleX), math.abs(scaleY))
+end
+
 function Path.points(path, bounds, opts)
   opts = opts or {}
   local morphTo = opts.morphTo
@@ -701,14 +820,14 @@ function Path.points(path, bounds, opts)
   local sourceBounds
   if morphTo ~= nil and morph > 0 and opts.morphMode == "resample" then
     points = Path.morphResample(path, morphTo, morph, { samples = samples })
-    sourceBounds = boundsFromFlat(points)
+    sourceBounds = normalizedViewBox(opts.viewBox) or boundsFromFlat(points)
   else
     local commands = path
     if morphTo ~= nil and morph > 0 then
       commands = Path.morphCompatible(path, morphTo, morph)
     end
     points = Path.flatten(commands, { samples = samples })
-    sourceBounds = Path.bounds(commands)
+    sourceBounds = normalizedViewBox(opts.viewBox) or Path.bounds(commands)
   end
 
   return Path.transform(points, sourceBounds, bounds, opts)

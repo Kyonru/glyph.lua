@@ -270,6 +270,7 @@ end
 ```
 
 `ctx:path` accepts the same options as `ui.path`: `stroke`, `strokeWidth`,
+`strokeLinecap`, `strokeLinejoin`, `viewBox`, `scaleStroke`,
 `fill`, `opacity`, `progress`, `morphTo`, `morph`, `morphMode`, `samples`, `fit`,
 `align`, and `valign`. Fill drawing targets simple closed single-contour paths;
 concave contours are triangulated with Love2D's math backend when available.

@@ -2863,6 +2863,30 @@ local function drawPathFill(love, points)
   graphics.polygon("fill", (table.unpack or unpack)(fillPoints))
 end
 
+local function drawRoundStrokeDetails(graphics, contour, lineWidth, linecap, linejoin)
+  if not graphics.circle or lineWidth <= 0 then
+    return
+  end
+
+  local radius = lineWidth * 0.5
+  local vertices = contour.vertices or {}
+  if linejoin == "round" then
+    local first = contour.closed and 1 or 3
+    local last = #vertices - 3
+    for index = first, last, 2 do
+      graphics.circle("fill", vertices[index], vertices[index + 1], radius)
+    end
+  end
+
+  local points = contour.points or {}
+  if linecap == "round" and not contour.closed and #points >= 2 then
+    graphics.circle("fill", points[1], points[2], radius)
+    if #points >= 4 then
+      graphics.circle("fill", points[#points - 1], points[#points], radius)
+    end
+  end
+end
+
 local function drawPath(runtime, love, pathSource, bounds, opts, style, opacity, mode, includeOptsOpacity)
   local graphics = love and love.graphics
   if not graphics or pathSource == nil then
@@ -2873,18 +2897,22 @@ local function drawPath(runtime, love, pathSource, bounds, opts, style, opacity,
   style = style or {}
   mode = pathDrawMode(opts, mode)
 
-  local points = Path.points(pathSource, bounds, opts)
-  if #points < 2 then
+  local contours = Path.contours(pathSource, bounds, opts)
+  if #contours == 0 then
     return
   end
 
   local previousColor = nil
   local previousLineWidth = nil
+  local previousLineJoin = nil
   if graphics.getColor then
     previousColor = { graphics.getColor() }
   end
   if graphics.getLineWidth then
     previousLineWidth = graphics.getLineWidth()
+  end
+  if graphics.getLineJoin then
+    previousLineJoin = graphics.getLineJoin()
   end
 
   local pathOpacity = opacity or 1
@@ -2897,9 +2925,13 @@ local function drawPath(runtime, love, pathSource, bounds, opts, style, opacity,
     fill = style.background
   end
 
-  if (mode == "fill" or mode == "both") and fill ~= nil and graphics.polygon and #points >= 6 then
+  if (mode == "fill" or mode == "both") and fill ~= nil and graphics.polygon then
     color(love, withOpacity(fill, pathOpacity))
-    drawPathFill(love, points)
+    for _, contour in ipairs(contours) do
+      if #contour.points >= 6 then
+        drawPathFill(love, contour.points)
+      end
+    end
   end
 
   local stroke = opts.stroke
@@ -2908,19 +2940,38 @@ local function drawPath(runtime, love, pathSource, bounds, opts, style, opacity,
   end
 
   if (mode == "line" or mode == "both") and stroke ~= false and graphics.line then
-    local strokePoints = points
-    if opts.progress ~= nil then
-      strokePoints = Path.reveal(points, opts.progress)
+    local lineWidth = opts.strokeWidth or style.lineWidth or 1
+    if opts.viewBox ~= nil and opts.scaleStroke ~= false then
+      lineWidth = lineWidth * Path.strokeScale(opts.viewBox, bounds, opts)
     end
-    if #strokePoints >= 4 then
-      if graphics.setLineWidth then
-        graphics.setLineWidth(opts.strokeWidth or style.lineWidth or 1)
+    if graphics.setLineWidth then
+      graphics.setLineWidth(lineWidth)
+    end
+    local linecap = opts.strokeLinecap or opts.lineCap or "butt"
+    local linejoin = opts.strokeLinejoin or opts.lineJoin or "miter"
+    if graphics.setLineJoin then
+      graphics.setLineJoin(linejoin == "round" and "bevel" or linejoin)
+    end
+    color(love, withOpacity(stroke, pathOpacity))
+    for _, contour in ipairs(contours) do
+      local strokePoints = contour.points
+      if opts.progress ~= nil then
+        strokePoints = Path.reveal(strokePoints, opts.progress)
       end
-      color(love, withOpacity(stroke, pathOpacity))
-      graphics.line((table.unpack or unpack)(strokePoints))
+      if #strokePoints >= 4 then
+        graphics.line((table.unpack or unpack)(strokePoints))
+        drawRoundStrokeDetails(graphics, {
+          points = strokePoints,
+          vertices = opts.progress ~= nil and {} or contour.vertices,
+          closed = opts.progress == nil and contour.closed,
+        }, lineWidth, linecap, linejoin)
+      end
     end
   end
 
+  if previousLineJoin and graphics.setLineJoin then
+    graphics.setLineJoin(previousLineJoin)
+  end
   if previousLineWidth and graphics.setLineWidth then
     graphics.setLineWidth(previousLineWidth)
   end
@@ -2985,8 +3036,12 @@ local function drawButtonContent(runtime, node, absX, absY, width, height, love,
       mode = props.iconMode or "line",
       stroke = props.iconColor,
       strokeWidth = props.iconStrokeWidth or 2,
+      strokeLinecap = props.iconStrokeLinecap or "round",
+      strokeLinejoin = props.iconStrokeLinejoin or "round",
       fill = props.iconFill,
       samples = props.iconSamples,
+      viewBox = props.iconViewBox,
+      scaleStroke = props.iconScaleStroke,
     }
     local iconBounds = { x = iconX, y = iconY, width = iconSize, height = iconSize }
     for _, source in ipairs(icons) do

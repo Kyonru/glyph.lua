@@ -200,6 +200,8 @@ ui.path({
   fit = "contain",
   stroke = { 0.1, 0.9, 0.75, 1 },
   strokeWidth = 4,
+  strokeLinecap = "round",
+  strokeLinejoin = "round",
   progress = charge, -- 0..1 stroke reveal
 })
 ```
@@ -230,6 +232,13 @@ ui.path({
 Supported SVG commands are `M/m`, `L/l`, `H/h`, `V/v`, `C/c`, `Q/q`, and
 `Z/z`. Arcs, gradients, CSS styling, masks, transforms, holes, and winding rules
 are out of scope for v1.
+
+Use `viewBox = { 0, 0, 24, 24 }` (or `"0 0 24 24"`) when the source path
+belongs to a fixed SVG coordinate system. Glyph then preserves the SVG's
+internal whitespace and scales `strokeWidth` with the fitted view box. Set
+`scaleStroke = false` for a non-scaling stroke. Separate `M` subpaths remain
+separate contours, and `strokeLinecap` / `strokeLinejoin` accept the SVG-style
+`butt`/`round` and `miter`/`round`/`bevel` values.
 
 Filled paths target simple closed single-contour shapes. Concave contours are
 triangulated with Love2D's math backend when available, so stars and chevrons
@@ -365,6 +374,7 @@ ui.button({
     "M7 3 V8 H15",
   },
   iconSize = 18,
+  iconViewBox = { 0, 0, 24, 24 },
   iconGap = 7,
   onClick = save,
 })
@@ -379,8 +389,12 @@ ui.button({
 ```
 
 `iconPosition` accepts `left`/`start` (the default) or `right`/`end`.
-`iconMode`, `iconColor`, `iconFill`, `iconStrokeWidth`, and `iconSamples` expose
+`iconMode`, `iconColor`, `iconFill`, `iconStrokeWidth`, `iconStrokeLinecap`,
+`iconStrokeLinejoin`, `iconViewBox`, `iconScaleStroke`, and `iconSamples` expose
 the matching path drawing controls without changing button interaction.
+Button icons default to round caps and joins. A shared `iconViewBox` is
+especially important for `iconPaths`: every member is fitted through that one
+coordinate system rather than resized independently.
 
 > [!NOTE]
 > The default theme gives focused buttons a two-pixel contrasting border.

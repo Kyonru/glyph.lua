@@ -93,6 +93,58 @@ describe("path", function()
     assert.are.same({ "M", 0, 0 }, ui.path.parse("M0 0")[1])
   end)
 
+  it("preserves moveto contours and a shared SVG viewBox", function()
+    local contours = Path.contours(
+      "M2 2 H22 M2 22 H22",
+      { x = 10, y = 20, width = 18, height = 18 },
+      { viewBox = "0 0 24 24" })
+
+    assert.are.equal(2, #contours)
+    assert.are.same({ 11.5, 21.5, 26.5, 21.5 }, contours[1].points)
+    assert.are.same({ 11.5, 36.5, 26.5, 36.5 }, contours[2].points)
+    assert.are.equal(0.75, Path.strokeScale({ 0, 0, 24, 24 }, { width = 18, height = 18 }))
+  end)
+
+  it("draws SVG-style round strokes and restores the line join", function()
+    local runtime = Runtime.new()
+    local lines, circles = {}, {}
+    local lineWidth = 9
+    local lineJoin = "none"
+
+    runtime:setLove({
+      graphics = {
+        getLineWidth = function() return lineWidth end,
+        setLineWidth = function(value) lineWidth = value end,
+        getLineJoin = function() return lineJoin end,
+        setLineJoin = function(value) lineJoin = value end,
+        getColor = function() return 1, 1, 1, 1 end,
+        setColor = function() end,
+        line = function(...) lines[#lines + 1] = { ... } end,
+        circle = function(mode, x, y, radius) circles[#circles + 1] = { mode, x, y, radius } end,
+      },
+    })
+
+    runtime:build(function()
+      return ui.path({
+        d = "M2 2 H22 M2 22 H22",
+        width = 18,
+        height = 18,
+        viewBox = { 0, 0, 24, 24 },
+        strokeWidth = 2,
+        strokeLinecap = "round",
+        strokeLinejoin = "round",
+      })
+    end)
+    runtime:layoutRoot(runtime.root)
+    runtime:draw(runtime.root)
+
+    assert.are.equal(2, #lines)
+    assert.are.equal(4, #circles)
+    assert.are.equal(0.75, circles[1][4])
+    assert.are.equal(9, lineWidth)
+    assert.are.equal("none", lineJoin)
+  end)
+
   it("draws path components with progress and restores graphics state", function()
     local runtime = Runtime.new()
     local calls = {}

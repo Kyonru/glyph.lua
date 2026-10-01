@@ -534,6 +534,10 @@ local GlyphImageProps = {}
 ---@field valign? "start"|"center"|"end"
 ---@field stroke? GlyphColor|false
 ---@field strokeWidth? number
+---@field strokeLinecap? "butt"|"round" SVG-style stroke caps; defaults to butt
+---@field strokeLinejoin? "miter"|"round"|"bevel" SVG-style stroke joins; defaults to miter
+---@field viewBox? GlyphPathViewBox|string fixed source coordinate system, as a table or "x y width height"
+---@field scaleStroke? boolean scale strokeWidth with viewBox fitting; defaults to true when viewBox is set
 ---@field fill? GlyphColor
 ---@field opacity? number
 ---@field progress? number
@@ -542,6 +546,17 @@ local GlyphImageProps = {}
 ---@field morphMode? "compatible"|"resample"
 ---@field samples? number
 local GlyphPathProps = {}
+
+---@class GlyphPathViewBox
+---@field x? number
+---@field y? number
+---@field width? number
+---@field height? number
+---@field [1]? number x
+---@field [2]? number y
+---@field [3]? number width
+---@field [4]? number height
+local GlyphPathViewBox = {}
 
 ---@class GlyphSpriteSheetProps
 ---@field frameWidth number
@@ -597,6 +612,10 @@ local GlyphSpriteSheetBackendApi = {}
 ---@field iconColor? GlyphColor
 ---@field iconFill? GlyphColor
 ---@field iconStrokeWidth? number
+---@field iconStrokeLinecap? "butt"|"round" defaults to round for icon fidelity
+---@field iconStrokeLinejoin? "miter"|"round"|"bevel" defaults to round for icon fidelity
+---@field iconViewBox? GlyphPathViewBox|string shared source coordinate system for all icon paths
+---@field iconScaleStroke? boolean scale iconStrokeWidth with iconViewBox fitting; defaults to true
 ---@field iconSamples? number
 ---@field onClick? fun()
 ---@field focusable? boolean
