@@ -100,6 +100,7 @@ ui.modal.isOpen("settings")
 - Layers route input top-down.
 - Blocking layers stop input from reaching lower layers.
 - Non-blocking overlays can pass input through.
+- A closing layer stops blocking input immediately, even while its exit visuals remain.
 - Backdrop clicks close a layer only when `dismissOnBackdrop = true`.
 - Escape closes the top eligible layer unless `escapeToClose = false`.
 - A pushed blocking layer suspends keyboard, gamepad, and text input focus below it.

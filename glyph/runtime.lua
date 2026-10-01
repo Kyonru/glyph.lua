@@ -1714,7 +1714,7 @@ end
 function Runtime:hasBlockingInputLayer()
   for index = #((self.scene and self.scene.layers) or {}), 1, -1 do
     local layer = self.scene.layers[index]
-    if layer.blocking == true then
+    if layer.blocking == true and layer.state ~= "exiting" then
       return true
     end
   end

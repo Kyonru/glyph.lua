@@ -242,6 +242,27 @@ describe("screen-space instance", function()
     assert.is_true(instance:textinput("a"))
   end)
 
+  it("stops claiming input as soon as a blocking modal closes", function()
+    local instance = Instance.new({
+      love = fakeLove(),
+      component = function(ui)
+        return ui.box({ width = 20, height = 20, interactive = false })
+      end,
+    })
+    instance:render()
+    instance.ui.modal.open("confirm", function()
+      return instance.ui.panel({ width = 80, height = 50 })
+    end, { transition = "fade" })
+    instance:render()
+
+    assert.is_true(instance:keypressed("s"))
+    instance.ui.modal.close("confirm")
+
+    assert.is_false(instance:keypressed("s"))
+    assert.is_false(instance:keyreleased("s"))
+    assert.is_false(instance:textinput("a"))
+  end)
+
   it("disposes effects and becomes inert exactly once", function()
     local calls = {}
     local instance = Instance.new({
