@@ -29,14 +29,43 @@ describe("path", function()
     }, commands)
   end)
 
-  it("rejects invalid syntax and unsupported SVG arcs clearly", function()
+  it("rejects invalid syntax and invalid SVG arc flags clearly", function()
     assert.has_error(function()
       Path.parse("M0 0 L")
     end)
 
     assert.has_error(function()
-      Path.parse("M0 0 A 10 10 0 0 1 20 20")
-    end, "unsupported SVG path command A; arcs are not supported in Glyph path v1")
+      Path.parse("M0 0 A 10 10 0 2 1 20 20")
+    end, "SVG path command A flags must be 0 or 1")
+  end)
+
+  it("normalizes smooth cubic, smooth quadratic, and arc commands", function()
+    local commands = Path.parse(
+      "M1 1 C2 2 3 3 4 4 S6 6 7 7 Q8 8 9 9 T11 11 A2 3 30 0 1 14 15 a1 2 0 1 0 3 4")
+
+    assert.are.same({
+      { "M", 1, 1 },
+      { "C", 2, 2, 3, 3, 4, 4 },
+      { "C", 5, 5, 6, 6, 7, 7 },
+      { "Q", 8, 8, 9, 9 },
+      { "Q", 10, 10, 11, 11 },
+      { "A", 2, 3, 30, 0, 1, 14, 15 },
+      { "A", 1, 2, 0, 1, 0, 17, 19 },
+    }, commands)
+  end)
+
+  it("flattens SVG arcs with their expected endpoint and bounds", function()
+    local circle = "M14 12 A2 2 0 1 0 10 12 A2 2 0 1 0 14 12"
+    local points = Path.flatten(circle, { samples = 16 })
+    local bounds = Path.bounds(circle)
+
+    assert.are.equal(34, #points)
+    assert.near(14, points[#points - 1], 1e-7)
+    assert.near(12, points[#points], 1e-7)
+    assert.near(10, bounds.x, 1e-7)
+    assert.near(10, bounds.y, 1e-7)
+    assert.near(4, bounds.width, 1e-7)
+    assert.near(4, bounds.height, 1e-7)
   end)
 
   it("computes bounds, flattening, length, and reveal prefixes", function()

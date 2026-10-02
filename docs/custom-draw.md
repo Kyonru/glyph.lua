@@ -276,9 +276,9 @@ end
 concave contours are triangulated with Love2D's math backend when available.
 
 > [!NOTE]
-> Glyph supports SVG path `d` data, not full SVG files. Arcs, gradients,
-> document transforms, CSS, masks, holes, and winding rules are out of scope for
-> v1.
+> Glyph supports SVG path `d` data, including elliptical arcs and smooth curves,
+> not full SVG files. Gradients, document transforms, CSS, masks, holes, and
+> winding rules are out of scope for v1.
 
 ## Nine-Slice Frames
 

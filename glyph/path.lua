@@ -11,7 +11,10 @@ local COMMANDS = {
   H = 1,
   V = 1,
   C = 6,
+  S = 4,
   Q = 4,
+  T = 2,
+  A = 7,
   Z = 0,
 }
 
@@ -50,7 +53,7 @@ local function isDigit(char)
 end
 
 local function isCommand(char)
-  return char ~= nil and char:match("[AaCcHhLlMmQqVvZz]") ~= nil
+  return char ~= nil and char:match("[AaCcHhLlMmQqSsTtVvZz]") ~= nil
 end
 
 local function parseNumber(source, index)
@@ -151,6 +154,7 @@ local function parseTokens(tokens)
   local currentCommand = nil
   local x, y = 0, 0
   local subpathX, subpathY = 0, 0
+  local previousKind, cubicX, cubicY, quadraticX, quadraticY
 
   local function add(command)
     commands[#commands + 1] = command
@@ -169,9 +173,6 @@ local function parseTokens(tokens)
     local upper = command:upper()
     local relative = command ~= upper
 
-    if upper == "A" then
-      error("unsupported SVG path command A; arcs are not supported in Glyph path v1", 2)
-    end
     if COMMANDS[upper] == nil then
       error("unsupported SVG path command " .. tostring(command), 2)
     end
@@ -179,6 +180,7 @@ local function parseTokens(tokens)
     if upper == "Z" then
       add({ "Z" })
       x, y = subpathX, subpathY
+      previousKind, cubicX, cubicY, quadraticX, quadraticY = "Z", nil, nil, nil, nil
       currentCommand = nil
     elseif index > #tokens or type(tokens[index]) == "string" then
       error("SVG path command " .. command .. " expected " .. tostring(COMMANDS[upper]) .. " number(s)", 2)
@@ -196,10 +198,13 @@ local function parseTokens(tokens)
         if first then
           add({ "M", nextX, nextY })
           subpathX, subpathY = nextX, nextY
+          previousKind = "M"
           first = false
         else
           add({ "L", nextX, nextY })
+          previousKind = "L"
         end
+        cubicX, cubicY, quadraticX, quadraticY = nil, nil, nil, nil
         x, y = nextX, nextY
       end
       currentCommand = relative and "l" or "L"
@@ -210,6 +215,7 @@ local function parseTokens(tokens)
         local nextX = relative and x + values[1] or values[1]
         local nextY = relative and y + values[2] or values[2]
         add({ "L", nextX, nextY })
+        previousKind, cubicX, cubicY, quadraticX, quadraticY = "L", nil, nil, nil, nil
         x, y = nextX, nextY
       end
     elseif upper == "H" then
@@ -218,6 +224,7 @@ local function parseTokens(tokens)
         values, index = requireNumbers(tokens, index, 1, command)
         local nextX = relative and x + values[1] or values[1]
         add({ "L", nextX, y })
+        previousKind, cubicX, cubicY, quadraticX, quadraticY = "L", nil, nil, nil, nil
         x = nextX
       end
     elseif upper == "V" then
@@ -226,6 +233,7 @@ local function parseTokens(tokens)
         values, index = requireNumbers(tokens, index, 1, command)
         local nextY = relative and y + values[1] or values[1]
         add({ "L", x, nextY })
+        previousKind, cubicX, cubicY, quadraticX, quadraticY = "L", nil, nil, nil, nil
         y = nextY
       end
     elseif upper == "C" then
@@ -239,6 +247,23 @@ local function parseTokens(tokens)
         local nextX = relative and x + values[5] or values[5]
         local nextY = relative and y + values[6] or values[6]
         add({ "C", x1, y1, x2, y2, nextX, nextY })
+        previousKind, cubicX, cubicY = "C", x2, y2
+        quadraticX, quadraticY = nil, nil
+        x, y = nextX, nextY
+      end
+    elseif upper == "S" then
+      while index <= #tokens and type(tokens[index]) ~= "string" do
+        local values
+        values, index = requireNumbers(tokens, index, 4, command)
+        local x1 = previousKind == "C" and 2 * x - cubicX or x
+        local y1 = previousKind == "C" and 2 * y - cubicY or y
+        local x2 = relative and x + values[1] or values[1]
+        local y2 = relative and y + values[2] or values[2]
+        local nextX = relative and x + values[3] or values[3]
+        local nextY = relative and y + values[4] or values[4]
+        add({ "C", x1, y1, x2, y2, nextX, nextY })
+        previousKind, cubicX, cubicY = "C", x2, y2
+        quadraticX, quadraticY = nil, nil
         x, y = nextX, nextY
       end
     elseif upper == "Q" then
@@ -250,6 +275,34 @@ local function parseTokens(tokens)
         local nextX = relative and x + values[3] or values[3]
         local nextY = relative and y + values[4] or values[4]
         add({ "Q", x1, y1, nextX, nextY })
+        previousKind, quadraticX, quadraticY = "Q", x1, y1
+        cubicX, cubicY = nil, nil
+        x, y = nextX, nextY
+      end
+    elseif upper == "T" then
+      while index <= #tokens and type(tokens[index]) ~= "string" do
+        local values
+        values, index = requireNumbers(tokens, index, 2, command)
+        local x1 = previousKind == "Q" and 2 * x - quadraticX or x
+        local y1 = previousKind == "Q" and 2 * y - quadraticY or y
+        local nextX = relative and x + values[1] or values[1]
+        local nextY = relative and y + values[2] or values[2]
+        add({ "Q", x1, y1, nextX, nextY })
+        previousKind, quadraticX, quadraticY = "Q", x1, y1
+        cubicX, cubicY = nil, nil
+        x, y = nextX, nextY
+      end
+    elseif upper == "A" then
+      while index <= #tokens and type(tokens[index]) ~= "string" do
+        local values
+        values, index = requireNumbers(tokens, index, 7, command)
+        if (values[4] ~= 0 and values[4] ~= 1) or (values[5] ~= 0 and values[5] ~= 1) then
+          error("SVG path command " .. command .. " flags must be 0 or 1", 2)
+        end
+        local nextX = relative and x + values[6] or values[6]
+        local nextY = relative and y + values[7] or values[7]
+        add({ "A", math.abs(values[1]), math.abs(values[2]), values[3], values[4], values[5], nextX, nextY })
+        previousKind, cubicX, cubicY, quadraticX, quadraticY = "A", nil, nil, nil, nil
         x, y = nextX, nextY
       end
     end
@@ -262,6 +315,7 @@ local function normalizeLuaPath(path)
   local commands = {}
   local x, y = 0, 0
   local subpathX, subpathY = 0, 0
+  local previousKind, cubicX, cubicY, quadraticX, quadraticY
 
   for _, command in ipairs(path or {}) do
     if type(command) ~= "table" or type(command[1]) ~= "string" then
@@ -271,9 +325,6 @@ local function normalizeLuaPath(path)
     local raw = command[1]
     local upper = raw:upper()
     local relative = raw ~= upper
-    if upper == "A" then
-      error("unsupported path command A; arcs are not supported in Glyph path v1", 3)
-    end
     if COMMANDS[upper] == nil then
       error("unsupported path command " .. tostring(raw), 3)
     end
@@ -281,6 +332,7 @@ local function normalizeLuaPath(path)
     if upper == "Z" then
       commands[#commands + 1] = { "Z" }
       x, y = subpathX, subpathY
+      previousKind, cubicX, cubicY, quadraticX, quadraticY = "Z", nil, nil, nil, nil
     elseif upper == "M" or upper == "L" then
       local nextX = tonumber(command[2])
       local nextY = tonumber(command[3])
@@ -295,6 +347,8 @@ local function normalizeLuaPath(path)
       if upper == "M" then
         subpathX, subpathY = nextX, nextY
       end
+      previousKind = upper == "M" and "M" or "L"
+      cubicX, cubicY, quadraticX, quadraticY = nil, nil, nil, nil
       x, y = nextX, nextY
     elseif upper == "H" then
       local nextX = tonumber(command[2])
@@ -305,6 +359,7 @@ local function normalizeLuaPath(path)
         nextX = x + nextX
       end
       commands[#commands + 1] = { "L", nextX, y }
+      previousKind, cubicX, cubicY, quadraticX, quadraticY = "L", nil, nil, nil, nil
       x = nextX
     elseif upper == "V" then
       local nextY = tonumber(command[2])
@@ -315,6 +370,7 @@ local function normalizeLuaPath(path)
         nextY = y + nextY
       end
       commands[#commands + 1] = { "L", x, nextY }
+      previousKind, cubicX, cubicY, quadraticX, quadraticY = "L", nil, nil, nil, nil
       y = nextY
     elseif upper == "C" then
       local x1, y1, x2, y2, nextX, nextY = tonumber(command[2]), tonumber(command[3]), tonumber(command[4]), tonumber(command[5]), tonumber(command[6]), tonumber(command[7])
@@ -325,6 +381,22 @@ local function normalizeLuaPath(path)
         x1, y1, x2, y2, nextX, nextY = x + x1, y + y1, x + x2, y + y2, x + nextX, y + nextY
       end
       commands[#commands + 1] = { "C", x1, y1, x2, y2, nextX, nextY }
+      previousKind, cubicX, cubicY = "C", x2, y2
+      quadraticX, quadraticY = nil, nil
+      x, y = nextX, nextY
+    elseif upper == "S" then
+      local x2, y2, nextX, nextY = tonumber(command[2]), tonumber(command[3]), tonumber(command[4]), tonumber(command[5])
+      if not x2 or not y2 or not nextX or not nextY then
+        error("path command S requires four numbers", 3)
+      end
+      if relative then
+        x2, y2, nextX, nextY = x + x2, y + y2, x + nextX, y + nextY
+      end
+      local x1 = previousKind == "C" and 2 * x - cubicX or x
+      local y1 = previousKind == "C" and 2 * y - cubicY or y
+      commands[#commands + 1] = { "C", x1, y1, x2, y2, nextX, nextY }
+      previousKind, cubicX, cubicY = "C", x2, y2
+      quadraticX, quadraticY = nil, nil
       x, y = nextX, nextY
     elseif upper == "Q" then
       local x1, y1, nextX, nextY = tonumber(command[2]), tonumber(command[3]), tonumber(command[4]), tonumber(command[5])
@@ -335,6 +407,34 @@ local function normalizeLuaPath(path)
         x1, y1, nextX, nextY = x + x1, y + y1, x + nextX, y + nextY
       end
       commands[#commands + 1] = { "Q", x1, y1, nextX, nextY }
+      previousKind, quadraticX, quadraticY = "Q", x1, y1
+      cubicX, cubicY = nil, nil
+      x, y = nextX, nextY
+    elseif upper == "T" then
+      local nextX, nextY = tonumber(command[2]), tonumber(command[3])
+      if not nextX or not nextY then
+        error("path command T requires two numbers", 3)
+      end
+      if relative then nextX, nextY = x + nextX, y + nextY end
+      local x1 = previousKind == "Q" and 2 * x - quadraticX or x
+      local y1 = previousKind == "Q" and 2 * y - quadraticY or y
+      commands[#commands + 1] = { "Q", x1, y1, nextX, nextY }
+      previousKind, quadraticX, quadraticY = "Q", x1, y1
+      cubicX, cubicY = nil, nil
+      x, y = nextX, nextY
+    elseif upper == "A" then
+      local rx, ry, rotation = tonumber(command[2]), tonumber(command[3]), tonumber(command[4])
+      local largeArc, sweep = tonumber(command[5]), tonumber(command[6])
+      local nextX, nextY = tonumber(command[7]), tonumber(command[8])
+      if not rx or not ry or not rotation or largeArc == nil or sweep == nil or not nextX or not nextY then
+        error("path command A requires seven numbers", 3)
+      end
+      if (largeArc ~= 0 and largeArc ~= 1) or (sweep ~= 0 and sweep ~= 1) then
+        error("path command A flags must be 0 or 1", 3)
+      end
+      if relative then nextX, nextY = x + nextX, y + nextY end
+      commands[#commands + 1] = { "A", math.abs(rx), math.abs(ry), rotation, largeArc, sweep, nextX, nextY }
+      previousKind, cubicX, cubicY, quadraticX, quadraticY = "A", nil, nil, nil, nil
       x, y = nextX, nextY
     end
   end
@@ -426,21 +526,95 @@ local function normalizedViewBox(viewBox)
   return { x = x, y = y, width = width, height = height }
 end
 
+local function vectorAngle(ux, uy, vx, vy)
+  local ul = math.sqrt(ux * ux + uy * uy)
+  local vl = math.sqrt(vx * vx + vy * vy)
+  if ul == 0 or vl == 0 then return 0 end
+  local angle = math.acos(clamp((ux * vx + uy * vy) / (ul * vl), -1, 1))
+  return ux * vy - uy * vx < 0 and -angle or angle
+end
+
+-- SVG endpoint-to-center conversion from the path implementation notes.
+local function arcParameters(x1, y1, command)
+  local rx, ry = math.abs(command[2]), math.abs(command[3])
+  local x2, y2 = command[7], command[8]
+  if rx == 0 or ry == 0 or (x1 == x2 and y1 == y2) then return nil end
+
+  local phi = math.rad(command[4] % 360)
+  local cosPhi, sinPhi = math.cos(phi), math.sin(phi)
+  local dx, dy = (x1 - x2) * 0.5, (y1 - y2) * 0.5
+  local px = cosPhi * dx + sinPhi * dy
+  local py = -sinPhi * dx + cosPhi * dy
+  local radii = px * px / (rx * rx) + py * py / (ry * ry)
+  if radii > 1 then
+    local scale = math.sqrt(radii)
+    rx, ry = rx * scale, ry * scale
+  end
+
+  local numerator = math.max(0,
+    rx * rx * ry * ry - rx * rx * py * py - ry * ry * px * px)
+  local denominator = rx * rx * py * py + ry * ry * px * px
+  local coefficient = denominator == 0 and 0 or math.sqrt(numerator / denominator)
+  if (command[5] ~= 0) == (command[6] ~= 0) then coefficient = -coefficient end
+  local cxPrime = coefficient * (rx * py / ry)
+  local cyPrime = coefficient * (-ry * px / rx)
+  local cx = cosPhi * cxPrime - sinPhi * cyPrime + (x1 + x2) * 0.5
+  local cy = sinPhi * cxPrime + cosPhi * cyPrime + (y1 + y2) * 0.5
+  local ux, uy = (px - cxPrime) / rx, (py - cyPrime) / ry
+  local vx, vy = (-px - cxPrime) / rx, (-py - cyPrime) / ry
+  local startAngle = vectorAngle(1, 0, ux, uy)
+  local sweepAngle = vectorAngle(ux, uy, vx, vy)
+  if command[6] == 0 and sweepAngle > 0 then
+    sweepAngle = sweepAngle - math.pi * 2
+  elseif command[6] ~= 0 and sweepAngle < 0 then
+    sweepAngle = sweepAngle + math.pi * 2
+  end
+  return { cx = cx, cy = cy, rx = rx, ry = ry, phi = phi,
+    startAngle = startAngle, sweepAngle = sweepAngle }
+end
+
+local function arcPoint(arc, angle)
+  local cosPhi, sinPhi = math.cos(arc.phi), math.sin(arc.phi)
+  local x, y = arc.rx * math.cos(angle), arc.ry * math.sin(angle)
+  return arc.cx + cosPhi * x - sinPhi * y,
+    arc.cy + sinPhi * x + cosPhi * y
+end
+
 function Path.bounds(path)
   local commands = Path.normalize(path)
   local raw = {}
+  local x, y = 0, 0
+  local subpathX, subpathY = 0, 0
 
   for _, command in ipairs(commands) do
     local kind = command[1]
     if kind == "M" or kind == "L" then
       include(raw, command[2], command[3])
+      x, y = command[2], command[3]
+      if kind == "M" then subpathX, subpathY = x, y end
     elseif kind == "C" then
       include(raw, command[2], command[3])
       include(raw, command[4], command[5])
       include(raw, command[6], command[7])
+      x, y = command[6], command[7]
     elseif kind == "Q" then
       include(raw, command[2], command[3])
       include(raw, command[4], command[5])
+      x, y = command[4], command[5]
+    elseif kind == "A" then
+      local arc = arcParameters(x, y, command)
+      if arc then
+        local steps = math.max(4, math.ceil(32 * math.abs(arc.sweepAngle) / (math.pi * 2)))
+        for step = 0, steps do
+          local px, py = arcPoint(arc, arc.startAngle + arc.sweepAngle * step / steps)
+          include(raw, px, py)
+        end
+      else
+        include(raw, command[7], command[8])
+      end
+      x, y = command[7], command[8]
+    elseif kind == "Z" then
+      x, y = subpathX, subpathY
     end
   end
 
@@ -500,6 +674,20 @@ local function flattenCommands(commands, samples)
         addPoint(points, nextX, nextY)
       end
       x, y = command[4], command[5]
+    elseif kind == "A" then
+      local arc = arcParameters(x, y, command)
+      if arc then
+        local arcSteps = math.max(1,
+          math.ceil(steps * math.abs(arc.sweepAngle) / (math.pi * 2)))
+        for step = 1, arcSteps do
+          local nextX, nextY = arcPoint(arc,
+            arc.startAngle + arc.sweepAngle * step / arcSteps)
+          addPoint(points, nextX, nextY)
+        end
+      else
+        addPoint(points, command[7], command[8])
+      end
+      x, y = command[7], command[8]
     elseif kind == "Z" then
       x, y = subpathX, subpathY
       addPoint(points, x, y)
@@ -748,6 +936,8 @@ local function commandVertices(commands)
       x, y = command[6], command[7]
     elseif kind == "Q" then
       x, y = command[4], command[5]
+    elseif kind == "A" then
+      x, y = command[7], command[8]
     elseif kind == "Z" then
       x, y = startX, startY
     end

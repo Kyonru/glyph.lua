@@ -229,9 +229,11 @@ ui.path({
 })
 ```
 
-Supported SVG commands are `M/m`, `L/l`, `H/h`, `V/v`, `C/c`, `Q/q`, and
-`Z/z`. Arcs, gradients, CSS styling, masks, transforms, holes, and winding rules
-are out of scope for v1.
+Supported SVG commands are `M/m`, `L/l`, `H/h`, `V/v`, `C/c`, `S/s`, `Q/q`,
+`T/t`, `A/a`, and `Z/z`. Smooth curves are normalized to their explicit control
+points, while elliptical arcs are flattened at the configured sample density.
+Gradients, CSS styling, masks, transforms, holes, and winding rules remain out
+of scope.
 
 Use `viewBox = { 0, 0, 24, 24 }` (or `"0 0 24 24"`) when the source path
 belongs to a fixed SVG coordinate system. Glyph then preserves the SVG's

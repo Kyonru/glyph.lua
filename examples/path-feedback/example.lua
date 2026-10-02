@@ -20,7 +20,7 @@ local colors = {
 local routePath = "M0 86 C62 8 108 142 166 66 C222 -12 284 116 360 32"
 local runeA = "M50 4 L90 30 L82 88 L50 110 L18 88 L10 30 Z"
 local runeB = "M50 0 L62 34 L98 34 L68 56 L80 98 L50 72 L20 98 L32 56 L2 34 L38 34 Z"
-local ringPath = "M50 0 C77.6 0 100 22.4 100 50 C100 77.6 77.6 100 50 100 C22.4 100 0 77.6 0 50 C0 22.4 22.4 0 50 0 Z"
+local ringPath = "M100 50 A50 50 0 1 1 0 50 A50 50 0 1 1 100 50 Z"
 local circuitPath = "M8 40 L36 40 L48 18 L64 74 L78 40 L112 40"
 
 local sigilTarget = nil
