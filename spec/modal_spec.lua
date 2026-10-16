@@ -610,7 +610,7 @@ describe("Scene runtime integration", function()
     assert.are.equal("exiting", runtime.scene.layers[1].state)
   end)
 
-  it("includes modal layer semantics in accessibility snapshots", function()
+  it("limits runtime accessibility snapshots to the reachable modal surface", function()
     local runtime = Runtime.new()
     runtime:setLove(makeLove())
 
@@ -636,12 +636,49 @@ describe("Scene runtime integration", function()
 
     local snapshot = Accessibility.snapshot(runtime)
 
-    assert.are.equal("button", snapshot[1].role)
-    assert.are.equal("Main", snapshot[1].label)
-    assert.are.equal("dialog", snapshot[2].role)
-    assert.are.equal("Settings", snapshot[2].label)
-    assert.are.equal("button", snapshot[4].role)
-    assert.are.equal("Close", snapshot[4].label)
+    assert.are.equal(3, #snapshot)
+    assert.are.equal("dialog", snapshot[1].role)
+    assert.are.equal("Settings", snapshot[1].label)
+    assert.are.equal("button", snapshot[3].role)
+    assert.are.equal("Close", snapshot[3].label)
+
+    local subtreeSnapshot = Accessibility.snapshot(runtime.root)
+    assert.are.equal(1, #subtreeSnapshot)
+    assert.are.equal("Main", subtreeSnapshot[1].label)
+  end)
+
+  it("composes non-blocking and input-disabled layers with root semantics", function()
+    local runtime = Runtime.new()
+    runtime:setLove(makeLove())
+
+    local function Main()
+      return Components.button({ label = "Main" })
+    end
+
+    runtime.scene:push("overlay", function()
+      return Components.text("Overlay")
+    end, {
+      kind = "overlay",
+      blocking = false,
+      transition = "none",
+    })
+    runtime.scene:push("display-only-shield", function()
+      return Components.text("Shield")
+    end, {
+      kind = "overlay",
+      blocking = true,
+      input = false,
+      transition = "none",
+    })
+    runtime:render(Main)
+
+    local snapshot = Accessibility.snapshot(runtime)
+    assert.are.equal(3, #snapshot)
+    assert.are.same({ "Main", "Overlay", "Shield" }, {
+      snapshot[1].label,
+      snapshot[2].label,
+      snapshot[3].label,
+    })
   end)
 end)
 

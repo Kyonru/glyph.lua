@@ -1395,9 +1395,32 @@ function Runtime:renderLayer(layer, viewportWidth, viewportHeight)
     return
   end
 
-  self:layoutRoot(layer.root, layer.width or viewportWidth, layer.height or viewportHeight)
-  local bounds = resolveLayerBounds(layer, viewportWidth, viewportHeight)
-  self:publishLayoutCallbacks(layer.root, bounds.x, bounds.y)
+  local layoutWidth = layer.width or viewportWidth
+  local layoutHeight = layer.height or viewportHeight
+  local layoutCache = layer._glyphLayoutCache
+  local needsLayout = not layoutCache
+    or layoutCache.root ~= layer.root
+    or layoutCache.viewportWidth ~= viewportWidth
+    or layoutCache.viewportHeight ~= viewportHeight
+    or layoutCache.width ~= layer.width
+    or layoutCache.height ~= layer.height
+    or layoutCache.align ~= layer.align
+
+  if needsLayout then
+    self:layoutRoot(layer.root, layoutWidth, layoutHeight)
+    local bounds = resolveLayerBounds(layer, viewportWidth, viewportHeight)
+    self:publishLayoutCallbacks(layer.root, bounds.x, bounds.y)
+    layer._glyphLayoutCache = {
+      root = layer.root,
+      viewportWidth = viewportWidth,
+      viewportHeight = viewportHeight,
+      width = layer.width,
+      height = layer.height,
+      align = layer.align,
+    }
+  end
+
+  local bounds = layer.bounds
 
   local progress = layer.state == "open" and 1 or layer.progress
   local phase = layer.state == "exiting" and "exit" or "enter"

@@ -95,6 +95,21 @@ Rich localized text uses `ui.richTextKey`.
 
 `ui.box(props, children)` is a visual/container primitive. It does not lay out children unless you provide a layout mode with `display`, or use `ui.row`, `ui.column`, or `ui.stack`.
 
+Child arrays may contain `false` or numeric holes for conditional content. Glyph
+omits those entries and keeps later nodes in numeric index order, so ordinary Lua
+conditions compose safely:
+
+```lua
+ui.column({ gap = 8 }, {
+  ui.text("Inventory"),
+  showDetails and ui.text("Item details"),
+  ui.button({ label = "Close", onClick = closeInventory }),
+})
+```
+
+Every supplied value other than `false` must be a Glyph node. Invalid values fail
+at construction time with an error that identifies the child index.
+
 ```lua
 ui.box({
   width = 200,

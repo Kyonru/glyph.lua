@@ -148,7 +148,11 @@ layout, and callback publication.
 
 ## Scenes And Layers
 
-Scene layers keep isolated hook scopes and cached roots. Use layers for overlays and modals instead of rebuilding unrelated UI inside the main tree.
+Scene layers keep isolated hook scopes and cache both their roots and completed
+layout while their viewport and layer bounds stay unchanged. Resizing, changing a
+layer's width, height, or alignment, or rebuilding its component automatically
+invalidates that layout. Use layers for overlays and modals instead of rebuilding
+unrelated UI inside the main tree.
 
 ## Custom Draw
 

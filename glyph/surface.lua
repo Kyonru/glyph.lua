@@ -492,33 +492,63 @@ function SurfaceInstance:render(component)
     return self.component(self.ui, self.ctx)
   end
 
+  local previousCanvas = nil
+  local canRestoreCanvas = graphics and type(graphics.getCanvas) == "function"
+  if canRestoreCanvas then
+    previousCanvas = graphics.getCanvas()
+  end
+
   local restore = pushAll(graphics)
-  if graphics and self.canvas and graphics.setCanvas then
-    if self.stencil ~= false then
-      graphics.setCanvas({ self.canvas, stencil = true })
-    else
-      graphics.setCanvas(self.canvas)
+  local ok, result = xpcall(function()
+    if graphics and self.canvas and graphics.setCanvas then
+      if self.stencil ~= false then
+        graphics.setCanvas({ self.canvas, stencil = true })
+      else
+        graphics.setCanvas(self.canvas)
+      end
+      clearCanvas(graphics, self.clearColor)
     end
-    clearCanvas(graphics, self.clearColor)
-  end
 
-  self.runtime:build(buildSurface)
-  if self.runtime.root then
-    self.runtime:layoutRoot(self.runtime.root, self.width, self.height)
-    self.runtime:publishLayoutCallbacks(self.runtime.root, 0, 0)
-    self.runtime:draw(self.runtime.root)
-  end
+    self.runtime:build(buildSurface)
+    if self.runtime.root then
+      self.runtime:layoutRoot(self.runtime.root, self.width, self.height)
+      self.runtime:publishLayoutCallbacks(self.runtime.root, 0, 0)
+      self.runtime:draw(self.runtime.root)
+    end
 
-  if self.runtime.scene then
-    for _, layer in ipairs(self.runtime.scene.layers) do
-      self.runtime:renderLayer(layer, self.width, self.height)
+    if self.runtime.scene then
+      for _, layer in ipairs(self.runtime.scene.layers) do
+        self.runtime:renderLayer(layer, self.width, self.height)
+      end
+    end
+  end, debug.traceback)
+
+  local cleanupError = nil
+  if graphics and self.canvas and graphics.setCanvas then
+    local canvasOk, canvasError = pcall(function()
+      if canRestoreCanvas then
+        graphics.setCanvas(previousCanvas)
+      else
+        graphics.setCanvas()
+      end
+    end)
+    if not canvasOk then
+      cleanupError = canvasError
     end
   end
 
-  if graphics and self.canvas and graphics.setCanvas then
-    graphics.setCanvas()
+  local restoreOk, restoreError = pcall(restore)
+  if not restoreOk and cleanupError == nil then
+    cleanupError = restoreError
   end
-  restore()
+
+  if not ok then
+    error(result, 0)
+  end
+  if cleanupError ~= nil then
+    error(cleanupError, 0)
+  end
+
   return self.canvas
 end
 

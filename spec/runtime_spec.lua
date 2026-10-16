@@ -388,6 +388,85 @@ describe("runtime", function()
     assert.are.same({ x = 305, y = 256, width = 20, height = 10 }, seen)
   end)
 
+  it("reuses clean scene layer layout and callback publication", function()
+    local runtime = Runtime.new()
+    local layouts = 0
+    local callbacks = 0
+    runtime:setLove(renderLove(function() return 800 end, function() return 600 end))
+    runtime:register("layout", function()
+      layouts = layouts + 1
+    end)
+
+    runtime.scene:push("panel", function()
+      return Components.box({
+        width = "100%",
+        height = "100%",
+        onLayout = function()
+          callbacks = callbacks + 1
+        end,
+      })
+    end, {
+      width = 200,
+      height = 100,
+      align = "center",
+      transition = "none",
+    })
+
+    runtime:render()
+    runtime:render()
+
+    assert.are.equal(1, layouts)
+    assert.are.equal(1, callbacks)
+  end)
+
+  it("invalidates scene layer layout after resize, property change, and rebuild", function()
+    local runtime = Runtime.new()
+    local viewportWidth = 800
+    local layouts = 0
+    local builds = 0
+    local published = {}
+    runtime:setLove(renderLove(function() return viewportWidth end, function() return 600 end))
+    runtime:register("layout", function()
+      layouts = layouts + 1
+    end)
+
+    local layer = runtime.scene:push("panel", function()
+      builds = builds + 1
+      return Components.box({
+        width = "100%",
+        height = "100%",
+        onLayout = function(bounds)
+          published[#published + 1] = bounds
+        end,
+      })
+    end, {
+      width = 200,
+      height = 100,
+      align = "center",
+      transition = "none",
+    })
+
+    runtime:render()
+    viewportWidth = 1000
+    runtime:render()
+    layer.align = "right"
+    runtime:render()
+    layer.width = 240
+    runtime:render()
+    layer.needsRender = true
+    runtime:render()
+
+    assert.are.equal(5, layouts)
+    assert.are.equal(2, builds)
+    assert.are.same({
+      { x = 300, y = 250, width = 200, height = 100 },
+      { x = 400, y = 250, width = 200, height = 100 },
+      { x = 800, y = 0, width = 200, height = 100 },
+      { x = 760, y = 0, width = 240, height = 100 },
+      { x = 760, y = 0, width = 240, height = 100 },
+    }, published)
+  end)
+
   it("does not include visual-only animation transforms in layout bounds", function()
     local runtime = Runtime.new()
     local seen

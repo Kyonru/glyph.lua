@@ -57,9 +57,9 @@ end
 
 ---
 
-## Example — sign-in screen
+## Example — profile form
 
-A centered card with email and password fields:
+A centered card with two plain-text profile fields:
 
 ```lua
 local ui = require("glyph")
@@ -94,9 +94,9 @@ local function field(label, value, onChange, placeholder)
   })
 end
 
-local function SignIn()
-  local email,    setEmail    = ui.useState("")
-  local password, setPassword = ui.useState("")
+local function ProfileForm()
+  local email,       setEmail       = ui.useState("")
+  local displayName, setDisplayName = ui.useState("")
 
   return ui.column({
     width  = "100%",
@@ -121,18 +121,18 @@ local function SignIn()
 
       -- Header
       ui.column({ gap = 4, margin = { bottom = 4 } }, {
-        ui.text("Welcome back", { style = { fontSize = 22, color = TEXT } }),
-        ui.text("Sign in to continue.", { style = { fontSize = 13, color = MUTED } }),
+        ui.text("Player profile", { style = { fontSize = 22, color = TEXT } }),
+        ui.text("Update your account details.", { style = { fontSize = 13, color = MUTED } }),
       }),
 
-      field("Email",    email,    setEmail,    "you@example.com"),
-      field("Password", password, setPassword, "••••••••"),
+      field("Email", email, setEmail, "you@example.com"),
+      field("Display name", displayName, setDisplayName, "Pilot"),
 
-      -- Sign-in button
+      -- Save button
       ui.button({
-        label   = "Sign in",
+        label   = "Save profile",
         onClick = function()
-          -- handle authentication
+          -- save the profile
         end,
         style = {
           background  = ACCENT,
@@ -145,9 +145,9 @@ local function SignIn()
         },
       }),
 
-      -- Footer link
+      -- Secondary action
       ui.button({
-        label   = "Forgot password?",
+        label   = "Cancel",
         onClick = function() end,
         style   = {
           background = { 0, 0, 0, 0 },
@@ -161,7 +161,7 @@ local function SignIn()
 end
 
 function love.load()
-  ui.load({ window = { width = 800, height = 600, title = "Sign in" }, app = SignIn })
+  ui.load({ window = { width = 800, height = 600, title = "Profile" }, app = ProfileForm })
 end
 ```
 

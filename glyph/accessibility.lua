@@ -251,14 +251,31 @@ function Accessibility.snapshot(target)
   end
 
   if target.root or target.scene then
-    if target.root then
+    local layers = target.scene and target.scene.layers or {}
+    local firstReachableLayer = 1
+    local includeRoot = true
+
+    -- Runtime-wide snapshots mirror the semantic surface a player can reach.
+    -- Walk from the top of the scene stack until an input-enabled blocking
+    -- layer cuts off everything below it. Input-disabled layers may still
+    -- contribute status/live-region semantics, but do not hide lower content.
+    for index = #layers, 1, -1 do
+      local layer = layers[index]
+      if layer.state ~= "exiting" and layer.blocking == true and layer.input ~= false then
+        firstReachableLayer = index
+        includeRoot = false
+        break
+      end
+    end
+
+    if includeRoot and target.root then
       appendSnapshot(result, target.root)
     end
-    if target.scene and target.scene.layers then
-      for _, layer in ipairs(target.scene.layers) do
-        if layer.root and layer.state ~= "exiting" then
-          appendSnapshot(result, layer.root)
-        end
+
+    for index = firstReachableLayer, #layers do
+      local layer = layers[index]
+      if layer.root and layer.state ~= "exiting" then
+        appendSnapshot(result, layer.root)
       end
     end
   else

@@ -64,3 +64,65 @@ describe("component props ownership", function()
     assert.are.equal(style, column.props.style)
   end)
 end)
+
+describe("component children", function()
+  it("retains a single node child", function()
+    local child = Components.text("Only child")
+    local parent = Components.column({}, child)
+
+    assert.are.same({ child }, parent.children)
+    assert.are.equal(parent, child.parent)
+  end)
+
+  it("compacts false conditional children without dropping later siblings", function()
+    local first = Components.text("First")
+    local last = Components.text("Last")
+    local parent = Components.column({}, { first, false, last })
+
+    assert.are.same({ first, last }, parent.children)
+    assert.are.equal(parent, first.parent)
+    assert.are.equal(parent, last.parent)
+  end)
+
+  it("keeps sparse numeric children in deterministic index order", function()
+    local first = Components.text("First")
+    local middle = Components.text("Middle")
+    local last = Components.text("Last")
+    local parent = Components.column({}, {
+      [5] = last,
+      [1] = first,
+      [3] = middle,
+    })
+
+    assert.are.same({ first, middle, last }, parent.children)
+  end)
+
+  it("treats a false children value as an omitted child", function()
+    local parent = Components.column({}, false)
+
+    assert.are.same({}, parent.children)
+  end)
+
+  it("reports an actionable error for an invalid child value", function()
+    assert.has_error(function()
+      Components.column({}, {
+        Components.text("Valid"),
+        "not a node",
+      })
+    end, "[glyph] invalid child at index 2: expected a Glyph node, false, or nil; got string")
+  end)
+
+  it("reports an actionable error for an invalid children argument", function()
+    assert.has_error(function()
+      Components.column({}, "not children")
+    end, "[glyph] children must be a Glyph node, an array of Glyph nodes, or false; got string")
+  end)
+
+  it("reports an actionable error for a non-array child key", function()
+    assert.has_error(function()
+      Components.column({}, {
+        header = Components.text("Not an array entry"),
+      })
+    end, "[glyph] invalid child index header: child arrays require positive integer indexes")
+  end)
+end)

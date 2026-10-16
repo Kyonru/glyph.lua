@@ -243,22 +243,28 @@ end)
 ## First focus
 
 When nothing is focused and `ui.navigate` is called, focus goes to the top-left
-focusable node (smallest `y`, then smallest `x`). You can set an explicit starting focus
-with `ui.setFocus` or by calling `ui.navigate` once at startup:
+focusable node (smallest `y`, then smallest `x`). Usually no setup is needed: the
+first arrow or d-pad event that calls `ui.navigate` seeds focus there.
+
+Do not call `ui.navigate` immediately after `ui.load` in `love.load`; the first
+render has not built or laid out any focusable nodes yet. To focus a particular
+control when it first appears, use its post-layout callback:
 
 ```lua
-function love.load()
-  ui.load({ ... })
-  ui.navigate("right")  -- seeds focus at the top-left node
-end
+local setInitialFocus = false
+
+ui.button({
+  label = "Continue",
+  onLayout = function(_, node)
+    if not setInitialFocus then
+      setInitialFocus = true
+      ui.setFocus(node)
+    end
+  end,
+})
 ```
 
-To focus a known node directly, call `ui.setFocus(node)`. Passing `nil` clears focus.
-
-```lua
-ui.setFocus(okButton)
-ui.setFocus(nil)
-```
+Call `ui.setFocus(nil)` later when the app intentionally needs to clear focus.
 
 ## Ordered focus traversal
 

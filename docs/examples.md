@@ -91,8 +91,9 @@ Theme and variant driven interaction cue events with app-owned Love2D tone playb
 ## Basic
 
 Minimal state loop with text, increment/reset buttons, and keyboard/gamepad
-focus. This is the copyable first example; broader component composition lives
-in Workbench.
+focus. Its files also demonstrate the shared example runner; use the standalone
+[Getting Started](getting-started.md) snippet as the copyable first `main.lua`.
+Broader component composition lives in Workbench.
 
 ## Workbench
 

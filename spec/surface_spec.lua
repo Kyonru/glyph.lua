@@ -8,6 +8,8 @@ local function fakeLove()
   local newCanvasCalls = {}
   local setCanvasCalls = {}
   local filterCalls = {}
+  local pushCalls = 0
+  local popCalls = 0
   local font = {
     getWidth = function(_, text)
       return #(tostring(text or "")) * 8
@@ -54,8 +56,12 @@ local function fakeLove()
     return 640, 360
   end
   function graphics.clear() end
-  function graphics.push() end
-  function graphics.pop() end
+  function graphics.push()
+    pushCalls = pushCalls + 1
+  end
+  function graphics.pop()
+    popCalls = popCalls + 1
+  end
   function graphics.translate() end
   function graphics.scale() end
   function graphics.rotate() end
@@ -86,6 +92,12 @@ local function fakeLove()
     newCanvasCalls = newCanvasCalls,
     setCanvasCalls = setCanvasCalls,
     filterCalls = filterCalls,
+    pushCalls = function()
+      return pushCalls
+    end,
+    popCalls = function()
+      return popCalls
+    end,
   }
 end
 
@@ -212,6 +224,48 @@ describe("surface", function()
     surface:render()
 
     assert.are.same({ "nearest", "linear", nil }, love.filterCalls[1])
+  end)
+
+  it("restores the previous canvas and graphics stack when rendering fails", function()
+    local stages = { "build", "layout", "draw" }
+
+    for _, stage in ipairs(stages) do
+      local love = fakeLove()
+      local previousCanvas = { name = "host-" .. stage }
+      love.graphics.setCanvas(previousCanvas)
+
+      local surface = Surface.new({
+        width = 32,
+        height = 32,
+        love = love,
+        component = function(ui)
+          if stage == "build" then
+            error("failed during build")
+          end
+          return ui.box({ width = 32, height = 32 })
+        end,
+      })
+
+      if stage == "layout" then
+        surface.runtime.layoutRoot = function()
+          error("failed during layout")
+        end
+      elseif stage == "draw" then
+        surface.runtime.draw = function()
+          error("failed during draw")
+        end
+      end
+
+      local ok, err = pcall(function()
+        surface:render()
+      end)
+
+      assert.is_false(ok)
+      assert.matches("failed during " .. stage, err, 1, true)
+      assert.are.equal(previousCanvas, love.graphics.getCanvas())
+      assert.are.equal(1, love.pushCalls())
+      assert.are.equal(1, love.popCalls())
+    end
   end)
 
   it("routes pointer input to the surface runtime", function()

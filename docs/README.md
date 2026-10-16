@@ -8,6 +8,7 @@ Glyph is a declarative UI runtime for Love2D 11.x. It is designed for game tools
 
 ## Start Here
 
+- [Installation](installation.md)
 - [Getting Started](getting-started.md)
 - [Architecture & Mental Model](architecture.md)
 - [Components](components.md)
@@ -41,9 +42,8 @@ A couple of things worth knowing up front (covered in
 - A node's state, focus, and animation are tied to its **position in the tree**.
   When you render a dynamic list, give each item a stable `key` so its identity
   follows the data, not the index.
-- Install by adding the repo to your Love2D project's `package.path` (see
-  [Installation](installation.md)); a LuaRocks rockspec exists but is not the
-  primary distribution path.
+- [Installation](installation.md) recommends Feather and also covers release
+  archives, repository copies or submodules, and LuaRocks.
 
 ## Documentation Rule
 

@@ -12,16 +12,71 @@ local function normalizeProps(props)
   return normalized
 end
 
+local function appendChild(normalized, child, index)
+  if child == nil or child == false then
+    return
+  end
+
+  if type(child) ~= "table" or type(child.type) ~= "string" then
+    local actual = type(child)
+    if actual == "table" and child.type ~= nil then
+      actual = "table with " .. type(child.type) .. " node type"
+    end
+    error(("[glyph] invalid child at index %s: expected a Glyph node, false, or nil; got %s")
+      :format(tostring(index), actual), 4)
+  end
+
+  normalized[#normalized + 1] = child
+end
+
 local function normalizeChildren(children)
-  if children == nil then
+  if children == nil or children == false then
     return {}
   end
 
-  if children.type then
+  if type(children) ~= "table" then
+    error(("[glyph] children must be a Glyph node, an array of Glyph nodes, or false; got %s")
+      :format(type(children)), 3)
+  end
+
+  if type(children.type) == "string" then
     return { children }
   end
 
-  return children
+  if children.type ~= nil then
+    error(("[glyph] invalid child node: expected a string node type, got %s")
+      :format(type(children.type)), 3)
+  end
+
+  local numericCount = 0
+  local maxIndex = 0
+  for index in pairs(children) do
+    if type(index) ~= "number" or index < 1 or index % 1 ~= 0 then
+      error(("[glyph] invalid child index %s: child arrays require positive integer indexes")
+        :format(tostring(index)), 3)
+    end
+    numericCount = numericCount + 1
+    maxIndex = math.max(maxIndex, index)
+  end
+
+  local normalized = {}
+  if numericCount == maxIndex then
+    for index = 1, maxIndex do
+      appendChild(normalized, children[index], index)
+    end
+    return normalized
+  end
+
+  local indexes = {}
+  for index in pairs(children) do
+    indexes[#indexes + 1] = index
+  end
+  table.sort(indexes)
+  for _, index in ipairs(indexes) do
+    appendChild(normalized, children[index], index)
+  end
+
+  return normalized
 end
 
 local function createNode(kind, props, children)

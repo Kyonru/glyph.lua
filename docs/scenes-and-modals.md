@@ -53,11 +53,41 @@ Common options:
 
 ## Main Scene
 
+Scene-first apps render the layer stack without a separate app component. Load
+Glyph without `app`, set the initial layer, and own only the update/draw
+callbacks; `ui.load` continues to install the common input and resize callbacks:
+
 ```lua
-ui.scene.set("home", HomeScene, {
-  transition = "none",
-})
+local ui = require("glyph")
+
+local function HomeScene()
+  return ui.column({ width = "100%", height = "100%" }, {
+    ui.text("Home"),
+  })
+end
+
+function love.load()
+  ui.load()
+  ui.scene.set("home", HomeScene, { transition = "none" })
+end
+
+function love.update(dt)
+  ui.update(dt)
+end
+
+function love.draw()
+  ui.render()
+end
 ```
+
+Do not also pass `app` to `ui.load` in this pattern: that would install a second
+root render. If existing input callbacks already forward events to Glyph,
+disable their automatic copies as described in
+[Input Forwarding](runtime.md#input-forwarding).
+
+An app using the recommended `ui.load({ app = App })` setup can still push a
+modal or overlay over that app root; no update/draw changes are needed for that
+case.
 
 ## Overlay
 

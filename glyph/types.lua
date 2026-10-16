@@ -390,6 +390,9 @@ local GlyphPadding = {}
 ---@field draw? fun(node: GlyphNode, x: number, y: number, w: number, h: number, love: table, style: GlyphStyle, ctx: GlyphDrawContext)
 ---@field onBounds? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
 ---@field onLayout? fun(bounds: GlyphLayoutBounds, node: GlyphNode)
+---@field onClick? fun(node: GlyphNode)
+---@field onMousePressed? fun(x: number, y: number, button: number, node: GlyphNode)
+---@field onMouseReleased? fun(x: number, y: number, button: number, node: GlyphNode)
 ---@field width? number|string numeric pixels, or a percent string of the parent's content size, e.g. "50%"
 ---@field height? number|string numeric pixels, or a percent string of the parent's content size, e.g. "50%"
 ---@field minWidth? number lower clamp; also honored when this node is a flex child
@@ -617,7 +620,7 @@ local GlyphSpriteSheetBackendApi = {}
 ---@field iconViewBox? GlyphPathViewBox|string shared source coordinate system for all icon paths
 ---@field iconScaleStroke? boolean scale iconStrokeWidth with iconViewBox fitting; defaults to true
 ---@field iconSamples? number
----@field onClick? fun()
+---@field onClick? fun(node: GlyphNode)
 ---@field focusable? boolean
 local GlyphButtonProps = {}
 
@@ -931,7 +934,8 @@ local GlyphNode = {}
 ---@class GlyphLayer
 ---@field id string|number
 ---@field kind string
----@field component fun(): GlyphNode
+---@field component fun(props?: table): GlyphNode
+---@field props? table
 ---@field state "entering"|"open"|"exiting"
 ---@field progress number
 ---@field blocking boolean
@@ -982,6 +986,7 @@ local GlyphTransitionApi = {}
 
 ---@class GlyphLayerOpts
 ---@field kind? "scene"|"modal"|"overlay"
+---@field props? table values passed to the layer component when Glyph builds it
 ---@field width? number
 ---@field height? number
 ---@field align? "center"|"top"|"bottom"|"left"|"right"|"stretch"
@@ -1118,6 +1123,21 @@ local GlyphGamepadMapperOpts = {}
 ---@field app? fun(): GlyphNode
 ---@field callbacks? table
 ---@field order? "before"|"after"
+---@field resize? boolean
+---@field mousemoved? boolean
+---@field mousepressed? boolean
+---@field mousereleased? boolean
+---@field wheelmoved? boolean
+---@field textinput? boolean
+---@field keypressed? boolean
+---@field keyreleased? boolean
+---@field mousefocus? boolean
+---@field focus? boolean
+---@field visible? boolean
+---@field quit? boolean
+---@field touchpressed? boolean
+---@field touchmoved? boolean
+---@field touchreleased? boolean
 ---@field gamepad? boolean|GlyphGamepadMapperOpts
 ---@field gamepadpressed? boolean
 ---@field gamepadreleased? boolean
@@ -1139,8 +1159,8 @@ local GlyphLoadOpts = {}
 -- ---------------------------------------------------------------------------
 
 ---@class GlyphSceneApi
----@field set fun(id: string|number, component: fun(), opts: GlyphLayerOpts|nil): GlyphLayer
----@field push fun(id: string|number, component: fun(), opts: GlyphLayerOpts|nil): GlyphLayer
+---@field set fun(id: string|number, component: fun(props?: table): GlyphNode, opts: GlyphLayerOpts|nil): GlyphLayer
+---@field push fun(id: string|number, component: fun(props?: table): GlyphNode, opts: GlyphLayerOpts|nil): GlyphLayer
 ---@field pop fun(id: string|number|nil): GlyphLayer|nil
 ---@field close fun(id: string|number): GlyphLayer|nil
 ---@field clear fun(predicate: fun(layer: GlyphLayer)|nil)
@@ -1150,7 +1170,7 @@ local GlyphLoadOpts = {}
 local GlyphSceneApi = {}
 
 ---@class GlyphModalApi
----@field open fun(id: string|number, component: fun(), opts: GlyphLayerOpts|nil): GlyphLayer
+---@field open fun(id: string|number, component: fun(props?: table): GlyphNode, opts: GlyphLayerOpts|nil): GlyphLayer
 ---@field close fun(id: string|number|nil)
 ---@field closeAll fun()
 ---@field isOpen fun(id: string|number): boolean

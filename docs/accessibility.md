@@ -121,7 +121,15 @@ ui.accessibility.announce("Autosave complete", {
 ## Snapshots
 
 `ui.accessibility.snapshot(root?)` returns semantic nodes in layout/draw order.
-Without a root, it snapshots the active runtime root and scene layers.
+Without a root, it snapshots the reachable runtime surface. A non-exiting,
+input-enabled blocking scene or modal layer hides the app root and lower layers,
+while non-blocking overlays remain composed with the content below them.
+Input-disabled layers may still contribute status or live-region semantics, but
+they do not hide lower content even when marked `blocking`.
+
+Passing a node explicitly snapshots that subtree without applying scene-layer
+reachability. This is useful for inspectors and tests that need to examine UI
+behind a currently open modal.
 
 ```lua
 for _, item in ipairs(ui.accessibility.snapshot()) do
